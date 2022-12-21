@@ -104,9 +104,23 @@ namespace Nop.Services.ExportImport.Help
         {
             get
             {
-                if (PropertyValue == null || !bool.TryParse(PropertyValue.ToString(), out var rez))
+                if (PropertyValue == null)
                     return default;
-                return rez;
+
+                switch (PropertyValue.ToString().ToLower())
+                {
+                    case "1":
+                        return true;
+                    case "0":
+                        return false;
+                    default:
+                        {
+                            if (!bool.TryParse(PropertyValue.ToString(), out var rez))
+                                return default;
+                            else
+                                return rez;
+                        }
+                }
             }
         }
 
