@@ -1,0 +1,502 @@
+﻿@using XcellenceIT.Plugin.Misc.CDN.Models;
+@model ConfigureModel
+
+@{
+    Layout = "_AdminLayout";
+    ViewBag.Title = T("XcellenceIT.Plugin.Misc.CDN.Configure").Text;
+    NopHtml.SetActiveMenuItemSystemName("XcellenceIT.Plugin.CDN");
+
+    <script src="http://code.jquery.com/ui/1.10.2/jquery-ui.js"></script>
+    <script src="~/Plugins/XcellenceIt.CDN/Js/FeedEk.js"></script>
+    <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.2/themes/smoothness/jquery-ui.css" />
+}
+
+<div class="content-header clearfix">
+    <h1 class="Plugins-left">
+        @T("XcellenceIT.Plugin.Misc.CDN.Configure") - @T("XcellenceIT.Plugin.Misc.CDN.nopAccelerateCDN")
+        <small>
+            <i class="fa fa-arrow-circle-left"></i>
+            <a asp-controller="Plugin" asp-action="List">@T("Admin.Configuration.Plugins.Misc.BackToList")</a>
+        </small>
+    </h1>
+</div>
+
+
+@if (!@Model.IsLicenseActive)
+@*@if (false)*@
+{
+    <div class="col-sm-12 col-md-8 col-lg-8" style="padding-top: 110px;float: none;margin: 0 auto;">
+        <div id="registerForm">
+            <div class="content-header clearfix" style="padding:0">
+                <h1 class="Plugins-left">
+                    @T("XcellenceIt.Plugin.Misc.CDN.Tab.General")
+                </h1>
+            </div>
+            <div>
+                @Html.Raw(@Model.RegistrationForm)
+            </div>
+        </div>
+    </div>
+}
+else
+{
+
+    <div class="content-header clearfix">@Html.Raw(@Model.LicenseInformation)</div>
+    
+    <form asp-controller="NopCDN" asp-action="Configure" method="post">
+        @Html.AntiForgeryToken()
+        <div class="content">
+            <div class="container-fluid">
+                <div class="form-horizontal">
+                    <nop-cards>
+                        <nop-card class="card">
+                            <div class="card-body">
+                                <h3>Integrate CDN with your nopCommerce Store</h3>
+                                <div>
+                                    <p>
+                                        The integration of a Content Delivery Network (CDN) into your website remains one of the easiest and most cost-effective ways to improve web performance. nopAccelerate CDN Plugin supports several CDN service providers and makes the integration into the nopCommerce simple.
+                                    </p>
+                                    <p>
+                                        Currently the Plugin is tested using the <a href="http://tracking.maxcdn.com/c/49036/3982/378" target="_blank"> MaxCDN </a>CDN service, but it will work with most CDN service providers that support Pull Zone. If you still don’t have CDN account to be used for your website, create MaxCDN account and <a href="http://bit.ly/ZD6Z06" target="_blank"> get 25% Off on Sign up.</a>
+                                    </p>
+                                </div>
+                            </div>
+                        </nop-card>
+
+                        <nop-card class="card">
+                            <div class="card-body">
+                                <h3>CDN Plugin Configuration Instruction</h3>
+                                <div>
+                                    <ol>
+                                        <li>Sign up with CDN Service provider like <a href="http://tracking.maxcdn.com/c/49036/3982/378" target="_blank">MaxCDN.</a>
+                                        <li>Create/Configure Pull Zone to be used with your site. Follow the instructions provided by your CDN Service Provider.Use your Site URL as your Origin URL while configuring Pull Zone. Your Origin URL will always be your Site URL. Once configured correctly, you will be able to access images & all static resources on your new CDN URL, which will pull the files from Origin URL for the first request, and then serves all subsequent requests from its cache from the nearest node.</li>
+                                        <li>If you want to use multiple Images CDN hostname which allow parallel downloads across hostnames, then configure additional Hostname and its corresponding CNAME entries. This is recommended but not required.</li>
+                                        <li>Enter all your hostnames in Images CDN Hostname(s) textbox separated by comma. For example: http://cdn1.yourdomain.com/,http://cdn2.yourdomain.com/,http://cdn3.yourdomain.com/. Make sure to include <b>“http://”</b> at the beginning of hostname & <b>“/”</b> at the end.<br /><b>If your configuration does not work than please check admin system logs.</b></li>
+                                        <li>The nopAccelerate CDN plugin simply rewrite nopCommerce image services to use CDN hostnames instead of your store URL. If you have entered more than one hostnames, then it will try to distribute requests randomly to speed up your website loading by allowing parallel downloads across hostnames.</li>
+                                        <li>Please restart the application after saving the CDN configuration to make changes.</li>
+                                        <li>We offer one time installation & configuration support at USD 30 for configuring CDN. You can request the same here by ordering it at our <a href="http://shop.xcellence-it.com/" target="_blank">shop.</a> </li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </nop-card>
+
+                        <nop-card class="card">
+                            <div class="card-body">
+                                <h3>CDN Configurations</h3>
+                                <div class="panel-group">
+                                    @await Component.InvokeAsync("StoreScopeConfiguration")
+                                </div>
+                                <div class="form-group row">
+                                    <div class="col-md-3">
+                                        <div class="label-wrapper">
+                                            <nop-overrride-store-checkbox asp-for="Enable_OverrideForStore" asp-input="Enable" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                                            <nop-label asp-for="Enable" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-9">
+                                        <nop-editor asp-for="Enable" />
+                                        <span asp-validation-for="Enable"></span>
+                                    </div>
+                                </div>
+                                <div class="form-group row" id="pnlUsesAzureBlobStorageImages">
+                                    <div class="col-md-3">
+                                        <div class="label-wrapper">
+                                            <nop-overrride-store-checkbox asp-for="IsAzureBlobStorageAsAnOrigin_OverrideForStore" asp-input="IsAzureBlobStorageAsAnOrigin" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                                            <nop-label asp-for="IsAzureBlobStorageAsAnOrigin" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-9">
+                                        <nop-editor asp-for="IsAzureBlobStorageAsAnOrigin" /> &nbsp;@T("XcellenceIT.Plugin.Misc.CDN.Field.IsAzureBlobStorageAsOrigin.Instruction")@T("XcellenceIT.Plugin.Misc.CDN.Field.ClearCacheNote")
+                                        <span asp-validation-for="IsAzureBlobStorageAsAnOrigin"></span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group row" id="pnlEnableImages">
+                                    <div class="col-md-3">
+                                        <div class="label-wrapper">
+                                            <nop-overrride-store-checkbox asp-for="EnableImages_OverrideForStore" asp-input="EnableImages" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                                            <nop-label asp-for="EnableImages" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-9">
+                                        <nop-editor asp-for="EnableImages" />
+                                        <span asp-validation-for="EnableImages"></span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group row" id="pnlDomainNames">
+                                    <div class="col-md-3">
+                                        <div class="label-wrapper">
+                                            <nop-overrride-store-checkbox asp-for="DomainNames_OverrideForStore" asp-input="DomainNames" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                                            <nop-label asp-for="DomainNames" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-9">
+                                        <nop-editor asp-for="DomainNames" /><label style='color:red; margin-left: 10px;' class="imageURL-validation">Image URL is required</label><label style='color:red; margin-left: 10px;' class="imageURL-URLvalidation">Please enter valid CDN URL for Image</label>
+                                        <span asp-validation-for="DomainNames"></span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group row" id="pnlEnableCss">
+                                    <div class="col-md-3">
+                                        <div class="label-wrapper">
+                                            <nop-overrride-store-checkbox asp-for="EnableCss_OverrideForStore" asp-input="EnableCss" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                                            <nop-label asp-for="EnableCss" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-9">
+                                        <nop-editor asp-for="EnableCss" />
+                                        <span asp-validation-for="EnableCss"></span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group row" id="pnlCssDomainNames">
+                                    <div class="col-md-3">
+                                        <div class="label-wrapper">
+                                            <nop-overrride-store-checkbox asp-for="CssDomainNames_OverrideForStore" asp-input="CssDomainNames" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                                            <nop-label asp-for="CssDomainNames" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-9">
+                                        <nop-editor asp-for="CssDomainNames" /><label style='color:red; margin-left: 10px;' class="cssURL-validation">Css URL is required</label><label style='color:red; margin-left: 10px;' class="cssURL-URLvalidation">Please enter valid CDN URL for Css</label>
+                                        <span asp-validation-for="CssDomainNames"></span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group row" id="pnlEnableJs">
+                                    <div class="col-md-3">
+                                        <div class="label-wrapper">
+                                            <nop-overrride-store-checkbox asp-for="EnableJs_OverrideForStore" asp-input="EnableJs" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                                            <nop-label asp-for="EnableJs" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-9">
+                                        <nop-editor asp-for="EnableJs" />
+                                        <span asp-validation-for="EnableJs"></span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group row" id="pnlJsDomainNames">
+                                    <div class="col-md-3">
+                                        <div class="label-wrapper">
+                                            <nop-overrride-store-checkbox asp-for="JsDomainNames_OverrideForStore" asp-input="JsDomainNames" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                                            <nop-label asp-for="JsDomainNames" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-9">
+                                        <nop-editor asp-for="JsDomainNames" /><label style='color:red; margin-left: 10px;' class="jsURL-validation">Js URL is required</label><label style='color:red; margin-left: 10px;' class="jsURL-URLvalidation">Please enter valid CDN URL for Js</label>
+                                        <span asp-validation-for="JsDomainNames"></span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group row" id="pnlCDNSSLDisable">
+                                    <div class="col-md-3">
+                                        <div class="label-wrapper">
+                                            <nop-overrride-store-checkbox asp-for="CDNSSLDisable_OverrideForStore" asp-input="CDNSSLDisable" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                                            <nop-label asp-for="CDNSSLDisable" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-9">
+                                        <nop-editor asp-for="CDNSSLDisable" />
+                                        <span asp-validation-for="CDNSSLDisable"></span>
+                                    </div>
+                                </div>
+
+                                <div class="form-group row" id="pnlSavebtn">
+                                    <div class="col-md-3">
+                                        &nbsp;
+                                    </div>
+                                    <div class="col-md-9">
+                                        <button type="submit" name="configure" id="configure" class="btn bg-blue" value="configure"> @T("Admin.Common.Save")</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </nop-card>
+
+                        <nop-card class="card">
+                            <div class="card-body">
+                                <h3>About nopAccelerate</h3>
+                                <div>
+                                    <p>
+                                        nopAccelerate bridge the gap to make nopCommerce faster, scalable & reliable by integrating Apache Solr with nopCommerce. nopAccelerate super charge your nopCommerce store to make you success online.
+                                    </p>
+                                    <p>Benefits of nopAccelerate</p>
+                                    <ul>
+                                        <li>Better & Faster Full Text Search</li>
+                                        <li>Make your site load faster</li>
+                                        <li>Reduces Database Load</li>
+                                        <li>Reduces Time to First Byte</li>
+                                        <li>Enhanced Catalog Navigation Pages with Faceted/Layered Navigation</li>
+                                        <li>Increases your site capacity to serve more concurrent requests </li>
+                                        <li>Improved Google Rankings</li>
+                                        <li>All these, without changing your existing hardware infrastructure</li>
+                                        <li>More Page Views & More Conversions</li>
+                                        <li>Easy to Scale</li>
+                                        <li>Faster Site= More Revenue</li>
+                                    </ul>
+                                    <p>We also offer nopCommerce Performance Optimization & nopCommerce Customization Services.</p>
+                                    <a href="http://www.nopaccelerate.com/?utm_source=cdn-plugin&utm_medium=button&utm_campaign=nopAccelerate" class="t-button">Get me Started with nopAccelerate</a>
+                                </div>
+                            </div>
+                        </nop-card>
+
+                        <nop-card class="card">
+                            <div class="card-body">
+                                <table>
+                                    <tr>
+                                        <td>
+                                            <style>
+                                                .feedEkList {
+                                                    padding: 0;
+                                                    margin: 0;
+                                                    list-style: none;
+                                                }
+
+                                                    .feedEkList li {
+                                                        margin-bottom: 10px;
+                                                        border-bottom: 1px solid #DFDFDF;
+                                                        padding-bottom: 10px;
+                                                    }
+
+                                                .itemTitle a:hover {
+                                                    text-decoration: underline;
+                                                }
+
+                                                .itemDate {
+                                                    font-size: 11px;
+                                                    color: #AAAAAA;
+                                                }
+                                            </style>
+                                            <div class="nop-news">
+                                                <div class="section-header">
+                                                    <div style="font-size: 13px !important;" class="title">
+                                                        <i class="fa fa-newspaper-o"></i>
+                                                        <h3> nopAccelerate News</h3>
+
+                                                    </div>
+                                                </div>
+                                                <div class="newsitem">
+                                                    <div id="NopAccelerateNewsFeed"></div>
+                                                </div>
+                                                <div class="clear">
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
+                                <div style="float:right; margin-bottom: 20px;">Powered By: <a href="http://www.nopaccelerate.com/?utm_source=extension&utm_medium=poweredby&utm_content=footer&utm_campaign=nopAccelerate" target="_blank" style="display: inline-block; vertical-align: middle;"><img alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKgAAAAZCAIAAAAqv/IzAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyBpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBXaW5kb3dzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjYyNTM2ODYzNzlCRjExRTJBQkIwODA4RkE0QjEzQzRGIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjYyNTM2ODY0NzlCRjExRTJBQkIwODA4RkE0QjEzQzRGIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6NjI1MzY4NjE3OUJGMTFFMkFCQjA4MDhGQTRCMTNDNEYiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6NjI1MzY4NjI3OUJGMTFFMkFCQjA4MDhGQTRCMTNDNEYiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz78kX//AAAFyklEQVR42uyaMUxkZRDHD4NyBjzgiiUW1yyWQuElJlynQqIVFBpNIEqjmEBFIdGEikSDJlSQC2hBAcmZWEB1BWvsjsQEC9DmIktxFXuJCLJ6eKf44w0Ow7wHfPfiZVd4kw3Z/Zj5dr75z39mvgc1+/v7lzK5ePJUFoIM+EwukNRWp1urq6tjY2N2paOjY3h4uOKO9ff3l8tleV9fXz81NcXPjPH/mSwuLrqVzc3NintVLBYVdaSlpeV/inqVAg/GMN4t2ohX0DH7sb29vbL+LC8vvxXJwsLCeQBejuHIVCWMtx/z+XxlUZ+YmEidglUHPMzmSLzp6+urtmrv6lClgMeNiUh01EjhybHh7mHph9LXLx9mRF3z8x/cf7Rd/P2nr35b+VxWml69+ewLb6r+3r1v/yyt7Nz5xG5y5can6NQ25k/aE6s/fv6m/OOXsnL1jVt1115T86WlJbAnheOHcdWePCBFKA92nRmws7PTMuCx1AqFgk0vdNBUNct4wk2PD7TFcGRkRA1nZ2dZmZ+fl0xCZ3R0VA7I8dfW1myGEQf26enpiU+XGhaqvQ6/IQfxwD/aOTrY33tbICqQ68ovt9/Jvf3907mX+Oh+W//i+4Il67xUjcxwO4C6W2l57y4ZICt4zM/u7u743MRJNBuImm1sHEwMlyMZHx8XzXRqxEiqTiESUCFkrs5rEENsLQZS0pSv2tTcRaa3t5edJWlEwJV9yADey1eoJ21tbeEHSSj1sNN+BLOWd+9aOiqQDnVY2/TKTUFaZPvOx/Lmr50Nl1uUBK0Hgj01QFHnbDAJ/xoaGk4q9e54xGhgYABQ7bydWm04EqsmuZJY5wNtXdJY1HUrqzM5OQnAOGw7Ogo4zLpWGkWXRSIW6EwC4y07kcYbn4GQcvEwUy43U/8t6uBt6792AXnz4F7Brl99/RZ7kg1scoT9gy2t88LL+HBn4bfHk1i4OGKbTo3wEUfXVuS9A48NU9uCB98+NDRk849EV6RlxQHMJpIibtbRxUBnknv8EcB1zcJgW/8RCoCUdJXL1w5zan/v12Pk3i4eYLy9YfcUrivSmkxCKc4GGF1dXTa4jvG2ykm+61FtvNKp6Z3CQpUYbvaRNA2xXV9fjzujpxMdS83EYVaZYGuPTnbhB/HAgzpV1/JY6rDLBl6uI2iFtyQ+2Lox7/bUrvHw/rEdaq/ktRCRlcwviVwvlUqn3KkU2tOvXqerrUbivpcOilcugkQ80NY99lFPBHgdEjk+4MV3cI0JE/cQ6bEOkgC8Y/YzuesHHXp7w9FdsiEOW2I2uDp/SPe9LZsiUlpkFj39BrK7uxuf7SWOMg8rF1lMp6bjXvzSnLhbClsdr2SS166vamApvYCLgMKpzD5pxgx0JpnxZyIni+SEtnCkpq4prild3xV/MXedQpJJ6O4eyE9PT9t5REpfLpeL84DslhlYY5FOTcopwVW60Hopwq7qym6BtvHhIP5cyCYHnV4y0hoqwCfV/0BnEoB3k53w2M3kQlk7vQu6kJjrvlXjdhfPBkZCuL678sUxF7kH/ktE1+dcjMqRkBwuGziSnWsk0wPVCKhV04TToMvAlcizdLZxIjoshbtzc3OJoUisZOHOnMF4nexcNgg7YTMvvY5vffch2Gv1BnVGd7kLuD1JJve0h33Y83b0dEVucWdWe3SYzxXCmZkZRicNhw1EiJo8ydGQUXLRsUiIS4nzVKCtnewSn7Khxrr6Nh2JU9OP7rLDl/ZEEuiMBz5ksrNXOy7uVGywp+arDihi+Nz1jxJ7BwBjBelhvHwXF3qU8U/cddctqU5xcpAfUgwBA0OFhIi4O26gGpf71tZWFOSurAwjjvlI4n+US22LcjybcYkGRw+SHToiAafBwcF4puI8i5rQtiOc6Yz90pon969XYGz5DcYgfSmT6pAn+EeaxMkuk/MPvJvs3KPfTM4n8IlPfrJwV4/UZP9enTE+kwsk/wgwAKm2AMXI9591AAAAAElFTkSuQmCC" /></a></div>
+                            </div>
+                        </nop-card>
+
+                    </nop-cards>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $('#NopAccelerateNewsFeed').FeedEk({
+                FeedUrl: 'http://www.nopaccelerate.com/blog/feed/',
+                MaxCount: 5
+            });
+
+            $('#NopAccelerateProductsNewsFeed').FeedEk({
+                FeedUrl: 'http://shop.xcellence-it.com/Content/files/ProductNewsFeeds.xml',
+                MaxCount: 5,
+                ShowPubDate: false
+            });
+        });
+    </script>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+
+            ShowHideContain();
+            CheckAllValidation();
+
+            $("#Enable").change(function () {
+                ShowHideContain()
+            });
+            $("#EnableImages").change(function () {
+                funforImage();
+            });
+            $("#EnableCss").change(function () {
+                funforCss();
+            });
+            $("#EnableJs").change(function () {
+                funforJs();
+            });
+            $('#configure').click(function () {
+
+                CheckAllValidation();
+
+                //Check all text box have any value.
+                if ($("#EnableImages").is(':checked'))
+                    if ($("#DomainNames").val().trim() == "")
+                        return false;
+                if ($("#EnableCss").is(':checked'))
+                    if ($("#CssDomainNames").val().trim() == "")
+                        return false;
+                if ($("#EnableJs").is(':checked'))
+                    if ($("#JsDomainNames").val().trim() == "")
+                        return false;
+
+                //Check enter url is valid or not
+                if ($("#EnableImages").is(':checked')) {
+                    var array = $("#DomainNames").val().split(',')
+                    for (val in array) {
+                        if (!isUrlValid(array[val].trim())) {
+                            $('.imageURL-URLvalidation').show();
+                            return false;
+                        }
+                        else {
+                            if ((array[val].slice(-1)) != "/") {
+                                array[val] = array[val] + "/";
+                                $('.imageURL-URLvalidation').hide();
+                            }
+                        }
+                    }
+                    document.getElementById("DomainNames").value = array;
+                }
+
+                if ($("#EnableCss").is(':checked')) {
+                    if (!isUrlValid($("#CssDomainNames").val().trim())) {
+                        $('.cssURL-URLvalidation').show();
+                        return false;
+                    }
+                    else {
+                        if (($("#CssDomainNames").val().slice(-1)) != "/")
+                            document.getElementById("CssDomainNames").value = $("#CssDomainNames").val() + '/';
+                        $('.cssURL-URLvalidation').hide();
+                    }
+                }
+
+                if ($("#EnableJs").is(':checked')) {
+                    if (!isUrlValid($("#JsDomainNames").val().trim())) {
+                        $('.jsURL-URLvalidation').show();
+                        return false;
+                    }
+                    else {
+                        if (($("#JsDomainNames").val().slice(-1)) != "/")
+                            document.getElementById("JsDomainNames").value = $("#JsDomainNames").val() + '/';
+                        $('.jsURL-URLvalidation').hide();
+                    }
+                }
+            });
+        });
+
+        function funforImage() {
+            if ($("#EnableImages").is(':checked')) {
+                $("#pnlDomainNames").show();
+            }
+            else {
+                //$("#DomainNames").val('');
+                $("#pnlDomainNames").hide();
+                $('.imageURL-validation').hide();
+                $('.imageURL-URLvalidation').hide();
+            }
+        }
+        function funforCss() {
+            if ($("#EnableCss").is(':checked')) {
+                $("#pnlCssDomainNames").show();
+            }
+            else {
+                //$("#CssDomainNames").val('');
+                $("#pnlCssDomainNames").hide();
+                $('.cssURL-validation').hide();
+                $('.cssURL-URLvalidation').hide();
+            }
+        }
+        function funforJs() {
+            if ($("#EnableJs").is(':checked')) {
+                $("#pnlJsDomainNames").show();
+            }
+            else {
+                //$("#pnlJsDomainNames").val('');
+                $("#pnlJsDomainNames").hide();
+                $('.jsURL-validation').hide();
+                $('.jsURL-URLvalidation').hide();
+            }
+        }
+
+        function isUrlValid(s) {
+            var regexp = /http:\/\/[A-Za-z0-9\.-]{3,}\.[A-Za-z]{3}/;
+            if (!regexp.test(s))
+                regexp = /https:\/\/[A-Za-z0-9\.-]{3,}\.[A-Za-z]{3}/;
+            return regexp.test(s);
+        }
+
+        function ShowHideContain() {
+            if ($("#Enable").is(':checked')) {
+                $('#pnlUsesAzureBlobStorageImages').show();
+                $('#pnlEnableImages').show();
+                $('#pnlEnableCss').show();
+                $('#pnlEnableJs').show();
+                $('#pnlCDNSSLDisable').show();
+
+                funforImage();
+                funforCss();
+                funforJs();
+            }
+            else {
+                $('#pnlUsesAzureBlobStorageImages').hide();
+                $('#pnlCDNSSLDisable').hide();
+
+                $('#pnlEnableImages').hide();
+                $('#pnlEnableCss').hide();
+                $('#pnlEnableJs').hide();
+
+                // if on disable CDN you do not want to flsh all url then this script else bellow commented script
+                $('#pnlDomainNames').hide();
+                $('#pnlCssDomainNames').hide();
+                $('#pnlJsDomainNames').hide();
+
+                //$("#EnableImages").prop("checked", false).change();
+                //$("#EnableCss").prop("checked", false).change();
+                //$("#EnableJs").prop("checked", false).change();
+
+            }
+        }
+
+        function CheckAllValidation() {
+            $('.imageURL-validation').hide();
+            $('.cssURL-validation').hide();
+            $('.jsURL-validation').hide();
+
+            $('.imageURL-URLvalidation').hide();
+            $('.cssURL-URLvalidation').hide();
+            $('.jsURL-URLvalidation').hide();
+
+            if ($("#Enable").is(':checked')) {
+                if ($("#EnableImages").is(':checked')) {
+                    if ($("#DomainNames").val().trim() == "") {
+                        $('.imageURL-validation').show();
+                    } else {
+                        $('.imageURL-validation').hide();
+                    }
+                }
+
+                if ($("#EnableCss").is(':checked')) {
+                    if ($("#CssDomainNames").val().trim() == "") {
+                        $('.cssURL-validation').show();
+                    } else {
+                        $('.cssURL-validation').hide();
+                    }
+                }
+
+                if ($("#EnableJs").is(':checked')) {
+                    if ($("#JsDomainNames").val().trim() == "") {
+                        $('.jsURL-validation').show();
+                    } else {
+                        $('.jsURL-validation').hide();
+                    }
+                }
+            }
+            else {
+                ShowHideContain();
+            }
+        }
+
+    </script>
+}

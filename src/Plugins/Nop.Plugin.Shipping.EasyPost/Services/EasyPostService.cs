@@ -1657,7 +1657,7 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
 
                 var options = rates?.Select(rate => new Nop.Core.Domain.Shipping.ShippingOption
                 {
-                    Name = $"{rate.Carrier} {rate.Service}".TrimEnd(' '),
+                    Name = $"{rate.Carrier} {rate.Service}".TrimEnd(' ').Replace("UPSDAP", "UPS"),
                     Rate = freeShipping ? decimal.Zero : rate.Rate,
                     TransitDays = rate.DeliveryDays,
                     ShippingRateComputationMethodSystemName = EasyPostDefaults.SystemName

@@ -222,6 +222,7 @@ namespace Nop.Web.Controllers
                     if (!await dataProvider.DatabaseExistsAsync())
                         throw new Exception(_locService.Value.GetResource("DatabaseNotExists"));
                 }
+                //await dataProvider.ExecuteNonQueryAsync("SET SESSION sql_require_primary_key = 0");
 
                 dataProvider.InitializeDatabase();
 

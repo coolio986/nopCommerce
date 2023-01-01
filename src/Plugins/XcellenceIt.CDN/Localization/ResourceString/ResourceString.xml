@@ -1,0 +1,84 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Language>
+	<!--CDN Plugin-->
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.Field.Enable">
+		<Value>Enable CDN</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugins.Misc.CDN.MainMenu.Title">
+		<Value>nopAccelerate</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.Field.Enable.Hint">
+		<Value>Select for Enable or Disable CDN</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.Field.DisableSsl">
+		<Value>Disable CDN on SSL Pages</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.Field.DisableSsl.Hint">
+		<Value>When SSL pages are returned no CDN URLs will appear in HTML Pages</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.Field.EnableImages">
+		<Value>Enable CDN for Images</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.Field.EnableImages.Hint">
+		<Value>Select for Enable or Disable CDN for Images</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.Field.DomainNames">
+		<Value>CDN Hostname(s) for Images</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.Field.DomainNames.Hint">
+		<Value>Contains the Hostname(s) for Images</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.Field.EnableCss">
+		<Value>Enable CDN for Css</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.Field.EnableCss.Hint">
+		<Value>Select for Enable or Disable CDN for Css</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.Field.CssDomainNames">
+		<Value>CDN Hostname(s) for Css</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.Field.CssDomainNames.Hint">
+		<Value>Contains the Hostname(s) for Css</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.Field.EnableJs">
+		<Value>Enable CDN for Js</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.Field.EnableJs.Hint">
+		<Value>Select for Enable or Disable CDN for Js</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.Field.JsDomainNames">
+		<Value>CDN Hostname(s) for Js</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.Field.JsDomainNames.Hint">
+		<Value>Contains the Hostname(s) for Js</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.Field.IsAzureBlobStorageAsAnOrigin">
+		<Value>Is AzureBlobStorage enabled and set as origin type for CDN</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.Field.IsAzureBlobStorageAsAnOrigin.Hint">
+		<Value>
+			If checked, images will be fetched from azure CDN when origin type for CDN is set to BlobStorage. Make sure you have configured AzureBlobStorage correctly in Web.config file. <b>Make sure to clear cache after changes.</b>
+		</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.Field.LicKey">
+		<Value>License Key</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.Field.LicKey.Hint">
+		<Value>A License Key</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.Field.IsAzureBlobStorageAsOrigin.Instruction">
+		<Value>[CDN with AzureBlobStorage only supports images and not stylesheets and javascript files.</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.Field.ClearCacheNote">
+		<Value>Make sure to clear cache after changes.]</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.Configure">
+		<Value>Configure</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIT.Plugin.Misc.CDN.nopAccelerateCDN">
+		<Value>nopAccelerate CDN</Value>
+	</LocaleResource>
+	<LocaleResource Name="XcellenceIt.Plugin.Misc.CDN.Tab.General">
+		<Value>General</Value>
+	</LocaleResource>
+</Language>

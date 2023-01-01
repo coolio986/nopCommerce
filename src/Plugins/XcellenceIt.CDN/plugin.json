@@ -1,0 +1,11 @@
+﻿{
+  "Group": "XcellenceIT",
+  "FriendlyName": "nopAccelerate CDN",
+  "SystemName": "XcellenceIT.Plugin.CDN",
+  "Version": "5.0.0",
+  "SupportedVersions": [ "4.50" ],
+  "Author": "Xcellence-IT",
+  "DisplayOrder": 1,
+  "FileName": "XcellenceIT.Plugin.Misc.CDN.dll",
+  "Description": "Make your nopCommerce website load fast. Integrates CDN with nopComerce to load static resources from CDN network."
+}
