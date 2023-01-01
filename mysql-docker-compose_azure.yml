@@ -1,0 +1,18 @@
+version: "3.4"
+services:
+    nopcommerce_web:
+        build: .
+        container_name: nopcommerce
+        
+        ports:
+            - "80:80"
+            - "443:443"
+        environment:
+        #https://learn.microsoft.com/en-us/aspnet/core/security/docker-compose-https?view=aspnetcore-7.0
+            - ASPNETCORE_ENVIRONMENT=Development
+            - ASPNETCORE_URLS=https://+:443;http://+:80
+            - ASPNETCORE_Kestrel__Certificates__Default__Password=mypass123
+            - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+        volumes:
+            - ${USERPROFILE}/.aspnet/https:/https/:ro
+            - ${USERPROFILE}/.microsoft/usersecrets/:/root/.microsoft/usersecrets

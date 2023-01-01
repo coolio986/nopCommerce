@@ -61,6 +61,8 @@ WORKDIR /src/Presentation/Nop.Web
 RUN dotnet publish Nop.Web.csproj -c Release -o /app/published
 
 WORKDIR /app/published
+EXPOSE 80
+EXPOSE 443
 
 RUN mkdir logs
 RUN mkdir bin
