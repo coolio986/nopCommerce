@@ -1,0 +1,13 @@
+﻿@model (string WidgetZone, string htmlSnippet, int ProductId)
+
+@if (Model.ProductId > 0)
+{
+        <div>
+            <div id="htmlsnippet-container@($"-{Model.ProductId}")">
+                @Model.htmlSnippet
+            </div>
+             
+        </div>
+}
+
+

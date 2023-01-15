@@ -1,0 +1,11 @@
+﻿{
+  "Group": "HTML Snippet Processor",
+  "FriendlyName": "HTMLSnippets",
+  "SystemName": "Product.HTMLSnippets",
+  "Version": "1.0",
+  "SupportedVersions": [ "4.50" ],
+  "Author": "3D Excellence LLC",
+  "DisplayOrder": 1,
+  "FileName": "Nop.Plugin.Product.HTMLSnippets.dll",
+  "Description": "This plugin allows using HTML snippets in product description"
+}

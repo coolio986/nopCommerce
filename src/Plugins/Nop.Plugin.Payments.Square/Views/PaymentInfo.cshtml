@@ -1,0 +1,196 @@
+﻿@model PaymentInfoModel
+
+@{
+    Layout = "";
+    var scriptUrl = settings.UseSandbox ? SquarePaymentDefaults.SandboxPaymentFormScriptPath : SquarePaymentDefaults.PaymentFormScriptPath;
+}
+
+<script src="@scriptUrl" asp-exclude-from-bundle="true" asp-location="Footer"></script>
+
+<style type="text/css">
+    select.square-input {
+        height: 36px;
+        border: 1px solid #ddd;
+        padding: 8px;
+        vertical-align: middle;
+        color: #777;
+        width: 100%;
+    }
+</style>
+
+<script asp-location="Footer">
+    $(document).ready(async function () {
+        $('#@Html.IdFor(model => model.StoredCardId)').on('change', toggleStoredCard);
+        toggleStoredCard();
+
+        if (!window.Square) {
+            console.error('Square.js failed to load properly');
+        }
+
+        $('.payment-info-next-step-button').hide();
+        displayAjaxLoading(true);
+        var use3ds = @settings.Use3ds.ToString().ToLower();
+        var payButton = $('#pay-button');
+
+        async function initializeCard(payments) {
+            var cardClassSelectors = {
+                'input': {
+                    fontSize: '15px',
+                },
+                'input.is-focus': {
+                    color: '#444',
+                },
+                '.input-container': {
+                    borderColor: '#ddd',
+                    borderWidth: '1px',
+                },
+                '.input-container.is-focus': {
+                    borderColor: '#ccc',
+                },
+                '.input-container.is-error': {
+                    borderColor: '#e4434b',
+                },
+            }
+
+            var card = await payments.card({ 'style': cardClassSelectors, 'postalCode': '@Model.PostalCode', });
+            await card.attach('#card-container');
+            return card;
+        }
+
+        async function tokenize(paymentMethod) {
+            var tokenResult = await paymentMethod.tokenize();
+            if (tokenResult.status === 'OK') {
+                return tokenResult.token;
+            } else {
+                let errorMessage = `Tokenization failed-status: ${tokenResult.status}`;
+                if (tokenResult.errors) {
+                    errorMessage += ` and errors: ${JSON.stringify(
+                        tokenResult.errors
+                    )}`;
+                }
+                console.error(errorMessage);
+            }
+        }
+
+        async function handlePaymentMethodSubmission(paymentMethod) {
+            try {
+                var token = await tokenize(paymentMethod);
+
+                if (token.errors) {
+                    var currentErrorvalue = $('#@Html.IdFor(model => model.Errors)').val();
+                    $('#@Html.IdFor(model => model.Errors)').val(currentErrorvalue + '|' + token.errors.message);
+                } else if (use3ds) {
+                    $('#@Html.IdFor(model => model.CardNonce)').val(token);
+                    await verifyBuyer(payments, token);
+                }
+                else {
+                    $('#@Html.IdFor(model => model.CardNonce)').val(token);
+                }
+            } catch (e) {
+                var currentErrorvalue = $('#@Html.IdFor(model => model.Errors)').val();
+                $('#@Html.IdFor(model => model.Errors)').val(currentErrorvalue + '|' + e);
+            }
+        }
+
+        var payments = window.Square.payments('@settings.ApplicationId', '@settings.LocationId');
+        let card;
+        try {
+            card = await initializeCard(payments);
+        } catch (e) {
+            console.error('Initializing Card failed', e);
+            return;
+        }
+        displayAjaxLoading(false);
+
+        payButton.click(async function () {
+            displayAjaxLoading(true);
+            var selectedStoredCardId = $('#@Html.IdFor(model => model.StoredCardId)').val();
+            if ((!selectedStoredCardId || selectedStoredCardId == '@(Guid.Empty.ToString())')) {
+                await handlePaymentMethodSubmission(card);
+            } else if (use3ds) {
+                await verifyBuyer(payments, selectedStoredCardId);
+            }
+            displayAjaxLoading(false);
+            $('.payment-info-next-step-button').click();
+        });
+
+        async function verifyBuyer(payments, token) {
+            var verificationDetails = {
+                intent: '@settings.TransactionMode.ToString().ToUpper()',
+                amount: '@Model.OrderTotal',
+                currencyCode: '@Model.Currency',
+                billingContact: {
+                    addressLines: ['@Model.BillingAddressLine1', '@Model.BillingAddressLine2'],
+                    givenName: '@Model.BillingFirstName',
+                    familyName: '@Model.BillingLastName',
+                    email: '@Model.BillingEmail',
+                    country: '@Model.BillingCountry',
+                    region: '@Model.BillingState',
+                    city: '@Model.BillingCity',
+                    postalCode: '@Model.BillingPostalCode'
+                }
+            };
+
+            var verificationResults = await payments.verifyBuyer(token, verificationDetails);
+
+            $('#@Html.IdFor(model => model.Token)').val(verificationResults.token);
+        }
+
+    });
+
+    function toggleStoredCard() {
+        var selectedStoredCardId = $('#@Html.IdFor(model => model.StoredCardId)').val();
+        if (!selectedStoredCardId || selectedStoredCardId == '@(Guid.Empty.ToString())') {
+            $('#payment-form').show();
+        } else {
+            $('#payment-form').hide();
+        }
+    }
+</script>
+
+<input type="hidden" asp-for="CardNonce" />
+<input type="hidden" asp-for="Errors" />
+<input type="hidden" asp-for="Token" />
+
+@if (!Model.IsGuest && Model.StoredCards.Any())
+{
+    <table width="100%" cellspacing="2" cellpadding="1" border="0">
+        <tr>
+            <td>
+                <label asp-for="StoredCardId">@T("Plugins.Payments.Square.Fields.StoredCard"):</label>
+            </td>
+            <td>
+                <select asp-for="StoredCardId" asp-items="Model.StoredCards" class="square-input"></select>
+            </td>
+        </tr>
+    </table>
+}
+
+<div id="payment-form">
+    <div id="card-container"></div>
+</div>
+<div id="payment-status-container"></div>
+
+@if (!Model.IsGuest)
+{
+    <table width="100%" cellspacing="2" cellpadding="1" border="0" id="square-card-details">
+        <tr>
+            <td>
+                <label asp-for="SaveCard">@T("Plugins.Payments.Square.Fields.SaveCard"):</label>
+            </td>
+            <td>
+                <input type="checkbox" asp-for="SaveCard" />
+                <span asp-validation-for="SaveCard"></span>
+            </td>
+        </tr>
+    </table>
+}
+
+<div class="buttons">
+    <button type="button" class="button-1 square-btn" id="pay-button">@T(orderSettings.OnePageCheckoutEnabled ? "Common.Continue" : "Checkout.NextButton")</button>
+</div>
+
+@if (orderSettings.OnePageCheckoutEnabled)
+{
+    @NopHtml.GenerateInlineScripts(ResourceLocation.Footer);
+}
