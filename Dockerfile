@@ -55,6 +55,10 @@ WORKDIR /src/Plugins/Nop.Plugin.Widgets.NivoSlider
 RUN dotnet build Nop.Plugin.Widgets.NivoSlider.csproj -c Release
 WORKDIR /src/Plugins/Nop.Plugin.Widgets.What3words
 RUN dotnet build Nop.Plugin.Widgets.What3words.csproj -c Release
+WORKDIR /src/Plugins/Nop.Plugin.Payments.Square
+RUN dotnet build Nop.Plugin.Payments.Square.csproj -c Release
+WORKDIR /src/Plugins/Nop.Plugin.Products.HTMLSnippets
+RUN dotnet build Nop.Plugin.Product.HTMLSnippets.csproj -c Release
 
 # publish project
 WORKDIR /src/Presentation/Nop.Web   

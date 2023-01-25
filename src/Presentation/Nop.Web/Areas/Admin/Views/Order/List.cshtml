@@ -14,12 +14,44 @@
     const string hideSearchBlockAttributeName = "OrdersPage.HideSearchBlock";
     var hideSearchBlock = await genericAttributeService.GetAttributeAsync<bool>(await workContext.GetCurrentCustomerAsync(), hideSearchBlockAttributeName);
 }
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.13/signalr.min.js"></script>
+<script >
+    const messageDiv =  document.getElementById('newOrderIndicator');
+
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/eventHub")
+        .configureLogging(signalR.LogLevel.Information)
+        .build();
+
+    connection.on('ReceiveEvent', (sender, message) => {
+    console.log(`${sender}:${message}`);
+    
+    messageDiv.innerHTML = 'New order(s), reload?';
+    messageDiv.style.display = 'flex';
+    });
+
+    connection.start()
+        .then(() => console.log('connected!'))
+        .catch(console.error);
+
+
+</script>
+
 
 <form asp-controller="Order" asp-action="List" method="post">
     <div class="content-header clearfix">
         <h1 class="float-left">
             @T("Admin.Orders")
         </h1>
+        <a href="" id="newOrderIndicator" class="float-left" style="
+            display: none;
+            flex-wrap: wrap;
+            justify-content: center;
+            font-size: 1.5em;
+            margin-left: 10%;
+            color: deeppink;">
+            
+        </a>
         <div class="float-right">
             <div class="btn-group">
                 <button type="button" class="btn btn-success">

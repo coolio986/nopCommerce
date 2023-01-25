@@ -7,7 +7,10 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR.Client;
 using Nop.Core;
+using Nop.Core.Configuration;
 using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Orders;
 using Nop.Core.Domain.Shipping;
@@ -68,6 +71,7 @@ namespace Nop.Web.Areas.Admin.Controllers
         private readonly IWorkContext _workContext;
         private readonly IWorkflowMessageService _workflowMessageService;
         private readonly OrderSettings _orderSettings;
+        private readonly IHubContext<SignalREventHub> _hubContext;
 
         #endregion
 
@@ -101,7 +105,8 @@ namespace Nop.Web.Areas.Admin.Controllers
             IShoppingCartService shoppingCartService,
             IWorkContext workContext,
             IWorkflowMessageService workflowMessageService,
-            OrderSettings orderSettings)
+            OrderSettings orderSettings,
+            IHubContext<SignalREventHub> hubContext)
         {
             _addressAttributeParser = addressAttributeParser;
             _addressService = addressService;
@@ -132,6 +137,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             _workContext = workContext;
             _workflowMessageService = workflowMessageService;
             _orderSettings = orderSettings;
+            _hubContext = hubContext;
         }
 
         #endregion
@@ -215,6 +221,11 @@ namespace Nop.Web.Areas.Admin.Controllers
                 PaymentStatusIds = paymentStatuses,
                 ShippingStatusIds = shippingStatuses
             });
+            //Task.Factory.StartNew(() =>
+            //{
+            //    System.Threading.Thread.Sleep(5000);
+            //    _hubContext.Clients.All.SendAsync("ReceiveEvent", new Order());
+            //});
 
             return View(model);
         }

@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.SignalR;
 using Nop.Core;
+using Nop.Core.Configuration;
 using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Common;
 using Nop.Core.Domain.Customers;
@@ -85,6 +87,7 @@ namespace Nop.Services.Orders
         private readonly RewardPointsSettings _rewardPointsSettings;
         private readonly ShippingSettings _shippingSettings;
         private readonly TaxSettings _taxSettings;
+        private readonly IHubContext<SignalREventHub> _hubContext;
 
         #endregion
 
@@ -133,7 +136,8 @@ namespace Nop.Services.Orders
             PaymentSettings paymentSettings,
             RewardPointsSettings rewardPointsSettings,
             ShippingSettings shippingSettings,
-            TaxSettings taxSettings)
+            TaxSettings taxSettings,
+            IHubContext<SignalREventHub> hubContext)
         {
             _currencySettings = currencySettings;
             _addressService = addressService;
@@ -179,6 +183,7 @@ namespace Nop.Services.Orders
             _rewardPointsSettings = rewardPointsSettings;
             _shippingSettings = shippingSettings;
             _taxSettings = taxSettings;
+            _hubContext = hubContext;
         }
 
         #endregion
@@ -1675,6 +1680,8 @@ namespace Nop.Services.Orders
                     //raise event       
                     await _eventPublisher.PublishAsync(new OrderPlacedEvent(order));
 
+                    await _hubContext.Clients.All.SendAsync("ReceiveEvent", order);
+
                     if (order.PaymentStatus == PaymentStatus.Paid)
                         await ProcessOrderPaidAsync(order);
                 }
@@ -2005,6 +2012,8 @@ namespace Nop.Services.Orders
 
                     //raise event       
                     await _eventPublisher.PublishAsync(new OrderPlacedEvent(order));
+
+                    await _hubContext.Clients.All.SendAsync("ReceiveEvent", order);
 
                     if (order.PaymentStatus == PaymentStatus.Paid)
                         await ProcessOrderPaidAsync(order);
