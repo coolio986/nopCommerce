@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace Nop.Services.ExportImport
@@ -14,6 +15,13 @@ namespace Nop.Services.ExportImport
         /// <param name="stream">Stream</param>
         /// <returns>A task that represents the asynchronous operation</returns>
         Task ImportProductsFromXlsxAsync(Stream stream);
+
+        /// <summary>
+        /// Import customers from XLSX file
+        /// </summary>
+        /// <param name="stream">Stream</param>
+        /// <returns>A task that represents the asynchronous operation</returns>
+        Task<List<ImportCustomerModel>> ImportCustomersFromXlsxAsync(Stream stream);
 
         /// <summary>
         /// Import newsletter subscribers from TXT file

@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.DependencyInjection;
 using Nop.Core;
 using Nop.Core.Domain.Catalog;
+using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Directory;
 using Nop.Core.Domain.Media;
 using Nop.Core.Domain.Messages;
@@ -42,6 +43,7 @@ namespace Nop.Services.ExportImport
         #region Fields
 
         private readonly CatalogSettings _catalogSettings;
+        private readonly CustomerSettings _customerSettings;
         private readonly ICategoryService _categoryService;
         private readonly ICountryService _countryService;
         private readonly ICustomerActivityService _customerActivityService;
@@ -78,6 +80,7 @@ namespace Nop.Services.ExportImport
         #region Ctor
 
         public ImportManager(CatalogSettings catalogSettings,
+            CustomerSettings customerSettings,
             ICategoryService categoryService,
             ICountryService countryService,
             ICustomerActivityService customerActivityService,
@@ -110,6 +113,7 @@ namespace Nop.Services.ExportImport
             VendorSettings vendorSettings)
         {
             _catalogSettings = catalogSettings;
+            _customerSettings = customerSettings;
             _categoryService = categoryService;
             _countryService = countryService;
             _customerActivityService = customerActivityService;
@@ -282,7 +286,7 @@ namespace Nop.Services.ExportImport
 
             var point = string.IsNullOrEmpty(extension) ? string.Empty : ".";
             var fileName = _fileProvider.FileExists(picturePath) ? $"{name}{point}{extension}" : string.Empty;
-            
+
             await _logger.ErrorAsync($"Insert picture failed (file name: {fileName})", ex);
         }
 
@@ -352,7 +356,7 @@ namespace Nop.Services.ExportImport
 
             var allProductPictureIds = productsImagesIds.SelectMany(p => p.Value);
 
-            var allPicturesHashes = allProductPictureIds.Any() ? await _dataProvider.GetFieldHashesAsync<PictureBinary>(p => allProductPictureIds.Contains(p.PictureId), 
+            var allPicturesHashes = allProductPictureIds.Any() ? await _dataProvider.GetFieldHashesAsync<PictureBinary>(p => allProductPictureIds.Contains(p.PictureId),
                 p => p.PictureId, p => p.BinaryData) : new Dictionary<int, string>();
 
             foreach (var product in productPictureMetadata)
@@ -384,8 +388,8 @@ namespace Nop.Services.ExportImport
 
                             pictureAlreadyExists = allPicturesHashes.Where(p => imagesIds.Contains(p.Key))
                                 .Select(p => p.Value)
-                                .Any(p => 
-                                    p.Equals(newImageHash, StringComparison.OrdinalIgnoreCase) || 
+                                .Any(p =>
+                                    p.Equals(newImageHash, StringComparison.OrdinalIgnoreCase) ||
                                     p.Equals(newValidatedImageHash, StringComparison.OrdinalIgnoreCase));
                         }
 
@@ -765,14 +769,15 @@ namespace Nop.Services.ExportImport
 
             var isNew = productSpecificationAttribute == null;
 
-            if (isNew) productSpecificationAttribute = new ProductSpecificationAttribute();
+            if (isNew)
+                productSpecificationAttribute = new ProductSpecificationAttribute();
 
             if (attributeTypeId != (int)SpecificationAttributeType.Option)
                 //we allow filtering only for "Option" attribute type
                 allowFiltering = false;
 
             //we don't allow CustomValue for "Option" attribute type
-            if (attributeTypeId == (int)SpecificationAttributeType.Option) 
+            if (attributeTypeId == (int)SpecificationAttributeType.Option)
                 customValue = null;
 
             productSpecificationAttribute.AttributeTypeId = attributeTypeId;
@@ -814,7 +819,7 @@ namespace Nop.Services.ExportImport
             {
                 var client = _httpClientFactory.CreateClient(NopHttpDefaults.DefaultHttpClient);
                 var fileData = await client.GetByteArrayAsync(urlString);
-                await using (var fs = new FileStream(filePath, FileMode.OpenOrCreate)) 
+                await using (var fs = new FileStream(filePath, FileMode.OpenOrCreate))
                     fs.Write(fileData, 0, fileData.Length);
 
                 downloadedFiles?.Add(filePath);
@@ -1672,7 +1677,7 @@ namespace Nop.Services.ExportImport
                                     p.Key.Key.Equals(categoryKey.Key, StringComparison.InvariantCultureIgnoreCase))
                                 .Value?.Id;
 
-                            if (!rez.HasValue && int.TryParse(categoryKey.Key, out var id)) 
+                            if (!rez.HasValue && int.TryParse(categoryKey.Key, out var id))
                                 rez = id;
 
                             if (!rez.HasValue)
@@ -1699,9 +1704,9 @@ namespace Nop.Services.ExportImport
 
                     //delete product categories
                     var deletedProductCategories = await categories.Where(categoryId => !importedCategories.Contains(categoryId))
-                        .SelectAwait(async categoryId => (await _categoryService.GetProductCategoriesByProductIdAsync(product.Id, true)).FirstOrDefault(pc => pc.CategoryId == categoryId)).Where(pc=>pc != null).ToListAsync();
+                        .SelectAwait(async categoryId => (await _categoryService.GetProductCategoriesByProductIdAsync(product.Id, true)).FirstOrDefault(pc => pc.CategoryId == categoryId)).Where(pc => pc != null).ToListAsync();
 
-                    foreach (var deletedProductCategory in deletedProductCategories) 
+                    foreach (var deletedProductCategory in deletedProductCategories)
                         await _categoryService.DeleteProductCategoryAsync(deletedProductCategory);
                 }
 
@@ -1732,7 +1737,7 @@ namespace Nop.Services.ExportImport
                     //delete product manufacturers
                     var deletedProductsManufacturers = await manufacturers.Where(manufacturerId => !importedManufacturers.Contains(manufacturerId))
                         .SelectAwait(async manufacturerId => (await _manufacturerService.GetProductManufacturersByProductIdAsync(product.Id)).First(pc => pc.ManufacturerId == manufacturerId)).ToListAsync();
-                    foreach (var deletedProductManufacturer in deletedProductsManufacturers) 
+                    foreach (var deletedProductManufacturer in deletedProductsManufacturers)
                         await _manufacturerService.DeleteProductManufacturerAsync(deletedProductManufacturer);
                 }
 
@@ -1807,6 +1812,182 @@ namespace Nop.Services.ExportImport
             //activity log
             await _customerActivityService.InsertActivityAsync("ImportProducts", string.Format(await _localizationService.GetResourceAsync("ActivityLog.ImportProducts"), metadata.CountProductsInFile));
         }
+
+        /// <summary>
+        /// Import customers from XLSX file
+        /// </summary>
+        /// <param name="stream">Stream</param>
+        /// <returns>A task that represents the asynchronous operation</returns>
+        public virtual async Task<List<ImportCustomerModel>> ImportCustomersFromXlsxAsync(Stream stream)
+        {
+            using var workbook = new XLWorkbook(stream);
+            // get the first worksheet in the workbook
+            var worksheet = workbook.Worksheets.FirstOrDefault();
+            if (worksheet == null)
+                throw new NopException("No worksheet found");
+
+            var properties = GetPropertiesByExcelCells<Customer>(worksheet);
+
+            var manager = new PropertyManager<Customer>(properties);
+
+            var endRow = 2;
+            int attributeIdCellNum = 1;
+
+            var customersInFile = new List<int>();
+
+            while (true)
+            {
+                var allColumnsAreEmpty = manager.GetProperties
+                    .Select(property => worksheet.Row(endRow).Cell(property.PropertyOrderPosition))
+                    .All(cell => string.IsNullOrEmpty(cell?.Value?.ToString()));
+
+                if (allColumnsAreEmpty)
+                    break;
+
+                if (new[] { 1, 2 }.Select(cellNum => worksheet.Row(endRow).Cell(cellNum))
+                        .All(cell => string.IsNullOrEmpty(cell?.Value?.ToString())) &&
+                    worksheet.Row(endRow).OutlineLevel == 0)
+                {
+                    var cellValue = worksheet.Row(endRow).Cell(attributeIdCellNum).Value;
+                }
+
+                if (worksheet.Row(endRow).OutlineLevel != 0)
+                {
+                    endRow++;
+                    continue;
+                }
+                
+                //counting the number of customers
+                customersInFile.Add(endRow);
+
+                endRow++;
+            }
+            List<ImportCustomerModel> importCustomerModelList = new List<ImportCustomerModel>();
+            ImportCustomerModel customer = null;
+            for (var iRow = 2; iRow < endRow; iRow++)
+            {
+                manager.ReadFromXlsx(worksheet, iRow);
+                customer = new ImportCustomerModel();
+                foreach (var property in manager.GetProperties)
+                {
+                    switch (property.PropertyName)
+                    {
+                        case "Email":
+                            customer.Email = property.StringValue;
+                            break;
+                        case "Username":
+                            customer.Username = property.StringValue;
+                            break;
+                        case "IsTaxExempt":
+                            customer.IsTaxExempt = property.BooleanValue;
+                            break;
+                        case "AffiliateId":
+                            customer.AffiliateId = property.IntValue;
+                            break;
+                        case "VendorId":
+                            customer.VendorId = property.IntValue;
+                            break;
+                        case "Active":
+                            customer.Active = property.BooleanValue;
+                            break;
+                        case "IsGuest":
+                            customer.IsGuest = property.BooleanValue;
+                            break;
+                        case "IsRegistered":
+                            customer.IsRegistered = property.BooleanValue;
+                            break;
+                        case "IsAdministrator":
+                            customer.IsAdministrator = property.BooleanValue;
+                            break;
+                        case "IsForumModerator":
+                            customer.IsForumModerator = property.BooleanValue;
+                            break;
+                        case "FirstName":
+                            customer.FirstName = property.StringValue;
+                            break;
+                        case "LastName":
+                            customer.LastName = property.StringValue;
+                            break;
+                        case "Gender":
+                            customer.Gender = property.StringValue;
+                            break;
+                        case "Company":
+                            customer.Company = property.StringValue;
+                            break;
+                        case "CountryId":
+                            {
+                                var country = await _countryService.GetCountryByTwoLetterIsoCodeAsync(property.StringValue);
+                                customer.CountryId = property.StringValue == string.Empty ? 0 : country.Id;
+                                break;
+                            }
+                        case "StreetAddress":
+                            customer.StreetAddress = property.StringValue;
+                            break;
+                        case "StreetAddress2":
+                            customer.StreetAddress2 = property.StringValue;
+                            break;
+                        case "ZipPostalCode":
+                            customer.ZipPostalCode = property.StringValue;
+                            break;
+                        case "City":
+                            customer.City = property.StringValue;
+                            break;
+                        case "County":
+                            customer.County = property.StringValue;
+                            break;
+                        case "Phone":
+                            customer.Phone = property.StringValue;
+                            break;
+                        case "Fax":
+                            customer.Fax = property.StringValue;
+                            break;
+                        case "VatNumber":
+                            customer.VatNumber = property.StringValue;
+                            break;
+                        case "VatNumberStatusId":
+                            customer.VatNumberStatusId = property.StringValue;
+                            break;
+                        case "TimeZoneId":
+                            customer.TimeZoneId = property.StringValue;
+                            break;
+                        case "Newsletter-in-store-1":
+                            customer.NewsletterInStore = property.BooleanValue;
+                            break;
+                        
+                    }
+                }
+
+                var props = manager.GetProperties;
+                string provinceId = props.FirstOrDefault(x => x.PropertyName == "StateProvinceId")?.StringValue;
+                //string countryId = props.FirstOrDefault(x => x.PropertyName == "CountryId")?.StringValue;
+                if (customer.CountryId > 0 && provinceId != null)
+                {
+                    var states = await _stateProvinceService.GetStateProvincesByCountryIdAsync(customer.CountryId, showHidden: true);
+                    
+                    var state = states.FirstOrDefault(x => x.Abbreviation.Equals(provinceId, StringComparison.InvariantCultureIgnoreCase));
+                    if(state == null)
+                        state = states.FirstOrDefault(x => x.Name.Contains(customer.City, StringComparison.InvariantCultureIgnoreCase));
+                    else
+                        customer.StateProvinceId = state.Id;
+                }
+
+                //case "StateProvinceId":
+                //                {
+                //    var states = await _stateProvinceService.GetStateProvincesByCountryIdAsync(country.Id, showHidden: true);
+                //    var state = states.FirstOrDefault(x => x.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase));
+                //    customer.StateProvinceId = property.StringValue;
+                //    break;
+                //}
+                importCustomerModelList.Add(customer);
+            }
+
+
+
+                //activity log
+                await _customerActivityService.InsertActivityAsync("ImportCustomers", string.Format(await _localizationService.GetResourceAsync("ActivityLog.ImportProducts"), importCustomerModelList.Count));
+
+            return importCustomerModelList;
+            }
 
         /// <summary>
         /// Import newsletter subscribers from TXT file

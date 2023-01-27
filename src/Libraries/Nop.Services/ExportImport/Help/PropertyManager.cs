@@ -46,6 +46,23 @@ namespace Nop.Services.ExportImport.Help
         }
 
         /// <summary>
+        /// Ctor
+        /// </summary>
+        /// <param name="properties">All access properties</param>
+        public PropertyManager(IEnumerable<PropertyByName<T>> properties)
+        {
+            _properties = new Dictionary<string, PropertyByName<T>>();
+
+            var poz = 1;
+            foreach (var propertyByName in properties.Where(p => !p.Ignore))
+            {
+                propertyByName.PropertyOrderPosition = poz;
+                poz++;
+                _properties.Add(propertyByName.PropertyName, propertyByName);
+            }
+        }
+
+        /// <summary>
         /// Export objects to XLSX
         /// </summary>
         /// <typeparam name="T">Type of object</typeparam>

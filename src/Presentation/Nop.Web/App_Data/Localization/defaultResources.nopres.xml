@@ -11346,6 +11346,9 @@
   <LocaleResource Name="Admin.Customers.Customers.Addresses.Updated">
     <Value>The address has been updated successfully.</Value>
   </LocaleResource>
+    <LocaleResource Name="Admin.Customers.Customers.Addresses.Imported">
+        <Value>The addresses have been imported successfully.</Value>
+    </LocaleResource>
   <LocaleResource Name="Admin.Customers.Customers.AdminAccountShouldExists.Deactivate">
     <Value>You can't deactivate the last administrator. At least one administrator account should exists.</Value>
   </LocaleResource>

@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using DocumentFormat.OpenXml.EMMA;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
@@ -15,6 +17,7 @@ using Nop.Core.Domain.Forums;
 using Nop.Core.Domain.Gdpr;
 using Nop.Core.Domain.Messages;
 using Nop.Core.Domain.Tax;
+using Nop.Core.Domain.Vendors;
 using Nop.Core.Events;
 using Nop.Services.Common;
 using Nop.Services.Customers;
@@ -31,6 +34,7 @@ using Nop.Services.Stores;
 using Nop.Services.Tax;
 using Nop.Web.Areas.Admin.Factories;
 using Nop.Web.Areas.Admin.Infrastructure.Mapper.Extensions;
+using Nop.Web.Areas.Admin.Models.Common;
 using Nop.Web.Areas.Admin.Models.Customers;
 using Nop.Web.Framework.Controllers;
 using Nop.Web.Framework.Mvc;
@@ -74,6 +78,7 @@ namespace Nop.Web.Areas.Admin.Controllers
         private readonly IWorkContext _workContext;
         private readonly IWorkflowMessageService _workflowMessageService;
         private readonly TaxSettings _taxSettings;
+        private readonly IImportManager _importManager;
 
         #endregion
 
@@ -110,7 +115,8 @@ namespace Nop.Web.Areas.Admin.Controllers
             ITaxService taxService,
             IWorkContext workContext,
             IWorkflowMessageService workflowMessageService,
-            TaxSettings taxSettings)
+            TaxSettings taxSettings,
+            IImportManager importManager)
         {
             _customerSettings = customerSettings;
             _dateTimeSettings = dateTimeSettings;
@@ -144,6 +150,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             _workContext = workContext;
             _workflowMessageService = workflowMessageService;
             _taxSettings = taxSettings;
+            _importManager = importManager;
         }
 
         #endregion
@@ -314,6 +321,30 @@ namespace Nop.Web.Areas.Admin.Controllers
         {
             if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageCustomers))
                 return AccessDeniedView();
+            try
+            {
+                Customer customer = await CreateCustomer(model, continueEditing, form);
+
+                if (!continueEditing)
+                    return RedirectToAction("List");
+
+                return RedirectToAction("Edit", new { id = customer.Id });
+            }
+            catch (Exception exc)
+            {
+                _notificationService.ErrorNotification(exc.Message);
+            }
+
+            //prepare model
+            model = await _customerModelFactory.PrepareCustomerModelAsync(model, null, true);
+
+            //if we got this far, something failed, redisplay form
+            return View(model);
+        }
+
+
+        private async Task<Customer> CreateCustomer(CustomerModel model, bool continueEditing, IFormCollection form, bool suppressNotifications = false)
+        {
 
             if (!string.IsNullOrWhiteSpace(model.Email) && await _customerService.GetCustomerByEmailAsync(model.Email) != null)
                 ModelState.AddModelError(string.Empty, "Email is already registered");
@@ -487,19 +518,13 @@ namespace Nop.Web.Areas.Admin.Controllers
                 //activity log
                 await _customerActivityService.InsertActivityAsync("AddNewCustomer",
                     string.Format(await _localizationService.GetResourceAsync("ActivityLog.AddNewCustomer"), customer.Id), customer);
-                _notificationService.SuccessNotification(await _localizationService.GetResourceAsync("Admin.Customers.Customers.Added"));
+                if(!suppressNotifications)
+                    _notificationService.SuccessNotification(await _localizationService.GetResourceAsync("Admin.Customers.Customers.Added"));
 
-                if (!continueEditing)
-                    return RedirectToAction("List");
-
-                return RedirectToAction("Edit", new { id = customer.Id });
+                return customer;
             }
 
-            //prepare model
-            model = await _customerModelFactory.PrepareCustomerModelAsync(model, null, true);
-
-            //if we got this far, something failed, redisplay form
-            return View(model);
+            return null;
         }
 
         public virtual async Task<IActionResult> Edit(int id)
@@ -1084,7 +1109,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                     throw new NopException(await _localizationService.GetResourceAsync("PrivateMessages.SubjectCannotBeEmpty"));
                 if (string.IsNullOrWhiteSpace(model.SendPm.Message))
                     throw new NopException(await _localizationService.GetResourceAsync("PrivateMessages.MessageCannotBeEmpty"));
-                
+
                 var store = await _storeContext.GetCurrentStoreAsync();
 
                 var privateMessage = new PrivateMessage
@@ -1198,7 +1223,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                 ?? throw new ArgumentException("No customer found with the specified id", nameof(customerId));
 
             //try to get an address with the specified id
-            var address = await _customerService.GetCustomerAddressAsync(customer.Id, id);            
+            var address = await _customerService.GetCustomerAddressAsync(customer.Id, id);
 
             if (address == null)
                 return Content("No address found with the specified id");
@@ -1238,6 +1263,35 @@ namespace Nop.Web.Areas.Admin.Controllers
             var customer = await _customerService.GetCustomerByIdAsync(model.CustomerId);
             if (customer == null)
                 return RedirectToAction("List");
+            try
+            {
+                Address address = await CreateCustomerAddress(model, form);
+
+                if (ModelState.IsValid)
+                {
+                    return RedirectToAction("AddressEdit", new { addressId = address.Id, customerId = model.CustomerId });
+                }
+
+            }
+            catch (Exception exc)
+            {
+                _notificationService.ErrorNotification(exc.Message);
+            }
+
+
+            //prepare model
+            model = await _customerModelFactory.PrepareCustomerAddressModelAsync(model, customer, null, true);
+
+            //if we got this far, something failed, redisplay form
+            return View(model);
+        }
+
+        private async Task<Address> CreateCustomerAddress(CustomerAddressModel model, IFormCollection form, bool suppressNotifications = false)
+        {
+            //try to get a customer with the specified id
+            var customer = await _customerService.GetCustomerByIdAsync(model.CustomerId);
+            if (customer == null)
+                return null;
 
             //custom address attributes
             var customAttributes = await _addressAttributeParser.ParseCustomAddressAttributesAsync(form);
@@ -1263,16 +1317,12 @@ namespace Nop.Web.Areas.Admin.Controllers
 
                 await _customerService.InsertCustomerAddressAsync(customer, address);
 
-                _notificationService.SuccessNotification(await _localizationService.GetResourceAsync("Admin.Customers.Customers.Addresses.Added"));
+                if(!suppressNotifications)
+                    _notificationService.SuccessNotification(await _localizationService.GetResourceAsync("Admin.Customers.Customers.Addresses.Added"));
 
-                return RedirectToAction("AddressEdit", new { addressId = address.Id, customerId = model.CustomerId });
             }
 
-            //prepare model
-            model = await _customerModelFactory.PrepareCustomerAddressModelAsync(model, customer, null, true);
-
-            //if we got this far, something failed, redisplay form
-            return View(model);
+            return null;
         }
 
         public virtual async Task<IActionResult> AddressEdit(int addressId, int customerId)
@@ -1726,6 +1776,176 @@ namespace Nop.Web.Areas.Admin.Controllers
                 await _notificationService.ErrorNotificationAsync(exc);
                 return RedirectToAction("List");
             }
+        }
+
+        [HttpPost]
+        public virtual async Task<IActionResult> ImportExcel(CustomerSearchModel model, IFormFile importexcelfile)
+        {
+            if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageProducts))
+                return AccessDeniedView();
+
+            //if (await _workContext.GetCurrentVendorAsync() != null && !_vendorSettings.AllowVendorsToImportProducts)
+            //    //a vendor can not import products
+            //    return AccessDeniedView();
+
+            var allCustomerRoles = await _customerService.GetAllCustomerRolesAsync(true);
+            var newCustomerRoles = new List<CustomerRole>();
+
+
+            try
+            {
+                if (importexcelfile != null && importexcelfile.Length > 0)
+                {
+                    List<ImportCustomerModel> importCustomerModelList = await _importManager.ImportCustomersFromXlsxAsync(importexcelfile.OpenReadStream());
+                    if (importCustomerModelList != null)
+                    {
+                        foreach (ImportCustomerModel importCustomer in importCustomerModelList)
+                        {
+                            RNGCryptoServiceProvider provider = new RNGCryptoServiceProvider();
+                            int passwordLength = 10;
+
+                            string capitalLetters = "QWERTYUIOPASDFGHJKLZXCVBNM";
+                            string smallLetters = "qwertyuiopasdfghjklzxcvbnm";
+                            string digits = "0123456789";
+                            string specialCharacters = "!@#$%^&*()-_=+<,>.";
+                            string allChar = capitalLetters + smallLetters + digits + specialCharacters;
+
+                            StringBuilder sb = new StringBuilder();
+                            for (int i = 0; i < passwordLength; i++)
+                            {
+                                sb = sb.Append(GenerateChar(allChar, provider));
+                            }
+
+                            CustomerModel customerModel = new CustomerModel();
+                            customerModel.Email = importCustomer.Email;
+                            customerModel.Username = importCustomer.Username;
+                            customerModel.Password = importCustomer.Password;
+                            customerModel.IsTaxExempt = importCustomer.IsTaxExempt;
+                            customerModel.AffiliateId = importCustomer.AffiliateId;
+                            customerModel.VendorId = importCustomer.VendorId;
+                            customerModel.Active = importCustomer.Active;
+                            customerModel.FirstName = importCustomer.FirstName;
+                            customerModel.LastName = importCustomer.LastName;
+                            customerModel.Gender = importCustomer.Gender;
+                            customerModel.Company = importCustomer.Company;
+
+
+
+                            customerModel.CountryId = importCustomer.CountryId;
+                            customerModel.StreetAddress = importCustomer.StreetAddress;
+                            customerModel.StreetAddress2 = importCustomer.StreetAddress2;
+                            customerModel.ZipPostalCode = importCustomer.ZipPostalCode;
+                            customerModel.City = importCustomer.City;
+                            customerModel.County = importCustomer.County;
+
+
+                            customerModel.StateProvinceId = importCustomer.StateProvinceId;
+                            customerModel.Phone = importCustomer.Phone;
+                            customerModel.Fax = importCustomer.Fax;
+                            customerModel.VatNumber = importCustomer.VatNumber;
+                            customerModel.TimeZoneId = importCustomer.TimeZoneId;
+                            customerModel.Password = sb.ToString();
+                            foreach (var customerRole in allCustomerRoles)
+                            {
+                                if (importCustomer.IsAdministrator)
+                                    newCustomerRoles.Add(allCustomerRoles.FirstOrDefault(x => x.SystemName == "Admistrators"));
+
+                                if (importCustomer.IsForumModerator)
+                                    newCustomerRoles.Add(allCustomerRoles.FirstOrDefault(x => x.SystemName == "ForumModerators"));
+
+                                if (importCustomer.IsRegistered)
+                                    newCustomerRoles.Add(allCustomerRoles.FirstOrDefault(x => x.SystemName == "Registered"));
+
+                                if (importCustomer.IsGuest)
+                                    newCustomerRoles.Add(allCustomerRoles.FirstOrDefault(x => x.SystemName == "Guests"));
+
+                            }
+                            customerModel.SelectedCustomerRoleIds = newCustomerRoles.Select(x => x.Id).ToList();
+
+                            
+
+                            if (!string.IsNullOrWhiteSpace(customerModel.Email) && await _customerService.GetCustomerByEmailAsync(customerModel.Email) != null)
+                                continue;
+
+                            if (!string.IsNullOrWhiteSpace(customerModel.Username) && _customerSettings.UsernamesEnabled &&
+                                await _customerService.GetCustomerByUsernameAsync(customerModel.Username) != null)
+                                continue;
+
+                            Customer customer = await this.CreateCustomer(customerModel, true, new FormCollection(new Dictionary<string, StringValues>()), true);
+
+                            if (customer != null && ModelState.IsValid)
+                            {
+                                CustomerAddressModel customerAddressModel = new CustomerAddressModel();
+
+                                customerAddressModel.CustomerId = customer.Id;
+                                customerAddressModel.Address = new Address()
+                                {
+                                    Address1 = importCustomer.StreetAddress,
+                                    Address2 = importCustomer.StreetAddress2,
+                                    City = importCustomer.City,
+                                    Company = importCustomer.Company,
+                                    CountryId = importCustomer.CountryId,
+                                    Email = importCustomer.Email,
+                                    CreatedOnUtc = DateTime.UtcNow,
+                                    FirstName = importCustomer.FirstName,
+                                    LastName = importCustomer.LastName,
+                                    PhoneNumber = importCustomer.Phone,
+                                    ZipPostalCode = importCustomer.ZipPostalCode,
+                                    StateProvinceId = importCustomer.StateProvinceId,
+                                    FaxNumber = importCustomer.Fax,
+
+
+                                }.ToModel<AddressModel>();
+
+
+                                Address address = await this.CreateCustomerAddress(customerAddressModel, new FormCollection(new Dictionary<string, StringValues>()), true);
+                                if (address != null && ModelState.IsValid)
+                                {
+                                    customer.BillingAddressId = address.Id;
+                                    customer.ShippingAddressId = address.Id;
+                                    await _customerService.UpdateCustomerAsync(customer);
+
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    _notificationService.ErrorNotification(await _localizationService.GetResourceAsync("Admin.Common.UploadFile"));
+
+                    return RedirectToAction("List");
+                }
+
+                if (ModelState.IsValid)
+                {
+                    _notificationService.SuccessNotification(await _localizationService.GetResourceAsync("Admin.Customers.Customers.Addresses.Imported"));
+                    return RedirectToAction("List");
+                }
+            }
+            catch (Exception exc)
+            {
+                await _notificationService.ErrorNotificationAsync(exc);
+            }
+
+            //prepare model
+            model = await _customerModelFactory.PrepareCustomerSearchModelAsync(model);
+
+            //if we got this far, something failed, redisplay form
+            return View(model);
+        }
+        private char GenerateChar(string availableChars, RNGCryptoServiceProvider provider)
+        {
+            var byteArray = new byte[1];
+            char c;
+            do
+            {
+                provider.GetBytes(byteArray);
+                c = (char)byteArray[0];
+
+            } while (!availableChars.Any(x => x == c));
+
+            return c;
         }
 
         #endregion
