@@ -6,6 +6,7 @@ using Nop.Core.Domain.Common;
 using Nop.Core.Domain.Customers;
 using Nop.Services.Common;
 using Nop.Services.Configuration;
+using Nop.Services.Customers;
 using Nop.Services.Localization;
 using Nop.Services.Messages;
 using Nop.Services.Security;
@@ -28,6 +29,7 @@ namespace Nop.Web.Areas.Admin.Controllers
         private readonly ISettingService _settingService;
         private readonly IGenericAttributeService _genericAttributeService;
         private readonly IWorkContext _workContext;
+        private readonly ILiveCustomerActivityService _liveCustomerActivityService;
 
         #endregion
 
@@ -41,7 +43,8 @@ namespace Nop.Web.Areas.Admin.Controllers
             IPermissionService permissionService,
             ISettingService settingService,
             IGenericAttributeService genericAttributeService,
-            IWorkContext workContext)
+            IWorkContext workContext,
+            ILiveCustomerActivityService liveCustomerActivityService)
         {
             _adminAreaSettings = adminAreaSettings;
             _commonModelFactory = commonModelFactory;
@@ -52,6 +55,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             _settingService = settingService;
             _workContext = workContext;
             _genericAttributeService = genericAttributeService;
+            _liveCustomerActivityService = liveCustomerActivityService;
         }
 
         #endregion
@@ -101,6 +105,13 @@ namespace Nop.Web.Areas.Admin.Controllers
             await _settingService.SaveSettingAsync(_adminAreaSettings);
 
             return Content("Setting changed");
+        }
+
+        [HttpGet]
+        public virtual async Task<IActionResult> UpdateVisitorCounter()
+        {
+            await _liveCustomerActivityService.UpdateVisitorCounter();
+            return Json(new { });
         }
 
         #endregion

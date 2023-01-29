@@ -218,7 +218,7 @@ namespace Nop.Web.Framework.Infrastructure
             services.AddScoped<ISettingService, SettingService>();
             services.AddScoped<IBBCodeHelper, BBCodeHelper>();
             services.AddScoped<IHtmlFormatter, HtmlFormatter>();
-
+            
             //plugin managers
             services.AddScoped(typeof(IPluginManager<>), typeof(PluginManager<>));
             services.AddScoped<IAuthenticationPluginManager, AuthenticationPluginManager>();
@@ -277,6 +277,7 @@ namespace Nop.Web.Framework.Infrastructure
             //schedule tasks
             services.AddSingleton<ITaskScheduler, TaskScheduler>();
             services.AddTransient<IScheduleTaskRunner, ScheduleTaskRunner>();
+            services.AddSingleton<ILiveCustomerActivityService, LiveCustomerActivityService>();
 
             //event consumers
             var consumers = typeFinder.FindClassesOfType(typeof(IConsumer<>)).ToList();
