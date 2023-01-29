@@ -518,7 +518,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                 //activity log
                 await _customerActivityService.InsertActivityAsync("AddNewCustomer",
                     string.Format(await _localizationService.GetResourceAsync("ActivityLog.AddNewCustomer"), customer.Id), customer);
-                if(!suppressNotifications)
+                if (!suppressNotifications)
                     _notificationService.SuccessNotification(await _localizationService.GetResourceAsync("Admin.Customers.Customers.Added"));
 
                 return customer;
@@ -1317,7 +1317,7 @@ namespace Nop.Web.Areas.Admin.Controllers
 
                 await _customerService.InsertCustomerAddressAsync(customer, address);
 
-                if(!suppressNotifications)
+                if (!suppressNotifications)
                     _notificationService.SuccessNotification(await _localizationService.GetResourceAsync("Admin.Customers.Customers.Addresses.Added"));
 
             }
@@ -1862,7 +1862,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                             }
                             customerModel.SelectedCustomerRoleIds = newCustomerRoles.Select(x => x.Id).ToList();
 
-                            
+
 
                             if (!string.IsNullOrWhiteSpace(customerModel.Email) && await _customerService.GetCustomerByEmailAsync(customerModel.Email) != null)
                                 continue;
@@ -1905,6 +1905,29 @@ namespace Nop.Web.Areas.Admin.Controllers
                                     customer.ShippingAddressId = address.Id;
                                     await _customerService.UpdateCustomerAsync(customer);
 
+                                }
+
+                                //newsletter subscriptions
+                                if (!string.IsNullOrEmpty(customer.Email))
+                                {
+                                    var allStores = await _storeService.GetAllStoresAsync();
+                                    foreach (var store in allStores)
+                                    {
+                                        var newsletterSubscription = await _newsLetterSubscriptionService
+                                            .GetNewsLetterSubscriptionByEmailAndStoreIdAsync(customer.Email, store.Id);
+
+                                        if (customerModel.SelectedNewsletterSubscriptionStoreIds.Count == 0 && importCustomer.NewsletterInStore && newsletterSubscription == null)
+                                        {
+                                            await _newsLetterSubscriptionService.InsertNewsLetterSubscriptionAsync(new NewsLetterSubscription
+                                            {
+                                                NewsLetterSubscriptionGuid = Guid.NewGuid(),
+                                                Email = customer.Email,
+                                                Active = true,
+                                                StoreId = store.Id,
+                                                CreatedOnUtc = DateTime.UtcNow
+                                            });
+                                        }
+                                    }
                                 }
                             }
                         }
