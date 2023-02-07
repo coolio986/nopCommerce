@@ -108,9 +108,9 @@ namespace Nop.Web.Areas.Admin.Controllers
         }
 
         [HttpGet]
-        public virtual async Task<IActionResult> UpdateVisitorCounter()
+        public virtual async Task<IActionResult> KickStartLiveUpdates()
         {
-            await _liveCustomerActivityService.UpdateVisitorCounter();
+            await _liveCustomerActivityService.KickStartLiveUpdates();
             return Json(new { });
         }
 

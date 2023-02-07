@@ -221,11 +221,6 @@ namespace Nop.Web.Areas.Admin.Controllers
                 PaymentStatusIds = paymentStatuses,
                 ShippingStatusIds = shippingStatuses
             });
-            //Task.Factory.StartNew(() =>
-            //{
-            //    System.Threading.Thread.Sleep(5000);
-            //    _hubContext.Clients.All.SendAsync("ReceiveEvent", new Order());
-            //});
 
             return View(model);
         }

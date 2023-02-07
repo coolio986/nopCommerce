@@ -2672,3 +2672,33 @@ div.dataTables_wrapper div.dataTables_paginate {
     transform: scale(0.8);
   }
 }
+
+@media(max-width: 767.98px) {
+  .small-box-div {
+    white-space: nowrap;
+  }
+    .small-box-div div {
+    font-size: 12px;
+    text-align: center;
+  }
+  .small-box-p {
+    font-size: 12px;
+    text-align: center;
+    display: inline-block;
+  }
+}
+
+.small-box-div {
+  white-space: nowrap;
+}
+
+  .small-box-div div {
+    padding-right: 3px;
+    padding-left: 3px;
+    display: inline-block;
+    z-index: 5;
+  }
+
+  .small-box-div p {
+    display: inline-block;
+  }

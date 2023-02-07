@@ -8,6 +8,6 @@ namespace Nop.Services.Customers
 {
     public interface ILiveCustomerActivityService
     {
-        public Task UpdateVisitorCounter();
+        public Task KickStartLiveUpdates();
     }
 }

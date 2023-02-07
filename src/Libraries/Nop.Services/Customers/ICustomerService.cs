@@ -63,6 +63,20 @@ namespace Nop.Services.Customers
             int[] customerRoleIds, int pageIndex = 0, int pageSize = int.MaxValue);
 
         /// <summary>
+        /// Gets total number of sessions for a given period
+        /// </summary>
+        /// <param name="lastActivityFromUtc">Customer last activity date (from)</param>
+        /// <param name="pageIndex">Page index</param>
+        /// <param name="pageSize">Page size</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the customers
+        /// </returns>
+        Task<IPagedList<Customer>> GetTotalSessionsAsync(DateTime startActivityFromUtc, DateTime endActivityFromUtc,
+            int pageIndex = 0, int pageSize = int.MaxValue);
+
+
+        /// <summary>
         /// Gets customers with shopping carts
         /// </summary>
         /// <param name="shoppingCartType">Shopping cart type; pass null to load all records</param>

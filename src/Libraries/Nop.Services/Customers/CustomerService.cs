@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using Nop.Core;
 using Nop.Core.Caching;
+using Nop.Core.Configuration;
 using Nop.Core.Domain.Blogs;
 using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Common;
@@ -19,6 +20,7 @@ using Nop.Core.Domain.Tax;
 using Nop.Core.Infrastructure;
 using Nop.Data;
 using Nop.Services.Common;
+using Nop.Services.Configuration;
 using Nop.Services.Localization;
 
 namespace Nop.Services.Customers
@@ -52,6 +54,7 @@ namespace Nop.Services.Customers
         private readonly IStaticCacheManager _staticCacheManager;
         private readonly IStoreContext _storeContext;
         private readonly ShoppingCartSettings _shoppingCartSettings;
+        private readonly ISettingService _settingService;
 
         #endregion
 
@@ -78,7 +81,8 @@ namespace Nop.Services.Customers
             IRepository<ShoppingCartItem> shoppingCartRepository,
             IStaticCacheManager staticCacheManager,
             IStoreContext storeContext,
-            ShoppingCartSettings shoppingCartSettings)
+            ShoppingCartSettings shoppingCartSettings,
+            ISettingService settingService)
         {
             _customerSettings = customerSettings;
             _genericAttributeService = genericAttributeService;
@@ -102,6 +106,7 @@ namespace Nop.Services.Customers
             _staticCacheManager = staticCacheManager;
             _storeContext = storeContext;
             _shoppingCartSettings = shoppingCartSettings;
+            _settingService = settingService;
         }
 
         #endregion
@@ -310,6 +315,100 @@ namespace Nop.Services.Customers
 
             query = query.OrderByDescending(c => c.LastActivityDateUtc);
             var customers = await query.ToPagedListAsync(pageIndex, pageSize);
+
+            return customers;
+        }
+
+        /// <summary>
+        /// Gets total number of sessions for a given period
+        /// </summary>
+        /// <param name="lastActivityFromUtc">Customer last activity date (from)</param>
+        /// <param name="pageIndex">Page index</param>
+        /// <param name="pageSize">Page size</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the customers
+        /// </returns>
+        /// 
+        
+        public virtual async Task<IPagedList<Customer>> GetTotalSessionsAsync(DateTime startActivityFromUtc, DateTime endActivityFromUtc,
+            int pageIndex = 0, int pageSize = int.MaxValue)
+        {
+            var ipblockList = await _settingService.GetSettingByKeyAsync<string>("TotalSession.IpMaskList");
+            string[] detokenizedList = ipblockList?.Split(',');
+
+            
+            //TotalSession setting = new TotalSession
+            //{
+            //    IpMaskList = "192.88.134.x," +
+            //    "192.88.135.x," +
+            //    "185.93.228.x," +
+            //    "185.93.229.x," +
+            //    "185.93.230.x," +
+            //    "185.93.231.x," +
+            //    "66.248.200.x," +
+            //    "66.248.201.x," +
+            //    "66.248.202.x," +
+            
+            //    "66.248.203.x," +
+            //    "208.109.0.x," +
+            //    "208.109.1.x," +
+            //    "208.109.2.x," +
+            //    "208.109.3.x,",
+            //};
+            //await _settingService.SaveSettingAsync(setting);
+
+            var query = _customerRepository.Table;
+            query = query.Where(c => endActivityFromUtc <= c.LastActivityDateUtc);
+            query = query.Where(c => startActivityFromUtc >= c.LastActivityDateUtc);
+            query = query.Where(c => !c.Deleted);
+            
+
+            query = query.OrderByDescending(c => c.LastActivityDateUtc);
+            var customers = await query.ToPagedListAsync(pageIndex, pageSize);
+
+
+            foreach(var customer in customers.ToList())
+            {
+                if (customer.LastIpAddress == null)
+                {
+                    customers.Remove(customer);
+                    continue;
+                }
+
+                if (detokenizedList != null && detokenizedList.Length > 0)
+                {
+                    for (int i = 0; i < detokenizedList.Length; i++)
+                    {
+                        if (!string.IsNullOrEmpty(detokenizedList[i]))
+                        {
+                            int ipAddresRadix = 4 - detokenizedList[i].Count(y => y == 'x');
+                            if (ipAddresRadix < 0)
+                                break;
+
+                            string ipToMatch = string.Empty;
+
+                            int lastPosition = 0;
+                            for(int j = 0; j < detokenizedList[i].Length; j++)
+                            {
+                                if (detokenizedList[i][j] == '.')
+                                    ipAddresRadix--;
+                                
+                                if (ipAddresRadix <= 0)
+                                    break;
+                                
+                                lastPosition++;
+
+                            }
+                            string ipScheme = detokenizedList[i].Substring(0, lastPosition);
+
+                            if (!string.IsNullOrEmpty(ipScheme) && customer.LastIpAddress.Contains(ipScheme))
+                                customers.Remove(customer);
+
+                        }
+                    }
+                }
+            }
 
             return customers;
         }
@@ -1709,5 +1808,9 @@ namespace Nop.Services.Customers
         #endregion
 
         #endregion
+    }
+    public class TotalSession : ISettings
+    {
+        public string IpMaskList { get; set; }
     }
 }
