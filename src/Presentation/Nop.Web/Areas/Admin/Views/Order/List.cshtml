@@ -99,6 +99,11 @@
                 </button>
                 <ul class="dropdown-menu" role="menu">
                     <li class="dropdown-item">
+                        <button type="button" id="pdf-packingslip-selected">
+                            @T("Admin.Orders.Shipments.PrintPackagingSlips.Selected")
+                        </button>
+                    </li>
+                    <li class="dropdown-item">
                         <button asp-action="PdfInvoice" type="submit" name="pdf-invoice-all">
                             @T("Admin.Orders.PdfInvoices.All")
                         </button>
@@ -108,6 +113,7 @@
                             @T("Admin.Orders.PdfInvoices.Selected")
                         </button>
                     </li>
+                    
                 </ul>
             </div>
             @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.OrderListButtons, additionalData = Model })
@@ -553,6 +559,10 @@
     <input type="hidden" id="selectedIds" name="selectedIds" value="" />
 </form>
 
+<form asp-controller="Order" asp-action="PdfPackagingSlipOrderSelected" method="post" id="pdf-packlist-selected-form">
+    <input type="hidden" id="selectedIds" name="selectedIds" value="" />
+</form>
+
 <script>
     $(document).ready(function () {
         $('#pdf-invoice-selected').click(function (e) {
@@ -569,6 +579,21 @@
             }
             return false;
         });
+        $('#pdf-packingslip-selected').click(function (e) {
+            e.preventDefault();
+            var ids = selectedIds.join(",");
+            if (!ids) {
+                $('#pdfInvoiceSelected-info').text("@T("Admin.Orders.NoOrders")");
+                $("#pdfPackingSlipSelected").click();
+            }
+            else {
+                $('#pdf-packlist-selected-form #selectedIds').val(ids);
+                $('#pdf-packlist-selected-form').submit();
+                updateTable('#orders-grid');
+            }
+            return false;
+        });
     });
 </script>
 <nop-alert asp-alert-id="pdfInvoiceSelected" />
+<nop-alert asp-alert-id="pdfPackingSlipSelected" />

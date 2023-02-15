@@ -1057,7 +1057,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                 return RedirectToAction("List");
             }
         }
-
+        
         //currently we use this method on the add product to order details pages
         [HttpPost]
         public virtual async Task<IActionResult> ProductDetails_AttributeChange(int productId, bool validateAttributeConditions, IFormCollection form)
@@ -2523,6 +2523,7 @@ namespace Nop.Web.Areas.Admin.Controllers
         [HttpPost]
         public virtual async Task<IActionResult> PdfPackagingSlipSelected(string selectedIds)
         {
+
             if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
                 return AccessDeniedView();
 
@@ -2541,12 +2542,54 @@ namespace Nop.Web.Areas.Admin.Controllers
                 shipments = await shipments.WhereAwait(HasAccessToShipmentAsync).ToListAsync();
             }
 
+
+            return await PreparePackingSlipSelected(selectedIds, shipments);
+        }
+
+        [HttpPost]
+        public virtual async Task<IActionResult> PdfPackagingSlipOrderSelected(string selectedIds)
+        {
+            if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
+                return AccessDeniedView();
+
+            var orders = new List<Order>();
+            if (selectedIds != null)
+            {
+                var ids = selectedIds
+                    .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(x => Convert.ToInt32(x))
+                    .ToArray();
+                orders.AddRange(await _orderService.GetOrdersByIdsAsync(ids));
+            }
+
+            //a vendor should have access only to his products
+            var currentVendor = await _workContext.GetCurrentVendorAsync();
+            var vendorId = 0;
+            if (currentVendor != null)
+            {
+                orders = await orders.WhereAwait(HasAccessToOrderAsync).ToListAsync();
+                vendorId = currentVendor.Id;
+            }
+
+
+            return await PreparePackingSlipSelected(selectedIds, orders, vendorId);
+        }
+
+        private async Task<IActionResult> PreparePackingSlipSelected(string selectedIds, IEnumerable<BaseEntity> orderOrShipment, int vendorId = 0)
+        {
+            List<Shipment> shipment = orderOrShipment as List<Shipment>;
+            List<Order> order = orderOrShipment as List<Order>;
+
+
             try
             {
                 byte[] bytes;
                 await using (var stream = new MemoryStream())
                 {
-                    await _pdfService.PrintPackagingSlipsToPdfAsync(stream, shipments, _orderSettings.GeneratePdfInvoiceInCustomerLanguage ? 0 : (await _workContext.GetWorkingLanguageAsync()).Id);
+                    if(shipment != null)
+                        await _pdfService.PrintPackagingSlipsToPdfAsync(stream, shipment, _orderSettings.GeneratePdfInvoiceInCustomerLanguage ? 0 : (await _workContext.GetWorkingLanguageAsync()).Id);
+                    else if(order != null)
+                        await _pdfService.PrintPackagingSlipsToPdfAsync(stream, order, _orderSettings.GeneratePdfInvoiceInCustomerLanguage ? 0 : (await _workContext.GetWorkingLanguageAsync()).Id, vendorId);
                     bytes = stream.ToArray();
                 }
 
