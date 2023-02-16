@@ -2598,7 +2598,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             catch (Exception exc)
             {
                 await _notificationService.ErrorNotificationAsync(exc);
-                return RedirectToAction("ShipmentList");
+                return RedirectToAction(shipment != null ? "ShipmentList" : "OrderList");
             }
         }
 
