@@ -259,6 +259,9 @@ namespace Nop.Services.Security
         /// </returns>
         public virtual async Task<bool> AuthorizeAsync(PermissionRecord permission)
         {
+            if (permission == StandardPermissionProvider.AccessAdminPanel)
+                return false;
+
             return await AuthorizeAsync(permission, await _workContext.GetCurrentCustomerAsync());
         }
 
@@ -277,6 +280,9 @@ namespace Nop.Services.Security
                 return false;
 
             if (customer == null)
+                return false;
+
+            if (permission == StandardPermissionProvider.AccessAdminPanel)
                 return false;
 
             return await AuthorizeAsync(permission.SystemName, customer);
