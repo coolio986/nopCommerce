@@ -295,7 +295,7 @@ namespace Nop.Services.Common
             const float margin = 43;
 
             //if you have really a lot of lines in the footer, then replace 9 with 10 or 11
-            var footerHeight = totalLines * font.Size + 30;
+            var footerHeight = totalLines * font.Size + 20;
             var directContent = pdfWriter.DirectContent;
             directContent.MoveTo(pageSize.GetLeft(margin), pageSize.GetBottom(margin) + footerHeight);
             directContent.LineTo(pageSize.GetRight(margin), pageSize.GetBottom(margin) + footerHeight);
@@ -308,6 +308,12 @@ namespace Nop.Services.Common
             };
             footerTable.SetTotalWidth(new float[] { 250, 250 });
 
+            var osVerison = Environment.OSVersion;
+
+            string newLineChar = "\n";
+            //if (osVerison.Platform >= PlatformID.Unix)
+            //    newLineChar = "\r" + newLineChar;
+
             //column 1
             if (column1Lines.Any())
             {
@@ -319,7 +325,7 @@ namespace Nop.Services.Common
 
                 foreach (var footerLine in column1Lines)
                 {
-                    column1.Phrase.Add(new Phrase(footerLine + "\r\n", font));
+                    column1.Phrase.Add(new Phrase(footerLine + newLineChar, font));
                     //column1.Phrase.Add(new Phrase(Environment.NewLine));
                 }
 
@@ -342,7 +348,7 @@ namespace Nop.Services.Common
 
                 foreach (var footerLine in column2Lines)
                 {
-                    column2.Phrase.Add(new Phrase(footerLine + "\r\n", font));
+                    column2.Phrase.Add(new Phrase(footerLine + newLineChar, font));
                     //column2.Phrase.Add(new Phrase(Environment.NewLine));
                 }
 
@@ -924,11 +930,9 @@ namespace Nop.Services.Common
                             lang.Id, false);
                     }
                     cellProductItem = GetPdfCell(subTotal, font);
+                    cellProductItem.HorizontalAlignment = Element.ALIGN_LEFT;
+                    productsTable.AddCell(cellProductItem);
                 }
-
-                
-                cellProductItem.HorizontalAlignment = Element.ALIGN_LEFT;
-                productsTable.AddCell(cellProductItem);
             }
 
             doc.Add(productsTable);
@@ -1199,7 +1203,7 @@ namespace Nop.Services.Common
             {
                 RunDirection = GetDirection(lang)
             };
-            //headerTable.DefaultCell.Border = Rectangle.NO_BORDER;
+            headerTable.DefaultCell.Border = Rectangle.NO_BORDER;
 
             //store info
             var store = await _storeService.GetStoreByIdAsync(order.StoreId) ?? await _storeContext.GetCurrentStoreAsync();
@@ -1221,8 +1225,6 @@ namespace Nop.Services.Common
 
             cellHeader.Border = Rectangle.NO_BORDER;
 
-
-
             if (logoExists)
                 headerTable.SetWidths(lang.Rtl ? new[] { 0.65f, 0.35f } : new[] { 0.35f, 0.65f });
             headerTable.WidthPercentage = 100f;
@@ -1235,37 +1237,24 @@ namespace Nop.Services.Common
                 //logo.Border = Rectangle.BOX;
                 //logo.BorderColor = BaseColor.Red;
                 //logo.BorderWidth = 1f;
-                logo.Alignment = Element.ALIGN_LEFT | Element.ALIGN_TOP;
-                logo.SetAbsolutePosition(0f, 0f);
+                logo.Alignment = Element.ALIGN_LEFT;
+                //logo.SetAbsolutePosition(0f, 0f);
                 logo.ScaleToFit(125f, 125f);
 
 
                 //var cellLogo = new PdfPCell { Border = Rectangle.BOX, BorderColor = BaseColor.Blue, BorderWidth = 1f,  };
                 var cellLogo = new PdfPCell { Border = Rectangle.NO_BORDER };
                 //cellLogo.FixedHeight = 60f;
-                cellLogo.HorizontalAlignment = Element.ALIGN_LEFT;
+                //cellLogo.HorizontalAlignment = Element.ALIGN_LEFT;
                 cellLogo.AddElement(logo);
 
                 headerTable.AddCell(cellLogo);
             }
 
             headerTable.AddCell(cellHeader);
-            headerTable.SpacingAfter = 8f;
-
+            //headerTable.SpacingAfter = 8f;
+            
             doc.Add(headerTable);
-
-            Chunk linebreak = new Chunk(new LineSeparator(0f, 100f, BaseColor.Black, Element.ALIGN_CENTER, -1));
-
-            doc.Add(linebreak);
-
-            var spacer = new PdfPTable(logoExists ? 2 : 1)
-            {
-                RunDirection = GetDirection(lang),
-                SpacingAfter = 8f,
-                WidthPercentage = 100f,
-            };
-
-            doc.Add(spacer);
         }
 
         #endregion
@@ -1613,6 +1602,13 @@ namespace Nop.Services.Common
             var ordCount = orders.Count;
             var ordNum = 0;
 
+            //line seperator
+            Paragraph lineSeparator = new Paragraph(new Chunk(new LineSeparator(0.0F, 100.0F, BaseColor.Black, Element.ALIGN_LEFT, -1)));
+            lineSeparator.SetLeading(0.5F, 0.5F);
+            Paragraph gap = new Paragraph(" ");
+            // Set gap between text paragraphs.
+            gap.SetLeading(0.7F, 0.7F);
+
             foreach (var order in orders)
             {
                 //by default _pdfSettings contains settings for the current active store
@@ -1626,6 +1622,11 @@ namespace Nop.Services.Common
 
                 //header
                 await PrintHeaderAsync(pdfSettingsByStore, lang, order, font, titleFont, doc);
+
+                //line seperator
+                doc.Add(gap);
+                doc.Add(lineSeparator);
+                doc.Add(gap);
 
                 //addresses
                 await PrintAddressesAsync(vendorId, lang, titleFont, order, font, doc);
