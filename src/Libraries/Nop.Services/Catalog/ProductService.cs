@@ -149,12 +149,13 @@ namespace Nop.Services.Catalog
         /// <param name="product">Product</param>
         /// <param name="totalStock">Total stock</param>
         /// <returns>A task that represents the asynchronous operation</returns>
-        protected virtual async Task ApplyLowStockActivityAsync(Product product, int totalStock)
+        public virtual async Task ApplyLowStockActivityAsync(Product product, int totalStock, bool forceUpdate = false)
         {
             var isMinimumStockReached = totalStock <= product.MinStockQuantity;
 
-            if (!isMinimumStockReached && !_catalogSettings.PublishBackProductWhenCancellingOrders)
-                return;
+            if(!forceUpdate)
+                if (!isMinimumStockReached && !_catalogSettings.PublishBackProductWhenCancellingOrders)
+                    return;
             
             switch (product.LowStockActivity)
             {
@@ -557,6 +558,11 @@ namespace Nop.Services.Catalog
         public virtual async Task<Product> GetProductByIdAsync(int productId)
         {
             return await _productRepository.GetByIdAsync(productId, cache => default);
+        }
+
+        public virtual async Task<Product> GetProductByIdWithoutCacheAsync(int productId)
+        {
+            return await _productRepository.GetByIdAsync(productId, null);
         }
 
         /// <summary>

@@ -521,6 +521,8 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             var formData = Request.Form.ToDictionary(x => x.Key, x => x.Value.ToString());
 
+            
+
             foreach (var warehouse in warehouses)
             {
                 //parse stock quantity
@@ -601,6 +603,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                     await _productService.AddStockQuantityHistoryEntryAsync(product, existingPwI.StockQuantity, existingPwI.StockQuantity,
                         existingPwI.WarehouseId, message);
                 }
+
             }
         }
 
@@ -961,7 +964,9 @@ namespace Nop.Web.Areas.Admin.Controllers
                 product = model.ToEntity(product);
 
                 product.UpdatedOnUtc = DateTime.UtcNow;
-                await _productService.UpdateProductAsync(product);
+                await _productService.ApplyLowStockActivityAsync(product, product.StockQuantity, true);
+
+                //await _productService.UpdateProductAsync(product);
 
                 //remove associated products
                 if (previousProductType == ProductType.GroupedProduct && product.ProductType == ProductType.SimpleProduct)
