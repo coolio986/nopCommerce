@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Nop.Core;
 using Nop.Core.Caching;
-using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Discounts;
 using Nop.Core.Domain.Orders;
@@ -543,8 +542,6 @@ namespace Nop.Services.Discounts
                     return result;
                 }
             }
-
-            
 
             //check date range
             var now = DateTime.UtcNow;
