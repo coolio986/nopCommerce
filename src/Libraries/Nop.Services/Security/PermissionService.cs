@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Nop.Core;
 using Nop.Core.Caching;
+using Nop.Core.Configuration;
 using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Security;
 using Nop.Data;
@@ -25,6 +26,7 @@ namespace Nop.Services.Security
         private readonly IRepository<PermissionRecordCustomerRoleMapping> _permissionRecordCustomerRoleMappingRepository;
         private readonly IStaticCacheManager _staticCacheManager;
         private readonly IWorkContext _workContext;
+        protected readonly AppSettings _appSettings;
 
         #endregion
 
@@ -35,7 +37,8 @@ namespace Nop.Services.Security
             IRepository<PermissionRecord> permissionRecordRepository,
             IRepository<PermissionRecordCustomerRoleMapping> permissionRecordCustomerRoleMappingRepository,
             IStaticCacheManager staticCacheManager,
-            IWorkContext workContext)
+            IWorkContext workContext,
+            AppSettings appSettings)
         {
             _customerService = customerService;
             _localizationService = localizationService;
@@ -43,6 +46,7 @@ namespace Nop.Services.Security
             _permissionRecordCustomerRoleMappingRepository = permissionRecordCustomerRoleMappingRepository;
             _staticCacheManager = staticCacheManager;
             _workContext = workContext;
+            _appSettings = appSettings;
         }
 
         #endregion
@@ -259,7 +263,9 @@ namespace Nop.Services.Security
         /// </returns>
         public virtual async Task<bool> AuthorizeAsync(PermissionRecord permission)
         {
-            if (permission == StandardPermissionProvider.AccessAdminPanel)
+            bool allowAdminAccess = _appSettings.Get<CommonConfig>().AllowAdministratorLoginAccess;
+
+            if (permission == StandardPermissionProvider.AccessAdminPanel && !allowAdminAccess)
                 return false;
 
             return await AuthorizeAsync(permission, await _workContext.GetCurrentCustomerAsync());
@@ -282,7 +288,10 @@ namespace Nop.Services.Security
             if (customer == null)
                 return false;
 
-            if (permission == StandardPermissionProvider.AccessAdminPanel)
+            bool allowAdminAccess = _appSettings.Get<CommonConfig>().AllowAdministratorLoginAccess;
+
+
+            if (permission == StandardPermissionProvider.AccessAdminPanel && !allowAdminAccess)
                 return false;
 
             return await AuthorizeAsync(permission.SystemName, customer);
