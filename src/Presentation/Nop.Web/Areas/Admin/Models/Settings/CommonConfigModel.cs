@@ -42,6 +42,9 @@ namespace Nop.Web.Areas.Admin.Models.Settings
         [NopResourceDisplayName("Admin.Configuration.AppSettings.Common.ServeUnknownFileTypes")]
         public bool ServeUnknownFileTypes { get; set; }
 
+        [NopResourceDisplayName("Admin.Configuration.AppSettings.Common.AllowAdministratorLoginAccess")]
+        public bool AllowAdministratorLoginAccess { get; set; }
+
         #endregion
     }
 }

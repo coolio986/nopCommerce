@@ -91,4 +91,13 @@
             <span asp-validation-for="CommonConfigModel.PluginStaticFileExtensionsBlacklist"></span>
         </div>
     </div>
+    <div class="form-group row">
+        <div class="col-md-3">
+            <nop-label asp-for="CommonConfigModel.AllowAdministratorLoginAccess" />
+        </div>
+        <div class="col-md-9">
+            <nop-editor asp-for="CommonConfigModel.AllowAdministratorLoginAccess" />
+            <span asp-validation-for="CommonConfigModel.AllowAdministratorLoginAccess"></span>
+        </div>
+    </div>
 </div>
