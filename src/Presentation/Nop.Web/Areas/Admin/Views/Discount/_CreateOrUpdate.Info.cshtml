@@ -22,24 +22,28 @@
             $('[data-card-name=discount-applied-to-manufacturers]').hideElement();
             $('[data-card-name=discount-applied-to-products]').hideElement();
             $('#pnlMaximumDiscountedQuantity').showElement();
+            $('#pnlMinimumDiscountedQuantity').showElement();
             $('#pnlAppliedToSubCategories').showElement();
     } else if (selectedDiscountTypeId == @(((int) DiscountType.AssignedToManufacturers).ToString())) {
             $('[data-card-name=discount-applied-to-categories]').hideElement();
             $('[data-card-name=discount-applied-to-manufacturers]').showElement();
             $('[data-card-name=discount-applied-to-products]').hideElement();
             $('#pnlMaximumDiscountedQuantity').showElement();
+            $('#pnlMinimumDiscountedQuantity').showElement();
             $('#pnlAppliedToSubCategories').hideElement();
     } else if (selectedDiscountTypeId == @(((int) DiscountType.AssignedToSkus).ToString())) {
             $('[data-card-name=discount-applied-to-categories]').hideElement();
             $('[data-card-name=discount-applied-to-manufacturers]').hideElement();
             $('[data-card-name=discount-applied-to-products]').showElement();
             $('#pnlMaximumDiscountedQuantity').showElement();
+            $('#pnlMinimumDiscountedQuantity').showElement();
             $('#pnlAppliedToSubCategories').hideElement();
     } else {
             $('[data-card-name=discount-applied-to-categories]').hideElement();
             $('[data-card-name=discount-applied-to-manufacturers]').hideElement();
             $('[data-card-name=discount-applied-to-products]').hideElement();
             $('#pnlMaximumDiscountedQuantity').hideElement();
+            $('#pnlMinimumDiscountedQuantity').hideElement();
             $('#pnlAppliedToSubCategories').hideElement();
     }
     }
@@ -232,6 +236,15 @@
         <div class="col-md-9">
             <nop-editor asp-for="MaximumDiscountedQuantity" />
             <span asp-validation-for="MaximumDiscountedQuantity"></span>
+        </div>
+    </div>
+    <div class="form-group row" id="pnlMinimumDiscountedQuantity">
+        <div class="col-md-3">
+            <nop-label asp-for="MinimumDiscountedQuantity" />
+        </div>
+        <div class="col-md-9">
+            <nop-editor asp-for="MinimumDiscountedQuantity" />
+            <span asp-validation-for="MinimumDiscountedQuantity"></span>
         </div>
     </div>
     <div class="form-group advanced-setting row">

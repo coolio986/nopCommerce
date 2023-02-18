@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Nop.Core;
 using Nop.Core.Caching;
+using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Discounts;
 using Nop.Core.Domain.Orders;
@@ -543,6 +544,8 @@ namespace Nop.Services.Discounts
                 }
             }
 
+            
+
             //check date range
             var now = DateTime.UtcNow;
             if (discount.StartDateUtc.HasValue)
@@ -594,6 +597,50 @@ namespace Nop.Services.Discounts
                 case DiscountLimitationType.Unlimited:
                 default:
                     break;
+            }
+
+            if (discount.DiscountType == DiscountType.AssignedToCategories)
+            {
+                var store = await _storeContext.GetCurrentStoreAsync();
+
+                //do not inject IShoppingCartService via constructor because it'll cause circular references
+                var shoppingCartService = EngineContext.Current.Resolve<IShoppingCartService>();
+                var categoryService = EngineContext.Current.Resolve<ICategoryService>();
+                var cart = await shoppingCartService.GetShoppingCartAsync(customer,
+                    ShoppingCartType.ShoppingCart, storeId: store.Id);
+
+                var cartProductIds = cart.Select(ci => ci.ProductId).ToArray();
+
+                if (discount.MinimumDiscountedQuantity != null && discount.MinimumDiscountedQuantity > 0)
+                {
+                    //load identifier of categories with this discount applied to
+                    var discountCategoryIds = await categoryService.GetAppliedCategoryIdsAsync(discount, customer);
+                    var productCategoryIds = new List<int>();
+                    int itemCount = 0;
+
+                    foreach (ShoppingCartItem shoppingCartItem in cart)
+                    {
+                        productCategoryIds = (await categoryService
+                            .GetProductCategoriesByProductIdAsync(shoppingCartItem.ProductId))
+                            .Select(x => x.CategoryId)
+                            .ToList();
+
+                        var productIsInCategoryDiscount = discountCategoryIds.Any(x => productCategoryIds.Contains(x));
+                        if (productIsInCategoryDiscount)
+                            itemCount += shoppingCartItem.Quantity;
+
+                        if (itemCount >= discount.MinimumDiscountedQuantity)
+                        {
+                            result.IsValid = true;
+                            return result;
+                        }
+                    }
+                    if (itemCount < discount.MinimumDiscountedQuantity)
+                    {
+                        result.Errors = new List<string> { await _localizationService.GetResourceAsync("ShoppingCart.Discount.MinimumQtyNotMet") };
+                        return result;
+                    }
+                }
             }
 
             //discount requirements

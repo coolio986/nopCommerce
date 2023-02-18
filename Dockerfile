@@ -60,6 +60,7 @@ RUN dotnet build Nop.Plugin.Payments.Square.csproj -c Release
 WORKDIR /src/Plugins/Nop.Plugin.Products.HTMLSnippets
 RUN dotnet build Nop.Plugin.Product.HTMLSnippets.csproj -c Release
 
+
 # publish project
 WORKDIR /src/Presentation/Nop.Web   
 RUN dotnet publish Nop.Web.csproj -c Release -o /app/published
@@ -70,6 +71,9 @@ EXPOSE 443
 
 RUN mkdir logs
 RUN mkdir bin
+
+#RUN mkdir NopAdvance.DiscountRules.CartSubTotal
+#ADD /src/Plugins/NopAdvance.DiscountRules.CartSubTotal Plugins/NopAdvance.DiscountRules.CartSubTotal
 
 RUN chmod 775 App_Data/
 RUN chmod 775 App_Data/DataProtectionKeys

@@ -88,7 +88,11 @@ namespace Nop.Web.Areas.Admin.Models.Discounts
         [NopResourceDisplayName("Admin.Promotions.Discounts.Fields.MaximumDiscountedQuantity")]
         [UIHint("Int32Nullable")]
         public int? MaximumDiscountedQuantity { get; set; }
-        
+
+        [NopResourceDisplayName("Admin.Promotions.Discounts.Fields.MinimumDiscountedQuantity")]
+        [UIHint("Int32Nullable")]
+        public int? MinimumDiscountedQuantity { get; set; }
+
         [NopResourceDisplayName("Admin.Promotions.Discounts.Fields.AppliedToSubCategories")]
         public bool AppliedToSubCategories { get; set; }
 
