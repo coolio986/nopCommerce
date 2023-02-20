@@ -1158,6 +1158,9 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
                 var shipment = Shipment.Retrieve(shipmentId)
                     ?? throw new NopException("No response from the service");
 
+                shipment.options.label_size = "4x6";
+                shipment.options.label_format = format;
+
                 (string DownloadUrl, string ContentType) getLabelDetails() =>
                     format.ToLowerInvariant() switch
                     {
