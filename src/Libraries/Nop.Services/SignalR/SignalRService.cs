@@ -13,7 +13,7 @@ namespace Nop.Services.SignalR
 {
     public class SignalRService : ISignalRService
     {
-        private readonly IHubContext<SignalREventHub> _hubContext,
+        private readonly IHubContext<SignalREventHub> _hubContext;
         private readonly HubConnection? hubConnection;
 
         public SignalRService(IHubContext<SignalREventHub> hubContext)
