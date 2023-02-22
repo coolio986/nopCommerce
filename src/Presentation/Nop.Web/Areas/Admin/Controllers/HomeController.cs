@@ -10,6 +10,7 @@ using Nop.Services.Customers;
 using Nop.Services.Localization;
 using Nop.Services.Messages;
 using Nop.Services.Security;
+using Nop.Services.SignalR;
 using Nop.Web.Areas.Admin.Factories;
 using Nop.Web.Areas.Admin.Models.Common;
 using Nop.Web.Areas.Admin.Models.Home;
@@ -30,6 +31,7 @@ namespace Nop.Web.Areas.Admin.Controllers
         private readonly IGenericAttributeService _genericAttributeService;
         private readonly IWorkContext _workContext;
         private readonly ILiveCustomerActivityService _liveCustomerActivityService;
+        private readonly ISignalRService _signalRService;
 
         #endregion
 
@@ -44,7 +46,8 @@ namespace Nop.Web.Areas.Admin.Controllers
             ISettingService settingService,
             IGenericAttributeService genericAttributeService,
             IWorkContext workContext,
-            ILiveCustomerActivityService liveCustomerActivityService)
+            ILiveCustomerActivityService liveCustomerActivityService,
+            ISignalRService signalRService)
         {
             _adminAreaSettings = adminAreaSettings;
             _commonModelFactory = commonModelFactory;
@@ -56,6 +59,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             _workContext = workContext;
             _genericAttributeService = genericAttributeService;
             _liveCustomerActivityService = liveCustomerActivityService;
+            _signalRService = signalRService;
         }
 
         #endregion

@@ -1,4 +1,5 @@
-﻿using Autofac.Extensions.DependencyInjection;
+﻿using Autofac.Core;
+using Autofac.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -26,10 +27,18 @@ builder.Services.AddSignalR();
 var app = builder.Build();
 
 
-app.MapHub<SignalREventHub>("/eventHub");
+
+
 
 //Configure the application HTTP request pipeline
 app.ConfigureRequestPipeline();
+
+//app.UseCors("AllowAllHeaders");
+
+
 app.StartEngine();
+
+app.MapHub<SignalREventHub>("/eventHub");
+app.MapHub<SignalREventHub>("/nopSqlEventServer");
 
 app.Run();

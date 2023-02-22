@@ -7,8 +7,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
-using Microsoft.AspNetCore.SignalR.Client;
 using Nop.Core;
 using Nop.Core.Configuration;
 using Nop.Core.Domain.Catalog;
@@ -71,8 +69,7 @@ namespace Nop.Web.Areas.Admin.Controllers
         private readonly IWorkContext _workContext;
         private readonly IWorkflowMessageService _workflowMessageService;
         private readonly OrderSettings _orderSettings;
-        private readonly IHubContext<SignalREventHub> _hubContext;
-
+        
         #endregion
 
         #region Ctor
@@ -105,8 +102,8 @@ namespace Nop.Web.Areas.Admin.Controllers
             IShoppingCartService shoppingCartService,
             IWorkContext workContext,
             IWorkflowMessageService workflowMessageService,
-            OrderSettings orderSettings,
-            IHubContext<SignalREventHub> hubContext)
+            OrderSettings orderSettings
+            )
         {
             _addressAttributeParser = addressAttributeParser;
             _addressService = addressService;
@@ -137,12 +134,11 @@ namespace Nop.Web.Areas.Admin.Controllers
             _workContext = workContext;
             _workflowMessageService = workflowMessageService;
             _orderSettings = orderSettings;
-            _hubContext = hubContext;
         }
 
         #endregion
 
-        #region Utilities
+            #region Utilities
 
         protected virtual async ValueTask<bool> HasAccessToOrderAsync(Order order)
         {
@@ -214,6 +210,8 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
                 return AccessDeniedView();
 
+            
+
             //prepare model
             var model = await _orderModelFactory.PrepareOrderSearchModelAsync(new OrderSearchModel
             {
@@ -225,6 +223,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+       
         [HttpPost]
         public virtual async Task<IActionResult> OrderList(OrderSearchModel searchModel)
         {

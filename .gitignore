@@ -201,3 +201,4 @@ src/Presentation/Nop.Web/wwwroot/lib_npm/cldr-data/main/*
 src/packages/*
 src/Tests/Nop.Tests/Connections.resx
 /NopCommerce_App_Data
+/docker-compose.yml
