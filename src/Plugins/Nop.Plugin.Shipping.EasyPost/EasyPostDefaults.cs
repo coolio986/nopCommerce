@@ -28,6 +28,11 @@
         #region Routes
 
         /// <summary>
+        /// Gets Shipping Rates
+        /// </summary>
+        public static string GetShippingRates => "Plugin.Shipping.EasyPost.AdminGetShippingRates";
+
+        /// <summary>
         /// Gets the configuration route name
         /// </summary>
         public static string ConfigurationRouteName => "Plugin.Shipping.EasyPost.Configure";

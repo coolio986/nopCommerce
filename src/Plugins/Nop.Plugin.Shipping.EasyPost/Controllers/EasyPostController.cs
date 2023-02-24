@@ -756,6 +756,19 @@ namespace Nop.Plugin.Shipping.EasyPost.Controllers
 
         #endregion
 
-        #endregion
-    }
+        #region GetAdminRates
+        [HttpPost]
+        public async Task<IActionResult> AdminGetShippingRates(ShippingModel model)
+        {
+            if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
+                return AccessDeniedView();
+
+            model.Parcel.width = 5;
+            return RedirectToAction("ShipmentDetails", "Order", new { shippingModel = model, id = 7 });
+            //return RedirectToAction("ShipmentDetails", "Order", new { id = shipment?.Id ?? 0 });
+
+        }
+            #endregion
+            #endregion
+        }
 }

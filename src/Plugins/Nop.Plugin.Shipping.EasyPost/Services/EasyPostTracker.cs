@@ -45,8 +45,8 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
             if (string.IsNullOrEmpty(trackingNumber))
                 return string.Empty;
 
-            if (!await _shippingPluginManager.IsPluginActiveAsync(EasyPostDefaults.SystemName))
-                return string.Empty;
+            //if (!await _shippingPluginManager.IsPluginActiveAsync(EasyPostDefaults.SystemName))
+            //    return string.Empty;
 
             return (await _easyPostService.GetTrackingUrlAsync(shipment, trackingNumber)).Url;
         }
@@ -65,8 +65,8 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
             if (string.IsNullOrEmpty(trackingNumber))
                 return new List<ShipmentStatusEvent>();
 
-            if (!await _shippingPluginManager.IsPluginActiveAsync(EasyPostDefaults.SystemName))
-                return new List<ShipmentStatusEvent>();
+            //if (!await _shippingPluginManager.IsPluginActiveAsync(EasyPostDefaults.SystemName))
+            //    return new List<ShipmentStatusEvent>();
 
             return (await _easyPostService.GetTrackingEventsAsync(shipment, trackingNumber)).Events ?? new();
         }

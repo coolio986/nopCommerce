@@ -1680,10 +1680,15 @@ namespace Nop.Services.Orders
                     //raise event       
                     await _eventPublisher.PublishAsync(new OrderPlacedEvent(order));
 
-                    await _hubContext.Clients.All.SendAsync("ReceiveEvent", order);
-
                     if (order.PaymentStatus == PaymentStatus.Paid)
                         await ProcessOrderPaidAsync(order);
+
+                    try
+                    {
+                        await _hubContext.Clients.All.SendAsync("ReceiveEvent", order);
+                    }
+                    catch { }
+                    
                 }
                 else
                     foreach (var paymentError in processPaymentResult.Errors)
@@ -2013,8 +2018,7 @@ namespace Nop.Services.Orders
                     //raise event       
                     await _eventPublisher.PublishAsync(new OrderPlacedEvent(order));
 
-                    await _hubContext.Clients.All.SendAsync("ReceiveEvent", order);
-
+                    
                     if (order.PaymentStatus == PaymentStatus.Paid)
                         await ProcessOrderPaidAsync(order);
 
@@ -2030,6 +2034,12 @@ namespace Nop.Services.Orders
                     });
 
                     await _orderService.UpdateRecurringPaymentAsync(recurringPayment);
+
+                    try
+                    {
+                        await _hubContext.Clients.All.SendAsync("ReceiveEvent", order);
+                    }
+                    catch { }
 
                     return new List<string>();
                 }

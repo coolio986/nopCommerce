@@ -80,8 +80,8 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
         /// </returns>
         public async Task<IViewComponentResult> InvokeAsync(string widgetZone, object additionalData)
         {
-            if (!await _shippingPluginManager.IsPluginActiveAsync(EasyPostDefaults.SystemName))
-                return Content(string.Empty);
+            //if (!await _shippingPluginManager.IsPluginActiveAsync(EasyPostDefaults.SystemName))
+            //    return Content(string.Empty);
 
             if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
                 return Content(string.Empty);
@@ -100,8 +100,8 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
             if (order is null)
                 return Content(string.Empty);
 
-            if (order.ShippingRateComputationMethodSystemName != EasyPostDefaults.SystemName)
-                return Content(string.Empty);
+            //if (order.ShippingRateComputationMethodSystemName != EasyPostDefaults.SystemName)
+            //    return Content(string.Empty);
 
             TEnum getEnumValue<TEnum>(string value) where TEnum : Enum => typeof(TEnum).GetFields()
                 .FirstOrDefault(field => field.IsLiteral &&
@@ -117,6 +117,56 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
 
             var shipmentId = await _genericAttributeService.GetAttributeAsync<string>(shipmentEntry, EasyPostDefaults.ShipmentIdAttribute);
             var (shipment, shipmentError) = await _easyPostService.GetShipmentAsync(shipmentId);
+
+            //fixed weights still need rates, this allows us to use easypost even with fixed rates
+            if(order.ShippingRateComputationMethodSystemName == "Shipping.FixedByWeightByTotal" && shipmentId == null)
+            {
+                //ShippingModel shippingModel = new ShippingModel();
+                //var address = await _easyPostService.GetAddressByIdAsync(order.ShippingAddressId, order.Id);
+
+                //var cart = await _easyPostService.RebuildShoppingCart(order);
+
+                //var (shippingOptionRequests, shippingFromMultipleLocations) = await _easyPostService.CreateShippingOptionRequestsAsync(cart, address, order.StoreId);
+
+                //var result = new GetShippingOptionResponse();
+                //result.ShippingFromMultipleLocations = shippingFromMultipleLocations;
+
+                //var (shippingOptions, response) = await _easyPostService.GetShippingOptionsAsync(shippingOptionRequests, result);
+
+                //if (response.Success)
+                //{
+                //    var rawShippingOptions = new List<ShippingOption>();
+
+                //    if (response.ShippingOptions.Any())
+                //    {
+                //        foreach (var shippingOption in response.ShippingOptions)
+                //        {
+                //            rawShippingOptions.Add(new ShippingOption
+                //            {
+                //                Name = shippingOption.Name,
+                //                Description = shippingOption.Description,
+                //                Rate = shippingOption.Rate,
+                //                TransitDays = shippingOption.TransitDays
+                //            });
+                //        }
+                //    }
+                //    else
+                //    {
+                //        foreach (var error in response.Errors)
+                //            shippingModel.Errors.Add(error);
+                //    }
+
+                //    shippingModel.ShippingOptions = rawShippingOptions;
+
+                //    shippingModel = _easyPostService.SortShippingOptions(shippingModel);
+
+                    
+                //}
+
+                return View("~/Plugins/Shipping.EasyPost/Views/Shipment/_ShipmentDetails.EasyPost.Rates.cshtml", new ShippingModel());
+                //return View("~/Plugins/Shipping.EasyPost/Views/Shipment/_ShipmentDetails.EasyPost.Rates.cshtml", shippingModel);
+            }
+
             if (!string.IsNullOrEmpty(shipmentError))
             {
                 model.Error = string

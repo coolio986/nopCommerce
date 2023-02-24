@@ -79,8 +79,8 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
             if (eventMessage.Model is not ProductModel model)
                 return;
 
-            if (!await _shippingPluginManager.IsPluginActiveAsync(EasyPostDefaults.SystemName))
-                return;
+            //if (!await _shippingPluginManager.IsPluginActiveAsync(EasyPostDefaults.SystemName))
+            //    return;
 
             if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageShippingSettings))
                 return;
@@ -118,8 +118,8 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
             if (eventMessage.Order is null)
                 return;
 
-            if (!await _shippingPluginManager.IsPluginActiveAsync(EasyPostDefaults.SystemName))
-                return;
+            //if (!await _shippingPluginManager.IsPluginActiveAsync(EasyPostDefaults.SystemName))
+            //    return;
 
             await _easyPostService.SaveShipmentAsync(eventMessage.Order);
         }
@@ -134,8 +134,8 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
             if (eventMessage.Shipment is null)
                 return;
 
-            if (!await _shippingPluginManager.IsPluginActiveAsync(EasyPostDefaults.SystemName))
-                return;
+            //if (!await _shippingPluginManager.IsPluginActiveAsync(EasyPostDefaults.SystemName))
+            //    return;
 
             await _easyPostService.SaveShipmentAsync(eventMessage.Shipment);
         }

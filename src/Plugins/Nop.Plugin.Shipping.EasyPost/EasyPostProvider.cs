@@ -161,8 +161,8 @@ namespace Nop.Plugin.Shipping.EasyPost
         /// <returns>A task that represents the asynchronous operation</returns>
         public async Task ManageSiteMapAsync(SiteMapNode rootNode)
         {
-            if (!await _shippingPluginManager.IsPluginActiveAsync(EasyPostDefaults.SystemName))
-                return;
+            //if (!await _shippingPluginManager.IsPluginActiveAsync(EasyPostDefaults.SystemName))
+            //    return;
 
             if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
                 return;

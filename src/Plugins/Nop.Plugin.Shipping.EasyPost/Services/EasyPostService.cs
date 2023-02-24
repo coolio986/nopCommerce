@@ -12,6 +12,8 @@ using Newtonsoft.Json;
 using Nop.Core;
 using Nop.Core.Domain.Directory;
 using Nop.Core.Domain.Logging;
+using Nop.Core.Domain.Orders;
+using Nop.Core.Domain.Common;
 using Nop.Core.Infrastructure;
 using Nop.Data;
 using Nop.Plugin.Shipping.EasyPost.Domain;
@@ -28,6 +30,12 @@ using Nop.Services.Orders;
 using Nop.Services.Shipping;
 using Nop.Services.Shipping.Tracking;
 using Nop.Services.Stores;
+using Address = EasyPost.Address;
+using Nop.Core.Domain.Customers;
+using Nop.Core.Domain.Shipping;
+using Shipment = EasyPost.Shipment;
+using DocumentFormat.OpenXml.EMMA;
+using Nop.Plugin.Shipping.EasyPost.Models.Shipment;
 
 namespace Nop.Plugin.Shipping.EasyPost.Services
 {
@@ -62,6 +70,9 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
         private readonly IWorkContext _workContext;
         private readonly MeasureSettings _measureSettings;
         private readonly Nop.Core.Domain.Shipping.ShippingSettings _shippingSettings;
+        private readonly IShoppingCartService _shoppingCartService;
+        private readonly ShoppingCartSettings _shoppingCartSettings;
+        private readonly IPriceCalculationService _priceCalculationService;
 
         private static bool? _isConfigured;
 
@@ -92,7 +103,10 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
             IUrlHelperFactory urlHelperFactory,
             IWorkContext workContext,
             MeasureSettings measureSettings,
-            Nop.Core.Domain.Shipping.ShippingSettings shippingSettings)
+            Nop.Core.Domain.Shipping.ShippingSettings shippingSettings,
+            IShoppingCartService shoppingCartService,
+            ShoppingCartSettings shoppingCartSettings,
+            IPriceCalculationService priceCalculationService)
         {
             _currencySettings = currencySettings;
             _easyPostSettings = easyPostSettings;
@@ -118,6 +132,9 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
             _workContext = workContext;
             _measureSettings = measureSettings;
             _shippingSettings = shippingSettings;
+            _shoppingCartService = shoppingCartService;
+            _shoppingCartSettings = shoppingCartSettings;
+            _priceCalculationService = priceCalculationService;
         }
 
         #endregion
@@ -767,8 +784,8 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
                 if (order is null)
                     throw new ArgumentNullException(nameof(order));
 
-                if (order.ShippingRateComputationMethodSystemName != EasyPostDefaults.SystemName)
-                    return false;
+                //if (order.ShippingRateComputationMethodSystemName != EasyPostDefaults.SystemName)
+                //    return false;
 
                 //move the shipment from the customer to the order entry
                 var customer = await _customerService.GetCustomerByIdAsync(order.CustomerId);
@@ -1633,7 +1650,7 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
         /// The task result contains the shipping options; error message if exists
         /// </returns>
         public async Task<(List<Nop.Core.Domain.Shipping.ShippingOption> Options, string Error)> GetShippingOptionsAsync(
-            GetShippingOptionRequest request)
+            GetShippingOptionRequest request, Parcel dimensionOverride = null)
         {
             return await HandleFunctionAsync(async () =>
             {
@@ -1642,7 +1659,13 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
 
                 var addressTo = await PrepareAddressToAsync(request);
                 var addressFrom = await PrepareAddressFromAsync(request);
-                var parcel = await PrepareParcelAsync(request, false);
+                var parcel = new Parcel();
+
+                if(dimensionOverride != null && dimensionOverride.width != null && dimensionOverride.height != null && dimensionOverride.length != null && dimensionOverride.weight > 0)
+                    parcel = dimensionOverride;
+                else
+                    parcel = await PrepareParcelAsync(request, false);
+
                 var shipment = await CreateShipmentAsync(addressTo, addressFrom, parcel, false);
                 var (rates, ratesError) = await GetShippingRatesAsync(shipment);
                 if (!string.IsNullOrEmpty(ratesError))
@@ -1668,6 +1691,80 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
 
                 return options;
             });
+        }
+
+        public async Task<(IList<Core.Domain.Shipping.ShippingOption> srcmShippingOptions, GetShippingOptionResponse response)> GetShippingOptionsAsync(IList<GetShippingOptionRequest> shippingOptionRequests, GetShippingOptionResponse result)
+        {
+            //request shipping options (separately for each package-request)
+            IList<Core.Domain.Shipping.ShippingOption> srcmShippingOptions = null;
+
+            foreach (var shippingOptionRequest in shippingOptionRequests)
+            {
+                var getShippingOptionResponse = await GetShippingOptionsResponseAsync(shippingOptionRequest);
+
+                if (getShippingOptionResponse.Success)
+                {
+                    //success
+                    if (srcmShippingOptions == null)
+                    {
+                        //first shipping option request
+                        srcmShippingOptions = getShippingOptionResponse.ShippingOptions;
+                    }
+                    else
+                    {
+                        //get shipping options which already exist for prior requested packages for this scrm (i.e. common options)
+                        srcmShippingOptions = srcmShippingOptions
+                            .Where(existingso => getShippingOptionResponse.ShippingOptions.Any(newso => newso.Name == existingso.Name))
+                            .ToList();
+
+                        //and sum the rates
+                        foreach (var existingso in srcmShippingOptions)
+                        {
+                            existingso.Rate += getShippingOptionResponse
+                                .ShippingOptions
+                                .First(newso => newso.Name == existingso.Name)
+                                .Rate;
+                        }
+                    }
+                }
+                else
+                {
+                    //errors
+                    foreach (var error in getShippingOptionResponse.Errors)
+                    {
+                        result.AddError(error);
+                        await _logger.WarningAsync($"Shipping (EasyPost). {error}");
+                    }
+                    //clear the shipping options in this case
+                    srcmShippingOptions = new List<Core.Domain.Shipping.ShippingOption>();
+                    break;
+                }
+            }
+
+            foreach (var so in srcmShippingOptions)
+            {
+                //set system name if not set yet
+                if (string.IsNullOrEmpty(so.ShippingRateComputationMethodSystemName))
+                    so.ShippingRateComputationMethodSystemName = EasyPostDefaults.SystemName;
+                if (_shoppingCartSettings.RoundPricesDuringCalculation)
+                    so.Rate = await _priceCalculationService.RoundPriceAsync(so.Rate);
+                result.ShippingOptions.Add(so);
+            }
+
+            if (_shippingSettings.ReturnValidOptionsIfThereAreAny)
+            {
+                //return valid options if there are any (no matter of the errors returned by other shipping rate computation methods).
+                if (result.ShippingOptions.Any() && result.Errors.Any())
+                    result.Errors.Clear();
+            }
+
+            //no shipping options loaded
+            if (!result.ShippingOptions.Any() && !result.Errors.Any())
+                result.Errors.Add(await _localizationService.GetResourceAsync("Checkout.ShippingOptionCouldNotBeLoaded"));
+
+
+
+            return (srcmShippingOptions, result);
         }
 
         #endregion
@@ -1955,9 +2052,89 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
                 return Task.FromResult(true);
             });
         }
+        public virtual async Task<(IList<GetShippingOptionRequest> shipmentPackages, bool shippingFromMultipleLocations)> CreateShippingOptionRequestsAsync(IList<ShoppingCartItem> cart,
+            Nop.Core.Domain.Common.Address shippingAddress, int storeId)
+        {
+            var (shippingOptionRequests, shippingFromMultipleLocations) = await _shippingService.CreateShippingOptionRequestsAsync(cart, shippingAddress, storeId);
+            return (shippingOptionRequests, shippingFromMultipleLocations);
+        }
+
+        public virtual async Task<Nop.Core.Domain.Common.Address> GetAddressByIdAsync(int? addressId, int orderId)
+        {
+            if (addressId == null || await _addressService.GetAddressByIdAsync((int)addressId) is not Nop.Core.Domain.Common.Address shippingAddress)
+                throw new NopException($"Shipping is required, but address is not available. Order ID = {orderId}");
+
+            return shippingAddress;
+
+        }
+        public virtual async Task<IList<ShoppingCartItem>> RebuildShoppingCart(Nop.Core.Domain.Orders.Order order)
+        {
+
+            var cart = (await _orderService.GetOrderItemsAsync(order.Id)).Select(item => new ShoppingCartItem
+            {
+                Id = item.Id,
+                AttributesXml = item.AttributesXml,
+                CustomerId = order.CustomerId,
+                ProductId = item.ProductId,
+                Quantity = item.Quantity,
+                RentalEndDateUtc = item.RentalEndDateUtc,
+                RentalStartDateUtc = item.RentalStartDateUtc,
+                ShoppingCartType = ShoppingCartType.ShoppingCart,
+                StoreId = order.StoreId
+            }).ToList();
+
+            return cart;
+
+            return cart;
+        }
+
+        public virtual async Task<Customer> GetCustomerByIdAsync(int customerId)
+        {
+            return await _customerService.GetCustomerByIdAsync(customerId);
+        }
+
+        public async Task<GetShippingOptionResponse> GetShippingOptionsResponseAsync(GetShippingOptionRequest getShippingOptionRequest)
+        {
+            if (getShippingOptionRequest is null)
+                throw new ArgumentNullException(nameof(getShippingOptionRequest));
+
+            if (getShippingOptionRequest.Customer is null)
+                return new GetShippingOptionResponse { Errors = new[] { "Customer is not set" } };
+
+            if (!getShippingOptionRequest.Items?.Any() ?? true)
+                return new GetShippingOptionResponse { Errors = new[] { "No shipment items" } };
+
+            if (getShippingOptionRequest.ShippingAddress?.CountryId is null)
+                return new GetShippingOptionResponse { Errors = new[] { "Shipping address is not set" } };
+
+            var (rates, error) = await GetShippingOptionsAsync(getShippingOptionRequest);
+            if (rates is null || !string.IsNullOrEmpty(error))
+            {
+                //add a friendly message besides the error
+                var friendlyError = await _localizationService.GetResourceAsync("Plugins.Shipping.EasyPost.Checkout.Error");
+                return new GetShippingOptionResponse { Errors = new[] { error, friendlyError } };
+            }
+
+            return new GetShippingOptionResponse { ShippingOptions = rates };
+        }
+
+        public ShippingModel SortShippingOptions(ShippingModel shippingModel)
+        {
+            if (shippingModel.ShippingOptions.Count > 1)
+            {
+                shippingModel.ShippingOptions = (_shippingSettings.ShippingSorting switch
+                {
+                    ShippingSortingEnum.ShippingCost => shippingModel.ShippingOptions.OrderBy(option => option.Rate),
+                    _ => shippingModel.ShippingOptions.OrderBy(option => option.DisplayOrder)
+                }).ToList();
+            }
+
+            return shippingModel;
+        }
 
         #endregion
 
         #endregion
     }
+
 }

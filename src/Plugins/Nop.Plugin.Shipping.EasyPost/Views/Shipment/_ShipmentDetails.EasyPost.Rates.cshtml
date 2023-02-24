@@ -1,0 +1,26 @@
+﻿@model ShippingModel
+
+@if (string.IsNullOrEmpty(Model.Error))
+{
+
+    var rateDetails = await Html.PartialAsync("~/Plugins/Shipping.EasyPost/Views/Shipment/_ShipmentDetails.EasyPost.RateDetails.cshtml", Model);
+
+    var rateContent = await rateDetails.RenderHtmlContentAsync();
+    rateContent = rateContent.Replace("</script>", "");
+    rateDetails = Html.Raw(rateContent);
+
+    <script asp-location="None">
+        $(document).ready(function () {
+            $('#TrackingNumber').closest('.card-default').after(`@rateDetails`);
+        });
+    </script>
+}
+else
+{
+    <nop-alert asp-alert-id="easypost-alert" asp-alert-message="@Model.Error" />
+    <script>
+        $(document).ready(function () {
+            $("#easypost-alert").click();
+        });
+    </script>
+}

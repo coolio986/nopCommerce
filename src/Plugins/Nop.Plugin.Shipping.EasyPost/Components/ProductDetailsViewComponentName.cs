@@ -61,8 +61,8 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
         /// </returns>
         public async Task<IViewComponentResult> InvokeAsync(string widgetZone, object additionalData)
         {
-            if (!await _shippingPluginManager.IsPluginActiveAsync(EasyPostDefaults.SystemName))
-                return Content(string.Empty);
+            //if (!await _shippingPluginManager.IsPluginActiveAsync(EasyPostDefaults.SystemName))
+            //    return Content(string.Empty);
 
             if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageShippingSettings))
                 return Content(string.Empty);

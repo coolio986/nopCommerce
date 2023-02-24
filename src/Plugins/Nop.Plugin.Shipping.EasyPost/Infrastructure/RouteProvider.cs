@@ -47,6 +47,10 @@ namespace Nop.Plugin.Shipping.EasyPost.Infrastructure
                 pattern: "Admin/EasyPost/CancelPickup",
                 defaults: new { controller = "EasyPost", action = "CancelPickup" });
 
+            endpointRouteBuilder.MapControllerRoute(name: EasyPostDefaults.GetShippingRates,
+                pattern: "Admin/EasyPost/AdminGetShippingRates",
+                defaults: new { controller = "EasyPost", action = "AdminGetShippingRates" });
+
             endpointRouteBuilder.MapControllerRoute(name: EasyPostDefaults.WebhookRouteName,
                 pattern: "easypost/webhook",
                 defaults: new { controller = "EasyPostPublic", action = "Webhook" });
