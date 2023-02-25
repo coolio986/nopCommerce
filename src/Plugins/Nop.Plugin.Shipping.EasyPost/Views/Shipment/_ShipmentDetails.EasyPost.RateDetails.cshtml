@@ -1,7 +1,45 @@
 ﻿@model ShippingModel
 
+
+<script>
+    function postWeightDimensions(){
+        var parcel = { 
+            length: $("#@Html.IdFor(model => model.Parcel.length)").val(),
+            width: $("#@Html.IdFor(model => model.Parcel.width)").val(),
+            height: $("#@Html.IdFor(model => model.Parcel.height)").val(),
+            weight: $("#@Html.IdFor(model => model.Parcel.weight)").val(),
+            
+        }
+        var postData = {
+               Parcel: parcel,
+               OrderId: $("#@Html.IdFor(model => model.OrderId)").val(),
+               Id: $("#@Html.IdFor(model => model.Id)").val(),
+               
+        };
+        addAntiForgeryToken(postData);
+
+        $.ajax({
+                    cache: false,
+                    type: "POST",
+                    data: postData,
+                    url: "@Html.Raw(Url.Action("AdminGetShippingRates", "EasyPost"))",
+                    success: function (data) {
+                        console.log(data);
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        console.log(errorThrown);
+                    }
+                });
+    }
+</script>
+
 @if (string.IsNullOrEmpty(Model.Error))
 {
+    
+    <input asp-for="@Model.Id" type="hidden" />
+    <input asp-for="@Model.OrderId" type="hidden" />
+    
+
     <div class="card card-secondary card-outline">
         <div> <!-- to avoid binding click trigger: .card.card-secondary > .card-header  --> 
             <div class="card-header with-border clearfix">
@@ -13,47 +51,99 @@
         </div>
     
         <div class="card-body">
-            <div class="form-group row advanced-setting">
-                
-                <div class="col-md-3">
-                    <nop-label asp-for="Parcel.length" />
-                </div>
-                <div class="col-md-9">
-                    <nop-editor asp-for="Parcel.length" asp-postfix="@Model.Parcel.length" />
-                    <span asp-validation-for="Parcel.length"></span>
-                </div>
-            </div>
-
-            <div class="col-md-3">
-                <button type="submit" asp-route="@EasyPostDefaults.GetShippingRates">
-                    Get Rates
-                </button>
-            </div>
 
             @if (Model.ShippingOptions.Any())
             {
-                <ul class="method-list">
-                    @for (var i = 0; i < Model.ShippingOptions.Count; i++)
-                    {
-                        var shippingMethod = Model.ShippingOptions[i];
-                        <li>
-                            <div class="method-name">
-                                <input id="shippingoption_@(i)" type="radio" name="shippingoption" value="@(shippingMethod.Name)" checked="@shippingMethod.Selected" />
-                                <label for="shippingoption_@(i)">@T("Checkout.SelectShippingMethod.MethodAndFee", shippingMethod.Name, shippingMethod.Rate)</label>
-                            </div>
-                            @if (!string.IsNullOrEmpty(shippingMethod.Description))
-                            {
-                                <div class="method-description">
-                                    @Html.Raw(shippingMethod.Description)
+                <input asp-for="@Model.Parcel.length" type="hidden" />
+                <input asp-for="@Model.Parcel.width" type="hidden" />
+                <input asp-for="@Model.Parcel.height" type="hidden" />
+                <input asp-for="@Model.Parcel.weight" type="hidden" />
+
+                <div class="form-group row advanced-setting">
+                    <ul class="method-list">
+                        @for (var i = 0; i < Model.ShippingOptions.Count; i++)
+                        {
+                            
+                            <input asp-for="@Model.ShippingOptions[i].Id" type="hidden" />
+                            <input asp-for="@Model.ShippingOptions[i].Description" type="hidden" />
+
+                            var shippingMethod = Model.ShippingOptions[i];
+                            <li>
+                                <div class="form-group row">
+                                    <div class="col-md-12">
+                                         
+                                        <input  asp-for="@Model.SelectedShippingOptionId" type="radio"  value="@(Model.ShippingOptions[i].Id)"  />
+                                        
+                                        @*<input  type="radio" name="shippingoption" value="@(Model.ShippingOptions[i].Id)"  @(Model.ShippingOptions[i].Selected ? Html.Raw(" checked=\"checked\"") : null) />*@
+
+                                        
+                                        <label >@T("Checkout.SelectShippingMethod.MethodAndFee", shippingMethod.Name, shippingMethod.Rate)</label>
+                                        @if (!string.IsNullOrEmpty(shippingMethod.Description))
+                                        {
+                                            <span>@Html.Raw(shippingMethod.Description)</span>
+                                        }
+                                     </div>
                                 </div>
-                            }
-                        </li>
-                    }
-                </ul>
+                            </li>
+                        }
+                                 
+                    </ul>
+                </div>
+                    <button type="submit" asp-route="@EasyPostDefaults.SelectShippingRate"  >
+                    Select Rate
+                </button>
+                
+            }
+            else
+            {
+            <div class="form-group row advanced-setting">
+                
+                <div class="col-md-3">
+                    <div class="label-wrapper"><label class="col-form-label">&nbsp;&nbsp;(inch)</label></div>
+                    <nop-label asp-for="@Model.Parcel.length" />
+                        
+                </div>
+                <div class="col-md-9">
+                        <nop-editor asp-for="@Model.Parcel.length"  />
+                        <span asp-validation-for="@Model.Parcel.length"></span>
+                </div>
+                <div class="col-md-3">
+                    <div class="label-wrapper"><label class="col-form-label">&nbsp;&nbsp;(inch)</label></div>
+                    <nop-label asp-for="@Model.Parcel.width" />
+                </div>
+                <div class="col-md-9">
+                    <nop-editor asp-for="@Model.Parcel.width"  />
+                    <span asp-validation-for="@Model.Parcel.width"></span>
+                </div>
+                <div class="col-md-3">
+                    <div class="label-wrapper"><label class="col-form-label">&nbsp;&nbsp;(inch)</label></div>
+                    <nop-label asp-for="@Model.Parcel.height" />
+                </div>
+                <div class="col-md-9">
+                    <nop-editor asp-for="@Model.Parcel.height"  />
+                    <span asp-validation-for="@Model.Parcel.height"></span>
+                </div>
+                <div class="col-md-3">
+                    <div class="label-wrapper"><label class="col-form-label">&nbsp;&nbsp;(lbs)</label></div>
+                    <nop-label asp-for="@Model.Parcel.weight" />
+                </div>
+                <div class="col-md-9">
+                    <nop-editor asp-for="@Model.Parcel.weight"  />
+                    <span asp-validation-for="@Model.Parcel.weight"></span>
+                </div>
+
+            </div>
+
+            <div class="col-md-3">
+                    @*<button type="button" onclick="postWeightDimensions()" >*@
+                    <button type="submit" asp-route="@EasyPostDefaults.GetShippingRates" >
+                    Get Rates
+                </button>
+            </div>
             }
         </div>
     </div>
-
+    
 }
 else
 {

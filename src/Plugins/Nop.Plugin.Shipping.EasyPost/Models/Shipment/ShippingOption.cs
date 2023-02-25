@@ -11,6 +11,7 @@ namespace Nop.Plugin.Shipping.EasyPost.Models.Shipment
     /// </summary>
     public partial class ShippingOption
     {
+        public string Id { get; set; }
         /// <summary>
         /// Gets or sets a shipping rate (without discounts, additional shipping charges, etc)
         /// </summary>
@@ -40,6 +41,8 @@ namespace Nop.Plugin.Shipping.EasyPost.Models.Shipment
         /// Gets or sets a display order
         /// </summary>
         public int? DisplayOrder { get; set; }
+
+        public string Currency { get; set; }
 
         public bool Selected { get; set; }
 

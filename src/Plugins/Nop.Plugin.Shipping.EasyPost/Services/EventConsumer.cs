@@ -134,8 +134,8 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
             if (eventMessage.Shipment is null)
                 return;
 
-            //if (!await _shippingPluginManager.IsPluginActiveAsync(EasyPostDefaults.SystemName))
-            //    return;
+            if (!await _shippingPluginManager.IsPluginActiveAsync(EasyPostDefaults.SystemName))
+                return;
 
             await _easyPostService.SaveShipmentAsync(eventMessage.Shipment);
         }

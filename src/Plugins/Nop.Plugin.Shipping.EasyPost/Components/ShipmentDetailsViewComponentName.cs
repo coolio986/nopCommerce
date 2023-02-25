@@ -5,6 +5,8 @@ using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Nop.Core.Domain.Directory;
+using Nop.Core;
 using Nop.Plugin.Shipping.EasyPost.Domain.Shipment;
 using Nop.Plugin.Shipping.EasyPost.Factories;
 using Nop.Plugin.Shipping.EasyPost.Models.Shipment;
@@ -121,50 +123,36 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
             //fixed weights still need rates, this allows us to use easypost even with fixed rates
             if(order.ShippingRateComputationMethodSystemName == "Shipping.FixedByWeightByTotal" && shipmentId == null)
             {
-                //ShippingModel shippingModel = new ShippingModel();
-                //var address = await _easyPostService.GetAddressByIdAsync(order.ShippingAddressId, order.Id);
+                ShippingModel shippingModel = new ShippingModel()
+                {
+                    OrderId = shipmentEntry.OrderId,
+                    Id = shipmentEntry.Id
+                };
 
-                //var cart = await _easyPostService.RebuildShoppingCart(order);
+                var customer = await _easyPostService.GetCustomerByIdAsync(order.CustomerId);
+                var fixedShipmentId = await _genericAttributeService.GetAttributeAsync<string>(customer, EasyPostDefaults.ShipmentIdAttribute, order.StoreId );
+                var (fixedShipment, fixedShipmentError) = await _easyPostService.GetShipmentAsync(fixedShipmentId);
 
-                //var (shippingOptionRequests, shippingFromMultipleLocations) = await _easyPostService.CreateShippingOptionRequestsAsync(cart, address, order.StoreId);
+                if(string.IsNullOrEmpty(fixedShipmentError) && fixedShipment != null)
+                {
+                    var storeCurrency = await _easyPostService.GetCurrencyByIdAsync(_easyPostService.GetCurrencySettings().PrimaryStoreCurrencyId)
+                    ?? throw new NopException("Primary store currency is not set");
 
-                //var result = new GetShippingOptionResponse();
-                //result.ShippingFromMultipleLocations = shippingFromMultipleLocations;
 
-                //var (shippingOptions, response) = await _easyPostService.GetShippingOptionsAsync(shippingOptionRequests, result);
+                    var easyPostRates = await fixedShipment.rates.SelectAwait(async rate => new ShippingOption
+                    {
+                        Id = rate.id,
+                        Description = string.Format("{0} {1}", rate.carrier, rate.service),
+                        Rate = await _easyPostService.ConvertRateAsync(rate.rate, rate.currency, storeCurrency),
+                        Currency = rate.currency
+                    }).ToListAsync();
 
-                //if (response.Success)
-                //{
-                //    var rawShippingOptions = new List<ShippingOption>();
+                    shippingModel.ShippingOptions = easyPostRates;
+                    shippingModel = _easyPostService.SortShippingOptions(shippingModel);
+                    shippingModel.SelectedShippingOptionId = shippingModel.ShippingOptions.FirstOrDefault()?.Id;
+                }
 
-                //    if (response.ShippingOptions.Any())
-                //    {
-                //        foreach (var shippingOption in response.ShippingOptions)
-                //        {
-                //            rawShippingOptions.Add(new ShippingOption
-                //            {
-                //                Name = shippingOption.Name,
-                //                Description = shippingOption.Description,
-                //                Rate = shippingOption.Rate,
-                //                TransitDays = shippingOption.TransitDays
-                //            });
-                //        }
-                //    }
-                //    else
-                //    {
-                //        foreach (var error in response.Errors)
-                //            shippingModel.Errors.Add(error);
-                //    }
-
-                //    shippingModel.ShippingOptions = rawShippingOptions;
-
-                //    shippingModel = _easyPostService.SortShippingOptions(shippingModel);
-
-                    
-                //}
-
-                return View("~/Plugins/Shipping.EasyPost/Views/Shipment/_ShipmentDetails.EasyPost.Rates.cshtml", new ShippingModel());
-                //return View("~/Plugins/Shipping.EasyPost/Views/Shipment/_ShipmentDetails.EasyPost.Rates.cshtml", shippingModel);
+                return View("~/Plugins/Shipping.EasyPost/Views/Shipment/_ShipmentDetails.EasyPost.Rates.cshtml", shippingModel);
             }
 
             if (!string.IsNullOrEmpty(shipmentError))
@@ -277,6 +265,8 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
             model.AvailableContentsTypes = await ContentsType.Other.ToSelectListAsync(false);
             model.AvailableRestrictionTypes = await RestrictionType.None.ToSelectListAsync(false);
             model.AvailableNonDeliveryOptions = await NonDeliveryOption.Return.ToSelectListAsync(false);
+
+            model.NotifyCustomerOfShipment = true;
 
             return View("~/Plugins/Shipping.EasyPost/Views/Shipment/ShipmentDetails.cshtml", model);
         }

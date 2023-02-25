@@ -34,7 +34,6 @@ using Address = EasyPost.Address;
 using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Shipping;
 using Shipment = EasyPost.Shipment;
-using DocumentFormat.OpenXml.EMMA;
 using Nop.Plugin.Shipping.EasyPost.Models.Shipment;
 
 namespace Nop.Plugin.Shipping.EasyPost.Services
@@ -73,6 +72,8 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
         private readonly IShoppingCartService _shoppingCartService;
         private readonly ShoppingCartSettings _shoppingCartSettings;
         private readonly IPriceCalculationService _priceCalculationService;
+        private readonly IOrderProcessingService _orderProcessingService;
+        private readonly ICustomerActivityService _customerActivityService;
 
         private static bool? _isConfigured;
 
@@ -106,7 +107,9 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
             Nop.Core.Domain.Shipping.ShippingSettings shippingSettings,
             IShoppingCartService shoppingCartService,
             ShoppingCartSettings shoppingCartSettings,
-            IPriceCalculationService priceCalculationService)
+            IPriceCalculationService priceCalculationService,
+            IOrderProcessingService orderProcessingService,
+            ICustomerActivityService customerActivityService)
         {
             _currencySettings = currencySettings;
             _easyPostSettings = easyPostSettings;
@@ -135,6 +138,8 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
             _shoppingCartService = shoppingCartService;
             _shoppingCartSettings = shoppingCartSettings;
             _priceCalculationService = priceCalculationService;
+            _orderProcessingService = orderProcessingService;
+            _customerActivityService = customerActivityService;
         }
 
         #endregion
@@ -442,9 +447,12 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
                 customs_info = customsInfo,
                 options = options
             };
+
             if (!_easyPostSettings.UseSandbox && !_easyPostSettings.UseAllAvailableCarriers)
                 shipment.carrier_accounts = _easyPostSettings.CarrierAccounts?.Select(value => new CarrierAccount { id = value }).ToList();
             shipment.Create();
+
+            shipment.options.label_size = "4x6";
 
             //log warning messages if any
             if (_easyPostSettings.LogShipmentMessages && shipment.messages?.Any() == true)
@@ -806,8 +814,16 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
         /// </summary>
         /// <param name="shipmentEntry">Shipment entry</param>
         /// <returns>A task that represents the asynchronous operation</returns>
-        public async Task SaveShipmentAsync(Nop.Core.Domain.Shipping.Shipment shipmentEntry)
+        public async Task SaveShipmentAsync(Nop.Core.Domain.Shipping.Shipment shipmentEntry, bool useParcelFromShipment = false)
         {
+            //we don't want to save the generic attribute right away for fixed shipping
+            var order = await _orderService.GetOrderByIdAsync(shipmentEntry.OrderId);
+            if (order is not null)
+            {
+                if (order.ShippingRateComputationMethodSystemName == "Shipping.FixedByWeightByTotal")
+                    return;
+            }
+
             await HandleFunctionAsync(async () =>
             {
                 if (shipmentEntry is null)
@@ -832,13 +848,26 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
                 //whether the origin address and parcel details are matched
                 var request = await PrepareShippingOptionRequestAsync(shipmentEntry, order);
                 var addressFrom = await PrepareAddressFromAsync(request);
-                var parcel = await PrepareParcelAsync(request, true);
-                if (!parcel.Matches(orderShipment.parcel) || !addressFrom.Matches(orderShipment.from_address))
+
+                orderShipment.options.label_size = "4x6";
+
+                Parcel myParcel = null;
+            if (orderShipment.parcel != null && 
+                orderShipment.parcel.length != null && 
+                orderShipment.parcel.width != null && 
+                orderShipment.parcel.height != null && 
+                useParcelFromShipment)
+                    myParcel = orderShipment.parcel;
+                else
+                    myParcel = await PrepareParcelAsync(request, true);
+                
+                if (!myParcel.Matches(orderShipment.parcel) || !addressFrom.Matches(orderShipment.from_address))
                 {
                     //if details are not matched, create a specific shipment from the common order shipment
-                    var shipment = await CreateShipmentAsync(orderShipment.to_address, addressFrom, parcel, true);
+                    var shipment = await CreateShipmentAsync(orderShipment.to_address, addressFrom, myParcel, true);
                     shipmentId = shipment.id;
                 }
+                orderShipment.options.label_size = "4x6";
 
                 //save the shipment id
                 await _genericAttributeService.SaveAttributeAsync(shipmentEntry, EasyPostDefaults.ShipmentIdAttribute, shipmentId);
@@ -1661,8 +1690,15 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
                 var addressFrom = await PrepareAddressFromAsync(request);
                 var parcel = new Parcel();
 
-                if(dimensionOverride != null && dimensionOverride.width != null && dimensionOverride.height != null && dimensionOverride.length != null && dimensionOverride.weight > 0)
+                if (dimensionOverride != null && dimensionOverride.width != null && dimensionOverride.height != null && dimensionOverride.length != null && dimensionOverride.weight > 0)
+                {
                     parcel = dimensionOverride;
+                    var measureWeight = await _measureService.GetMeasureWeightBySystemKeywordAsync(EasyPostDefaults.MeasureWeightSystemName)
+                    ?? throw new NopException($"'{EasyPostDefaults.MeasureWeightSystemName}' measure weight is not found");
+
+                    var weight = await _measureService.ConvertFromPrimaryMeasureWeightAsync((decimal)parcel.weight, measureWeight);
+                    parcel.weight = Convert.ToDouble(Math.Max(Math.Round(weight, 1, MidpointRounding.ToPositiveInfinity), 0.1M));
+                }
                 else
                     parcel = await PrepareParcelAsync(request, false);
 
@@ -1693,14 +1729,14 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
             });
         }
 
-        public async Task<(IList<Core.Domain.Shipping.ShippingOption> srcmShippingOptions, GetShippingOptionResponse response)> GetShippingOptionsAsync(IList<GetShippingOptionRequest> shippingOptionRequests, GetShippingOptionResponse result)
+        public async Task<(IList<Core.Domain.Shipping.ShippingOption> srcmShippingOptions, GetShippingOptionResponse response)> GetShippingOptionsAsync(IList<GetShippingOptionRequest> shippingOptionRequests, GetShippingOptionResponse result, Parcel parcelOverride = null)
         {
             //request shipping options (separately for each package-request)
             IList<Core.Domain.Shipping.ShippingOption> srcmShippingOptions = null;
 
             foreach (var shippingOptionRequest in shippingOptionRequests)
             {
-                var getShippingOptionResponse = await GetShippingOptionsResponseAsync(shippingOptionRequest);
+                var getShippingOptionResponse = await GetShippingOptionsResponseAsync(shippingOptionRequest, parcelOverride);
 
                 if (getShippingOptionResponse.Success)
                 {
@@ -2093,7 +2129,7 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
             return await _customerService.GetCustomerByIdAsync(customerId);
         }
 
-        public async Task<GetShippingOptionResponse> GetShippingOptionsResponseAsync(GetShippingOptionRequest getShippingOptionRequest)
+        public async Task<GetShippingOptionResponse> GetShippingOptionsResponseAsync(GetShippingOptionRequest getShippingOptionRequest, Parcel parcelOverride = null)
         {
             if (getShippingOptionRequest is null)
                 throw new ArgumentNullException(nameof(getShippingOptionRequest));
@@ -2107,7 +2143,7 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
             if (getShippingOptionRequest.ShippingAddress?.CountryId is null)
                 return new GetShippingOptionResponse { Errors = new[] { "Shipping address is not set" } };
 
-            var (rates, error) = await GetShippingOptionsAsync(getShippingOptionRequest);
+            var (rates, error) = await GetShippingOptionsAsync(getShippingOptionRequest, parcelOverride);
             if (rates is null || !string.IsNullOrEmpty(error))
             {
                 //add a friendly message besides the error
@@ -2130,6 +2166,37 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
             }
 
             return shippingModel;
+        }
+
+        public virtual async Task<Nop.Core.Domain.Orders.Order> GetOrderByIdAsync(int orderId)
+        {
+            return await _orderService.GetOrderByIdAsync(orderId);
+        }
+        public virtual async Task<Currency> GetCurrencyByIdAsync(int currencyId)
+        {
+            return await _currencyService.GetCurrencyByIdAsync(currencyId);
+        }
+        public CurrencySettings GetCurrencySettings()
+        {
+            return _currencySettings;
+        }
+
+        public virtual async Task UpdateOrderAsync(Nop.Core.Domain.Orders.Order order)
+        {
+            await _orderService.UpdateOrderAsync(order);
+        }
+
+        public virtual async Task ShipAsync(Nop.Core.Domain.Shipping.Shipment shipment, bool notifyCustomer)
+        {
+            await _orderProcessingService.ShipAsync(shipment, notifyCustomer);
+        }
+
+        public virtual async Task LogEditOrderAsync(int orderId)
+        {
+            var order = await _orderService.GetOrderByIdAsync(orderId);
+
+            await _customerActivityService.InsertActivityAsync("EditOrder",
+                string.Format(await _localizationService.GetResourceAsync("ActivityLog.EditOrder"), order.CustomOrderNumber), order);
         }
 
         #endregion

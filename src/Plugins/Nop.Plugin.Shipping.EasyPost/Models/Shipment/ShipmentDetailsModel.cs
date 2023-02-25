@@ -174,6 +174,9 @@ namespace Nop.Plugin.Shipping.EasyPost.Models.Shipment
         [NopResourceDisplayName("Plugins.Shipping.EasyPost.Shipment.CustomsInfo.EelPfc")]
         public string EelPfc { get; set; }
 
+        [NopResourceDisplayName("Plugins.Shipping.EasyPost.Shipment.NotifyCustomer")]
+        public bool NotifyCustomerOfShipment { get; set; }
+
         #endregion
 
         #region Common

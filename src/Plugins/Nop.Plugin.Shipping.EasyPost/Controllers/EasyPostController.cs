@@ -289,6 +289,22 @@ namespace Nop.Plugin.Shipping.EasyPost.Controllers
                 {
                     var locale = await _localizationService.GetResourceAsync("Plugins.Shipping.EasyPost.Success");
                     _notificationService.SuccessNotification(locale);
+
+                    if (model.NotifyCustomerOfShipment)
+                    {
+                        try
+                        {
+                            await _easyPostService.ShipAsync(shipment, true);
+                            await _easyPostService.LogEditOrderAsync(shipment.OrderId);
+                            return RedirectToAction("ShipmentDetails", "Order", new { id = shipment?.Id ?? 0 });
+                        }
+                        catch (Exception exc)
+                        {
+                            //error
+                            await _notificationService.ErrorNotificationAsync(exc);
+                            return RedirectToAction("ShipmentDetails", "Order", new { id = shipment?.Id ?? 0 });
+                        }
+                    }
                 }
             }
 
@@ -758,17 +774,115 @@ namespace Nop.Plugin.Shipping.EasyPost.Controllers
 
         #region GetAdminRates
         [HttpPost]
+        [AuthorizeAdmin]
+        [Area(AreaNames.Admin)]
         public async Task<IActionResult> AdminGetShippingRates(ShippingModel model)
         {
             if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
                 return AccessDeniedView();
 
-            model.Parcel.width = 5;
-            return RedirectToAction("ShipmentDetails", "Order", new { shippingModel = model, id = 7 });
-            //return RedirectToAction("ShipmentDetails", "Order", new { id = shipment?.Id ?? 0 });
+            var order = await _easyPostService.GetOrderByIdAsync(model.OrderId);
+            if (order is null)
+                return Content(string.Empty);
+
+            if(model.Parcel.length == null || model.Parcel.width == null || model.Parcel.height == null || model.Parcel.weight == 0)
+                return Content(string.Empty);
+
+            if(model.Parcel.length == 0 || model.Parcel.width == 0 || model.Parcel.height == 0)
+                return Content(string.Empty);
+
+
+            ShippingModel shippingModel = model;
+
+            var address = await _easyPostService.GetAddressByIdAsync(order.ShippingAddressId, order.Id);
+
+            var cart = await _easyPostService.RebuildShoppingCart(order);
+
+            var (shippingOptionRequests, shippingFromMultipleLocations) = await _easyPostService.CreateShippingOptionRequestsAsync(cart, address, order.StoreId);
+
+            var result = new GetShippingOptionResponse();
+            result.ShippingFromMultipleLocations = shippingFromMultipleLocations;
+
+            var (shippingOptions, response) = await _easyPostService.GetShippingOptionsAsync(shippingOptionRequests, result, shippingModel.Parcel);
+
+            if (response.Success)
+            {
+                var rawShippingOptions = new List<EasyPost.Models.Shipment.ShippingOption>();
+
+                if (response.ShippingOptions.Any())
+                {
+                    foreach (var shippingOption in response.ShippingOptions)
+                    {
+                        rawShippingOptions.Add(new EasyPost.Models.Shipment.ShippingOption
+                        {
+                            Name = shippingOption.Name,
+                            Description = shippingOption.Description,
+                            Rate = shippingOption.Rate,
+                            TransitDays = shippingOption.TransitDays
+                        });
+                    }
+                }
+                else
+                {
+                    foreach (var error in response.Errors)
+                        shippingModel.Errors.Add(error);
+                }
+
+                shippingModel.ShippingOptions = rawShippingOptions;
+
+                shippingModel = _easyPostService.SortShippingOptions(shippingModel);
+            }
+            
+            return RedirectToAction("ShipmentDetails", "Order", new { id = shippingModel.Id });
+        }
+
+        [HttpPost]
+        [AuthorizeAdmin]
+        [Area(AreaNames.Admin)]
+        public async Task<IActionResult> AdminSelectShippingRate(ShippingModel model)
+        {
+            if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
+                return AccessDeniedView();
+
+            bool isError = false;
+
+            if (string.IsNullOrEmpty(model.SelectedShippingOptionId))
+            {
+                await _notificationService.ErrorNotificationAsync(new Exception("No shipping option selected!"));
+                isError = true;
+            }
+
+            var order = await _easyPostService.GetOrderByIdAsync(model.OrderId);
+            if (order is null)
+            {
+                await _notificationService.ErrorNotificationAsync(new Exception("Unable to find order with Id " + model.OrderId));
+                isError = true;
+            }
+
+            var shippingOption = model.ShippingOptions.FirstOrDefault(x => x.Id == model.SelectedShippingOptionId);
+
+            order.ShippingRateComputationMethodSystemName = EasyPostDefaults.SystemName;
+            order.ShippingMethod = shippingOption.Description;
+
+            var shipmentEntry = await _shipmentService.GetShipmentByIdAsync(model.Id);
+            if (shipmentEntry is null)
+            {
+                await _notificationService.ErrorNotificationAsync(new Exception("Unable to find shipment with Id " + model.Id));
+                isError = true;
+            }
+            if (isError)
+                return RedirectToAction("ShipmentDetails", "Order", new { id = model.Id });
+
+            await _easyPostService.UpdateOrderAsync(order);
+
+            await _easyPostService.SaveShipmentAsync(order);
+
+            await _easyPostService.SaveShipmentAsync(shipmentEntry, true);
+
+            return RedirectToAction("ShipmentDetails", "Order", new { id = model.Id });
 
         }
-            #endregion
-            #endregion
-        }
+        #endregion
+        #endregion
+    }
 }

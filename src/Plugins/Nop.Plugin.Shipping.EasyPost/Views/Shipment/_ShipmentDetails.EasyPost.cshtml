@@ -164,6 +164,15 @@
                             <span asp-validation-for="RateId"></span>
                         </div>
                     </div>
+                    <div class="form-group row">
+                        <div class="col-md-3">
+                            <nop-label asp-for="NotifyCustomerOfShipment" />
+                        </div>
+                        <div class="col-md-9">
+                            <nop-editor asp-for="NotifyCustomerOfShipment" />
+                            <span asp-validation-for="NotifyCustomerOfShipment"></span>
+                        </div>
+                    </div>
                     @if (Model.SmartRates.Any())
                     {
                         <div class="form-group row"></div>

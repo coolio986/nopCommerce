@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using EasyPost;
+using Nop.Web.Framework.Mvc.ModelBinding;
 
 namespace Nop.Plugin.Shipping.EasyPost.Models.Shipment
 {
@@ -16,5 +17,13 @@ namespace Nop.Plugin.Shipping.EasyPost.Models.Shipment
         public string Error => Errors.FirstOrDefault() == null ? "" : Errors.FirstOrDefault();
 
         public Parcel Parcel { get; set; } = new Parcel();
+
+        [NopResourceDisplayName("Admin.Orders.Shipments.ID")]
+        public int Id { get; set; }
+
+        public string SelectedShippingOptionId { get; set; }
+
+        public int OrderId { get; set; }
+
     }
 }
