@@ -104,7 +104,7 @@ var AjaxCart = {
                 }
                 else {
                     //specify timeout for success messages
-                    displayBarNotification(response.message, 'success', 3500);
+                    displayBarNotification(response.message, 'success', 2000);
                 }
             }
             else {

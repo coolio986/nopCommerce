@@ -95,6 +95,10 @@
                     }
                     <button type="button" class="button-2 product-box-add-to-cart-button" onclick="AjaxCart.addproducttocart_catalog('@addtocartlink');return false;">@(addToCartText)</button>
                 }
+                else
+                {
+                    <button type="button" class="button-2" style="width:60%" >OUT OF STOCK</button>
+                }
                 @if (!Model.ProductPrice.DisableAddToCompareListButton)
                 {
                     <button type="button" class="button-2 add-to-compare-list-button" title="@T("ShoppingCart.AddToCompareList")" onclick="AjaxCart.addproducttocomparelist('@addtocomparelink');return false;">@T("ShoppingCart.AddToCompareList")</button>

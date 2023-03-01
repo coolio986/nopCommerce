@@ -1199,7 +1199,7 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
                 if (string.IsNullOrEmpty(shipmentId))
                     throw new NopException("Shipment is not yet purchased");
 
-                var format = labelFormat ?? "png";
+                var format = labelFormat ?? "pdf";
 
                 var shipment = Shipment.Retrieve(shipmentId)
                     ?? throw new NopException("No response from the service");
