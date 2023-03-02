@@ -150,6 +150,37 @@ namespace Nop.Data
         }
 
         /// <summary>
+        /// Get the entity entry without cache
+        /// </summary>
+        /// <param name="id">Entity entry identifier</param>
+        /// <param name="getCacheKey">Function to get a cache key; pass null to don't cache; return null from this function to use the default key</param>
+        /// <param name="includeDeleted">Whether to include deleted items (applies only to <see cref="ISoftDeletedEntity"/> entities)</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the entity entry
+        /// </returns>
+        public virtual async Task<TEntity> GetByIdAsyncWithoutCache(int? id, Func<IStaticCacheManager, CacheKey> getCacheKey = null, bool includeDeleted = true)
+        {
+            if (!id.HasValue || id == 0)
+                return null;
+
+            async Task<TEntity> getEntityAsync()
+            {
+                return await AddDeletedFilter(Table, includeDeleted).FirstOrDefaultAsync(entity => entity.Id == Convert.ToInt32(id));
+            }
+
+            if (getCacheKey == null)
+                return await getEntityAsync();
+
+            //caching
+            var cacheKey = getCacheKey(_staticCacheManager)
+                ?? _staticCacheManager.PrepareKeyForDefaultCache(NopEntityCacheDefaults<TEntity>.ByIdCacheKey, id);
+
+            return await _staticCacheManager.GetAsyncWithoutCache(cacheKey, getEntityAsync);
+        }
+
+
+        /// <summary>
         /// Get entity entries by identifiers
         /// </summary>
         /// <param name="ids">Entity entry identifiers</param>

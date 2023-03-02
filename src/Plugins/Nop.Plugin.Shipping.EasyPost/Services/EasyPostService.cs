@@ -2120,8 +2120,6 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
             }).ToList();
 
             return cart;
-
-            return cart;
         }
 
         public virtual async Task<Customer> GetCustomerByIdAsync(int customerId)

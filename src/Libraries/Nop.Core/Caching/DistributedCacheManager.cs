@@ -173,6 +173,37 @@ namespace Nop.Core.Caching
         }
 
         /// <summary>
+        /// Get an item without cache
+        /// </summary>
+        /// <typeparam name="T">Type of cached item</typeparam>
+        /// <param name="key">Cache key</param>
+        /// <param name="acquire">Function to load item if it's not in the cache yet</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the cached value associated with the specified key
+        /// </returns>
+        public async Task<T> GetAsyncWithoutCache<T>(CacheKey key, Func<Task<T>> acquire)
+        {
+            //little performance workaround here:
+            //we use "PerRequestCache" to cache a loaded object in memory for the current HTTP request.
+            //this way we won't connect to Redis server many times per HTTP request (e.g. each time to load a locale or setting)
+            if (_perRequestCache.IsSet(key.Key))
+                return _perRequestCache.Get(key.Key, () => default(T));
+
+            var (isSet, item) = await TryGetItemAsync<T>(key);
+
+            if (isSet)
+                return item;
+
+            var result = await acquire();
+
+            if (result != null)
+                await SetAsync(key, result);
+
+            return result;
+        }
+
+        /// <summary>
         /// Get a cached item. If it's not in the cache yet, then load and cache it
         /// </summary>
         /// <typeparam name="T">Type of cached item</typeparam>

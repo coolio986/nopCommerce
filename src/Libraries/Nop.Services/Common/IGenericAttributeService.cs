@@ -75,6 +75,20 @@ namespace Nop.Services.Common
         Task<TPropType> GetAttributeAsync<TPropType>(BaseEntity entity, string key, int storeId = 0, TPropType defaultValue = default);
 
         /// <summary>
+        /// Get an attribute of an entity without cache
+        /// </summary>
+        /// <typeparam name="TPropType">Property type</typeparam>
+        /// <param name="entity">Entity</param>
+        /// <param name="key">Key</param>
+        /// <param name="storeId">Load a value specific for a certain store; pass 0 to load a value shared for all stores</param>
+        /// <param name="defaultValue">Default value</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the attribute
+        /// </returns>
+        Task<TPropType> GetAttributeAsyncWithoutCache<TPropType>(BaseEntity entity, string key, int storeId = 0, TPropType defaultValue = default);
+
+        /// <summary>
         /// Get an attribute of an entity
         /// </summary>
         /// <typeparam name="TPropType">Property type</typeparam>

@@ -901,7 +901,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                 return AccessDeniedView();
 
             //try to get a product with the specified id
-            var product = await _productService.GetProductByIdAsync(id);
+            var product = await _productService.GetProductByIdWithoutCacheAsync(id);
             if (product == null || product.Deleted)
                 return RedirectToAction("List");
 

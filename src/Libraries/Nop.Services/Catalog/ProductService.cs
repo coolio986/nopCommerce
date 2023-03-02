@@ -560,9 +560,17 @@ namespace Nop.Services.Catalog
             return await _productRepository.GetByIdAsync(productId, cache => default);
         }
 
+        /// <summary>
+        /// Gets product without cache
+        /// </summary>
+        /// <param name="productId">Product identifier</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the product
+        /// </returns>
         public virtual async Task<Product> GetProductByIdWithoutCacheAsync(int productId)
         {
-            return await _productRepository.GetByIdAsync(productId, null);
+            return await _productRepository.GetByIdAsyncWithoutCache(productId, cache => default);
         }
 
         /// <summary>

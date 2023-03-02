@@ -117,7 +117,7 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
 
             var model = new ShipmentDetailsModel { Id = shipmentEntry.Id };
 
-            var shipmentId = await _genericAttributeService.GetAttributeAsync<string>(shipmentEntry, EasyPostDefaults.ShipmentIdAttribute);
+            var shipmentId = await _genericAttributeService.GetAttributeAsyncWithoutCache<string>(shipmentEntry, EasyPostDefaults.ShipmentIdAttribute);
             var (shipment, shipmentError) = await _easyPostService.GetShipmentAsync(shipmentId);
 
             //fixed weights still need rates, this allows us to use easypost even with fixed rates
