@@ -1891,6 +1891,21 @@ namespace Nop.Web.Areas.Admin.Controllers
 
         #endregion
 
+        #region Drafts
+
+        public virtual async Task<IActionResult> Draft()
+        {
+            if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
+                return AccessDeniedView();
+
+            //prepare model
+            var model = await _orderModelFactory.PrepareOrderSearchModelAsync(new OrderSearchModel());
+
+            return View(model);
+        }
+
+        #endregion
+
         #region Shipments
 
         public virtual async Task<IActionResult> ShipmentList()

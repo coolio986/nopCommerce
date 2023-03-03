@@ -5,9 +5,9 @@
 
 @{
     //page title
-    ViewBag.PageTitle = T("Admin.Orders").Text;
+    ViewBag.PageTitle = "draft order";
     //active menu item (system name)
-    NopHtml.SetActiveMenuItemSystemName("Orders");
+    NopHtml.SetActiveMenuItemSystemName("Draft Orders");
 }
 
 @{
@@ -41,7 +41,7 @@
 <form asp-controller="Order" asp-action="List" method="post">
     <div class="content-header clearfix">
         <h1 class="float-left">
-            @T("Admin.Orders")
+            Draft Orders
         </h1>
         <a href="" id="newOrderIndicator" class="float-left" style="
             display: none;

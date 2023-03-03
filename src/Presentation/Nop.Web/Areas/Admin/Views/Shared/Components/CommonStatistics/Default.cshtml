@@ -3,7 +3,8 @@
 @inject Nop.Services.Common.IGenericAttributeService genericAttributeService
 @inject IWorkContext workContext
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.13/signalr.min.js"></script>
+<script asp-src-include="~/lib/signalr/6.0.13/signalr.min.js"></script>
+
 <script >
     const visitorCountDiv =  document.getElementById('numberOfOnlineCustomers');
     const totalSessionsDiv = document.getElementById('numberOfTotalSessions');
