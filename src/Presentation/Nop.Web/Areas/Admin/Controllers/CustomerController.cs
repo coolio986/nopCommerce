@@ -1801,6 +1801,12 @@ namespace Nop.Web.Areas.Admin.Controllers
                     {
                         foreach (ImportCustomerModel importCustomer in importCustomerModelList)
                         {
+
+                            var existingCustomer = await _customerService.GetCustomerByEmailAsync(importCustomer.Email);
+                            if (existingCustomer != null)
+                                continue;
+
+
                             RNGCryptoServiceProvider provider = new RNGCryptoServiceProvider();
                             int passwordLength = 10;
 
@@ -1955,7 +1961,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             model = await _customerModelFactory.PrepareCustomerSearchModelAsync(model);
 
             //if we got this far, something failed, redisplay form
-            return View(model);
+            return RedirectToAction("List");
         }
         private char GenerateChar(string availableChars, RNGCryptoServiceProvider provider)
         {
