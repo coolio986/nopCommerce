@@ -60,7 +60,23 @@ namespace Nop.Services.Customers
             var customers = await _customerService.GetOnlineCustomersAsync(customerRoleIds: null,
                  lastActivityFromUtc: lastActivityFrom);
 
-            var totalSessionCount = (await _customerService.GetTotalSessionsAsync(DateTime.UtcNow, DateTime.Today)).Count;
+            List<string> alreadyUsedIPs = new List<string>();
+
+            //todo fix -6 to local time zone
+            var customerSessions = await _customerService.GetTotalSessionsAsync(DateTime.UtcNow, DateTime.Today);
+            
+            foreach(var customerSession in customerSessions.ToList())
+            {
+                if (alreadyUsedIPs.Contains(customerSession.LastIpAddress))
+                {
+                    customerSessions.Remove(customerSession);
+                    if (customers.Contains(customerSession))
+                        customers.Remove(customerSession);
+                }
+                alreadyUsedIPs.Add(customerSession.LastIpAddress);
+            }
+
+            //var totalSessionCount = (await _customerService.GetTotalSessionsAsync(DateTime.UtcNow, DateTime.Today)).Count;
 
             var salesSummary = await GetSalesSummaryReportAsync();
             if(salesSummary != null && salesSummary.Count > 0)
@@ -69,7 +85,7 @@ namespace Nop.Services.Customers
                 await _hubContext.Clients.All.SendAsync("TotalDailyOrders", salesSummary[0].NumberOfOrders);
             }
 
-            await _hubContext.Clients.All.SendAsync("TotalSessionCount", totalSessionCount);
+            await _hubContext.Clients.All.SendAsync("TotalSessionCount", customerSessions.Count);
 
             await _hubContext.Clients.All.SendAsync("VisitorCount", customers.Count());
         }

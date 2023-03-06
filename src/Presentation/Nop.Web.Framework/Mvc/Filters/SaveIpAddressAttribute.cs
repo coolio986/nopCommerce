@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Nop.Core;
+using Nop.Core.Configuration;
 using Nop.Core.Domain.Customers;
 using Nop.Data;
 
@@ -38,6 +39,12 @@ namespace Nop.Web.Framework.Mvc.Filters
             private readonly IRepository<Customer> _customerRepository;
             private readonly IWebHelper _webHelper;
             private readonly IWorkContext _workContext;
+            private readonly AppSettings _appSettings;
+
+
+            private readonly string _forwardedForHeaderName;
+            private readonly bool _useProxy;
+
 
             #endregion
 
@@ -46,12 +53,26 @@ namespace Nop.Web.Framework.Mvc.Filters
             public SaveIpAddressFilter(CustomerSettings customerSettings,
                 IRepository<Customer> customerRepository,
                 IWebHelper webHelper,
-                IWorkContext workContext)
+                IWorkContext workContext,
+                AppSettings appSettings)
             {
                 _customerSettings = customerSettings;
                 _customerRepository = customerRepository;
                 _webHelper = webHelper;
                 _workContext = workContext;
+                _appSettings = appSettings;
+
+                //hack to fix x-forwarded-for
+                if (_appSettings.Get<HostingConfig>().UseProxy)
+                {
+                    if (!string.IsNullOrEmpty(appSettings.Get<HostingConfig>().ForwardedForHeaderName))
+                    {
+                        _forwardedForHeaderName = appSettings.Get<HostingConfig>().ForwardedForHeaderName;
+                        _useProxy = true;
+                    }
+                }
+
+
             }
 
             #endregion
@@ -84,6 +105,26 @@ namespace Nop.Web.Framework.Mvc.Filters
 
                 //get current IP address
                 var currentIpAddress = _webHelper.GetCurrentIpAddress();
+
+                //hack to fix x-forwarded-for
+                if (_useProxy && context.HttpContext.Request.Headers.ContainsKey(_forwardedForHeaderName))
+                {
+                    var ipaddress = context.HttpContext.Request.Headers[_forwardedForHeaderName].ToString();
+                    if(!string.IsNullOrEmpty(ipaddress))
+                        currentIpAddress = ipaddress;
+                }
+
+                //hack to fix uptime pinging
+                if (context.HttpContext.Request.Headers.ContainsKey("user-agent"))
+                {
+                    string userAgent = context.HttpContext.Request.Headers["user-agent"];
+                    if(userAgent != null)
+                    {
+                        userAgent = userAgent.ToLower();
+                        if (userAgent.Contains("bot")) //dont log bots
+                            return;
+                    }
+                }
 
                 if (string.IsNullOrEmpty(currentIpAddress))
                     return;
