@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
 using Nop.Core;
+using Nop.Core.Configuration;
 using Nop.Core.Domain;
 using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Common;
@@ -97,6 +98,7 @@ namespace Nop.Web.Controllers
         private readonly MultiFactorAuthenticationSettings _multiFactorAuthenticationSettings;
         private readonly StoreInformationSettings _storeInformationSettings;
         private readonly TaxSettings _taxSettings;
+        private readonly AppSettings _appSettings;
 
         #endregion
 
@@ -146,7 +148,8 @@ namespace Nop.Web.Controllers
             MediaSettings mediaSettings,
             MultiFactorAuthenticationSettings multiFactorAuthenticationSettings,
             StoreInformationSettings storeInformationSettings,
-            TaxSettings taxSettings)
+            TaxSettings taxSettings,
+            AppSettings appSettings)
         {
             _addressSettings = addressSettings;
             _captchaSettings = captchaSettings;
@@ -193,6 +196,7 @@ namespace Nop.Web.Controllers
             _multiFactorAuthenticationSettings = multiFactorAuthenticationSettings;
             _storeInformationSettings = storeInformationSettings;
             _taxSettings = taxSettings;
+            _appSettings = appSettings;
         }
 
         #endregion
@@ -601,6 +605,10 @@ namespace Nop.Web.Controllers
             var model = new PasswordRecoveryModel();
             model = await _customerModelFactory.PreparePasswordRecoveryModelAsync(model);
 
+            bool allowAdminAccess = _appSettings.Get<CommonConfig>().AllowAdministratorLoginAccess;
+            if (allowAdminAccess)
+                model.DisplayCaptcha = false;
+
             return View(model);
         }
 
@@ -613,10 +621,14 @@ namespace Nop.Web.Controllers
         [CheckAccessClosedStore(true)]
         public virtual async Task<IActionResult> PasswordRecoverySend(PasswordRecoveryModel model, bool captchaValid)
         {
-            // validate CAPTCHA
-            if (_captchaSettings.Enabled && _captchaSettings.ShowOnForgotPasswordPage && !captchaValid)
+            
+            bool allowAdminAccess = _appSettings.Get<CommonConfig>().AllowAdministratorLoginAccess;
+
+            if (!allowAdminAccess)
             {
-                ModelState.AddModelError("", await _localizationService.GetResourceAsync("Common.WrongCaptchaMessage"));
+                // validate CAPTCHA
+                if (_captchaSettings.Enabled && _captchaSettings.ShowOnForgotPasswordPage && !captchaValid)
+                    ModelState.AddModelError("", await _localizationService.GetResourceAsync("Common.WrongCaptchaMessage"));
             }
 
             if (ModelState.IsValid)
@@ -644,9 +656,11 @@ namespace Nop.Web.Controllers
                 }
             }
 
-            model = await _customerModelFactory.PreparePasswordRecoveryModelAsync(model);
+            //model = await _customerModelFactory.PreparePasswordRecoveryModelAsync(model);
 
-            return View(model);
+            //return View(model);
+
+            return RedirectToAction("login");
         }
 
         //available even when navigation is not allowed

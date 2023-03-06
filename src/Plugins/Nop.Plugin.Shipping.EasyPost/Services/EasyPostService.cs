@@ -438,6 +438,9 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
             if (string.IsNullOrEmpty(options.currency))
                 options.currency = EasyPostDefaults.CurrencyCode;
 
+            options.label_size = "4x6";
+            options.label_format = "PDF";
+
             //create shipment
             var shipment = new Shipment
             {
@@ -445,14 +448,16 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
                 from_address = addressFrom,
                 parcel = parcel,
                 customs_info = customsInfo,
-                options = options
+                options = options,
+                
             };
 
             if (!_easyPostSettings.UseSandbox && !_easyPostSettings.UseAllAvailableCarriers)
                 shipment.carrier_accounts = _easyPostSettings.CarrierAccounts?.Select(value => new CarrierAccount { id = value }).ToList();
             shipment.Create();
 
-            shipment.options.label_size = "4x6";
+            //shipment.options.label_size = "4x6";
+            //shipment.options.label_format = "PDF";
 
             //log warning messages if any
             if (_easyPostSettings.LogShipmentMessages && shipment.messages?.Any() == true)
@@ -850,6 +855,7 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
                 var addressFrom = await PrepareAddressFromAsync(request);
 
                 orderShipment.options.label_size = "4x6";
+                orderShipment.options.label_format = "PDF";
 
                 Parcel myParcel = null;
             if (orderShipment.parcel != null && 
@@ -868,6 +874,7 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
                     shipmentId = shipment.id;
                 }
                 orderShipment.options.label_size = "4x6";
+                orderShipment.options.label_format = "PDF";
 
                 //save the shipment id
                 await _genericAttributeService.SaveAttributeAsync(shipmentEntry, EasyPostDefaults.ShipmentIdAttribute, shipmentId);
@@ -1205,7 +1212,7 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
                     ?? throw new NopException("No response from the service");
 
                 shipment.options.label_size = "4x6";
-                shipment.options.label_format = format;
+                shipment.options.label_format = "PDF";
 
                 (string DownloadUrl, string ContentType) getLabelDetails() =>
                     format.ToLowerInvariant() switch

@@ -121,7 +121,9 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
             var (shipment, shipmentError) = await _easyPostService.GetShipmentAsync(shipmentId);
 
             //fixed weights still need rates, this allows us to use easypost even with fixed rates
-            if(order.ShippingRateComputationMethodSystemName == "Shipping.FixedByWeightByTotal" && shipmentId == null)
+            if (order.ShippingRateComputationMethodSystemName == "Shipping.FixedByWeightByTotal" &&
+                shipmentId == null &&
+                order.ShippingStatus != Core.Domain.Shipping.ShippingStatus.Shipped)
             {
                 ShippingModel shippingModel = new ShippingModel()
                 {
@@ -130,10 +132,10 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
                 };
 
                 var customer = await _easyPostService.GetCustomerByIdAsync(order.CustomerId);
-                var fixedShipmentId = await _genericAttributeService.GetAttributeAsync<string>(customer, EasyPostDefaults.ShipmentIdAttribute, order.StoreId );
+                var fixedShipmentId = await _genericAttributeService.GetAttributeAsync<string>(customer, EasyPostDefaults.ShipmentIdAttribute, order.StoreId);
                 var (fixedShipment, fixedShipmentError) = await _easyPostService.GetShipmentAsync(fixedShipmentId);
 
-                if(string.IsNullOrEmpty(fixedShipmentError) && fixedShipment != null)
+                if (string.IsNullOrEmpty(fixedShipmentError) && fixedShipment != null)
                 {
                     var storeCurrency = await _easyPostService.GetCurrencyByIdAsync(_easyPostService.GetCurrencySettings().PrimaryStoreCurrencyId)
                     ?? throw new NopException("Primary store currency is not set");
@@ -154,6 +156,10 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
 
                 return View("~/Plugins/Shipping.EasyPost/Views/Shipment/_ShipmentDetails.EasyPost.Rates.cshtml", shippingModel);
             }
+
+            if (order.ShippingRateComputationMethodSystemName == "Shipping.FixedByWeightByTotal" && order.ShippingStatus == Core.Domain.Shipping.ShippingStatus.Shipped)
+                return Content(string.Empty);
+
 
             if (!string.IsNullOrEmpty(shipmentError))
             {
