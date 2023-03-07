@@ -97,8 +97,8 @@ namespace Nop.Services.Customers
             PaymentStatus? paymentStatus = null;
 
             var currentVendor = await _workContext.GetCurrentVendorAsync();
-
-            var startDateValue = DateTime.Today;
+            var offset = TimeZoneInfo.Local.GetUtcOffset(DateTime.UtcNow);
+            var startDateValue = DateTime.Today.AddHours(offset.Hours);
             var endDateValue = DateTime.UtcNow;
 
             //get sales summary
