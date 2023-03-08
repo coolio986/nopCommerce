@@ -38,6 +38,8 @@ namespace Nop.Web.Models.Catalog
         /// </summary>
         public string ViewMode { get; set; }
 
+        public bool ShowInStockOnly { get; set; }
+
         #endregion
     }
 }

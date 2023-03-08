@@ -8,6 +8,9 @@
     return;
 }
 
+<input asp-for="@Model.InStockOnly" type="hidden" />
+
+
 <div class="product-selectors">
     @*view mode*@
     @if (Model.AllowProductViewModeChanging)
@@ -87,4 +90,30 @@
             });
         </script>
     }
+
+    <div style="width:10px" >
+        
+        
+    </div>
+
+
+    <div class="product-stock-status" >
+        <span >In stock only</span>
+        <input style="margin-left:5px" type="checkbox" name="inStockOnly" id="product-stockstatus" />
+        
+    </div>
+
+    <script asp-location="Footer">
+        $(document).ready(function () {
+            var $inStockEl = $('#product-stockstatus');
+            $inStockEl.on('change', function () {
+                CatalogProducts.getProducts();
+            });
+
+            $(CatalogProducts).on('before', function (e) {
+                e.payload.urlBuilder
+                    .addParameter('showinstockonly', $inStockEl.is(":checked"));
+            });
+        });
+    </script>
 </div>

@@ -86,6 +86,8 @@ namespace Nop.Web.Models.Catalog
         /// </summary>
         public IList<ProductOverviewModel> Products { get; set; }
 
+        public bool InStockOnly { get; set; }
+
         #endregion
 
         #region Ctor

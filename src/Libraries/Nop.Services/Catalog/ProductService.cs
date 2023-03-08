@@ -824,7 +824,8 @@ namespace Nop.Services.Catalog
             IList<SpecificationAttributeOption> filteredSpecOptions = null,
             ProductSortingEnum orderBy = ProductSortingEnum.Position,
             bool showHidden = false,
-            bool? overridePublished = null)
+            bool? overridePublished = null,
+            bool inStockOnly = false)
         {
             //some databases don't support int.MaxValue
             if (pageSize == int.MaxValue)
@@ -836,6 +837,9 @@ namespace Nop.Services.Catalog
                 productsQuery = productsQuery.Where(p => p.Published);
             else if (overridePublished.HasValue)
                 productsQuery = productsQuery.Where(p => p.Published == overridePublished.Value);
+
+            if(inStockOnly)
+                productsQuery = productsQuery.Where(p => p.DisableBuyButton == !inStockOnly);
 
             //apply store mapping constraints
             productsQuery = await _storeMappingService.ApplyStoreMapping(productsQuery, storeId);
