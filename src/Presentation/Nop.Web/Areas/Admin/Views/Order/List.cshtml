@@ -559,9 +559,9 @@
     <input type="hidden" id="selectedIds" name="selectedIds" value="" />
 </form>
 
-<form asp-controller="Order" asp-action="PdfPackagingSlipOrderSelected" method="post" id="pdf-packlist-selected-form">
+@*<form asp-controller="Order" asp-action="PdfPackagingSlipOrderSelected" method="post" id="pdf-packlist-selected-form">*@
     <input type="hidden" id="selectedIds" name="selectedIds" value="" />
-</form>
+@*</form>*@
 
 <script>
     $(document).ready(function () {
@@ -584,11 +584,13 @@
             var ids = selectedIds.join(",");
             if (!ids) {
                 $('#pdfInvoiceSelected-info').text("@T("Admin.Orders.NoOrders")");
-                $("#pdfPackingSlipSelected").click();
+                $("#pdfInvoiceSelected").click();
             }
             else {
-                $('#pdf-packlist-selected-form #selectedIds').val(ids);
-                $('#pdf-packlist-selected-form').submit();
+                window.open('@Url.Action("PdfPackagingSlipOrderSelected", "Order")?selectedIds=' + ids);
+
+                //$('#pdf-packlist-selected-form #selectedIds').val(ids);
+                //$('#pdf-packlist-selected-form').submit();
                 updateTable('#orders-grid');
             }
             return false;

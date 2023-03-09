@@ -2560,7 +2560,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             return await PreparePackingSlipSelected(selectedIds, shipments);
         }
 
-        [HttpPost]
+        [HttpGet]
         public virtual async Task<IActionResult> PdfPackagingSlipOrderSelected(string selectedIds)
         {
             if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
@@ -2607,7 +2607,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                     bytes = stream.ToArray();
                 }
 
-                return File(bytes, MimeTypes.ApplicationPdf, "packagingslips.pdf");
+                return File(bytes, MimeTypes.ApplicationPdf);
             }
             catch (Exception exc)
             {
