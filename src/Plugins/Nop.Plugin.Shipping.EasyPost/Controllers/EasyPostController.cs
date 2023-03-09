@@ -328,11 +328,14 @@ namespace Nop.Plugin.Shipping.EasyPost.Controllers
                 }
                 else
                 {
+                    //switched to ajax for download
+                    return Json(new { Result = downloadUrl });
+
                     //return file
-                    var filename = _nopFileProvider.GetFileName(downloadUrl);
-                    var client = _httpClientFactory.CreateClient(NopHttpDefaults.DefaultHttpClient);
-                    var stream = await client.GetStreamAsync(downloadUrl);
-                    return File(stream, contentType, filename, true);
+                    //var filename = _nopFileProvider.GetFileName(downloadUrl);
+                    //var client = _httpClientFactory.CreateClient(NopHttpDefaults.DefaultHttpClient);
+                    //var stream = await client.GetStreamAsync(downloadUrl);
+                    //return File(stream, contentType, filename, true);
                 }
             }
 

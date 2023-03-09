@@ -22,19 +22,28 @@ namespace Nop.Services.Customers
         private readonly IWorkContext _workContext;
         private readonly IOrderReportService _orderReportService;
         private readonly IHubContext<SignalREventHub> _hubContext;
+        private readonly IDateTimeHelper _dateTimeHelper;
         private readonly Timer _timer;
+
+        private readonly TimeZoneInfo _timeZone;
 
         public LiveCustomerActivityService(CustomerSettings customerSettings, 
             IHubContext<SignalREventHub> hubContext, 
             ICustomerService customerService,
             IWorkContext workContext,
-            IOrderReportService orderReportService)
+            IOrderReportService orderReportService,
+            IDateTimeHelper dateTimeHelper)
         {
             _customerSettings = customerSettings;
             _customerService = customerService;
             _workContext = workContext;
             _orderReportService = orderReportService;
             _hubContext = hubContext;
+            _dateTimeHelper = dateTimeHelper;
+
+            _timeZone = dateTimeHelper.DefaultStoreTimeZone;
+
+
 
             _timer = new Timer(15000);
             _timer.Enabled = true;
@@ -62,8 +71,15 @@ namespace Nop.Services.Customers
 
             List<string> alreadyUsedIPs = new List<string>();
 
-            //todo fix -6 to local time zone
-            var customerSessions = await _customerService.GetTotalSessionsAsync(DateTime.UtcNow, DateTime.Today);
+            var startDateValue = DateTime.Today;
+
+            //hack... trying to fix issues between docker datetime and windows
+            var endDateValue = DateTime.UtcNow;
+            if (endDateValue.AddHours(_timeZone.BaseUtcOffset.Hours) < DateTime.Today)
+                startDateValue = startDateValue.AddDays(-1);
+
+
+            var customerSessions = await _customerService.GetTotalSessionsAsync(endDateValue, startDateValue);
             
             foreach(var customerSession in customerSessions.ToList())
             {
@@ -81,8 +97,10 @@ namespace Nop.Services.Customers
             var salesSummary = await GetSalesSummaryReportAsync();
             if(salesSummary != null && salesSummary.Count > 0)
             {
-                await _hubContext.Clients.All.SendAsync("TotalDailySales", salesSummary[0].ProfitStr);
-                await _hubContext.Clients.All.SendAsync("TotalDailyOrders", salesSummary[0].NumberOfOrders);
+               var profit = String.Format("{0:C}", salesSummary.Sum(x => x.Profit));
+
+                await _hubContext.Clients.All.SendAsync("TotalDailySales", profit);
+                await _hubContext.Clients.All.SendAsync("TotalDailyOrders", salesSummary.Sum(x => x.NumberOfOrders).ToString());
             }
 
             await _hubContext.Clients.All.SendAsync("TotalSessionCount", customerSessions.Count);
@@ -97,9 +115,14 @@ namespace Nop.Services.Customers
             PaymentStatus? paymentStatus = null;
 
             var currentVendor = await _workContext.GetCurrentVendorAsync();
-            var offset = TimeZoneInfo.Local.GetUtcOffset(DateTime.UtcNow);
-            var startDateValue = DateTime.Today.AddHours(offset.Hours);
+            //var offset = TimeZoneInfo.Local.GetUtcOffset(DateTime.UtcNow);
+            var startDateValue = DateTime.Today;
+
+            //hack... trying to fix issues between docker datetime and windows
             var endDateValue = DateTime.UtcNow;
+            if (endDateValue.AddHours(_timeZone.BaseUtcOffset.Hours) < DateTime.Today)
+                startDateValue = startDateValue.AddDays(-1);
+
 
             //get sales summary
             var salesSummary = await _orderReportService.SalesSummaryReportAsync(

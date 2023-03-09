@@ -227,17 +227,23 @@ namespace Nop.Web.Framework.Infrastructure.Extensions
                 options.DefaultSignInScheme = NopAuthenticationDefaults.ExternalAuthenticationScheme;
             });
 
+            var appSettings = Singleton<AppSettings>.Instance;
+            bool allowAdminAccess = appSettings.Get<CommonConfig>().AllowAdministratorLoginAccess;
+            
+
             //add main cookie authentication
             authenticationBuilder.AddCookie(NopAuthenticationDefaults.AuthenticationScheme, options =>
-            {
-                options.Cookie.Name = $"{NopCookieDefaults.Prefix}{NopCookieDefaults.AuthenticationCookie}";
-                options.Cookie.HttpOnly = true;
-                options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-                options.LoginPath = NopAuthenticationDefaults.LoginPath;
-                options.AccessDeniedPath = NopAuthenticationDefaults.AccessDeniedPath;
+        {
+            options.Cookie.Name = $"{NopCookieDefaults.Prefix}{NopCookieDefaults.AuthenticationCookie}";
+            options.Cookie.HttpOnly = true;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+            options.LoginPath = NopAuthenticationDefaults.LoginPath;
+            options.AccessDeniedPath = NopAuthenticationDefaults.AccessDeniedPath;
+            if(!allowAdminAccess)
                 options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
-                options.SlidingExpiration = true;
-            });
+
+            options.SlidingExpiration = !allowAdminAccess;
+        });
 
             //add external authentication
             authenticationBuilder.AddCookie(NopAuthenticationDefaults.ExternalAuthenticationScheme, options =>
@@ -247,8 +253,10 @@ namespace Nop.Web.Framework.Infrastructure.Extensions
                 options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
                 options.LoginPath = NopAuthenticationDefaults.LoginPath;
                 options.AccessDeniedPath = NopAuthenticationDefaults.AccessDeniedPath;
-                options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
-                options.SlidingExpiration = true;
+                if(!allowAdminAccess)
+                    options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+
+                options.SlidingExpiration = !allowAdminAccess;
             });
 
             //register and configure external authentication plugins now

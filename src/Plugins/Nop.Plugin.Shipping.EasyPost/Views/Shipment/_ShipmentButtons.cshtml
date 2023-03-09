@@ -18,15 +18,45 @@ else
 {
     @await Html.PartialAsync("~/Plugins/Shipping.EasyPost/Views/Pickup/_PickupButtons.cshtml", Model.PickupModel)
     <div class="btn-group">
-        <button type="button" class="btn btn-success">
+        <button class="btn btn-success" type="button" asp-route="@EasyPostDefaults.DownloadLabelRouteName" asp-route-labelFormat="pdf" id="downloadPDF">
             <i class="fa fa-download"></i>
             @T("Plugins.Shipping.EasyPost.Shipment.DownloadLabel")
         </button>
-        <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+
+        <script>
+            $(document).ready(function () {
+                $("#downloadPDF").click(function (e){
+                    e.preventDefault();
+
+                    var postData = {
+                        id: '@Model.Id',
+                        labelFormat: 'PDF'
+                    };
+                    addAntiForgeryToken(postData);
+                    $.ajax({
+                        cache: false,
+                        type: "POST",
+                        url: "@(Url.Action("DownloadLabel", "EasyPost"))",
+                        data: postData,
+                        traditional: true,
+                        async: false,
+                        error: function (jqXHR, textStatus, errorThrown) {
+                            console.log(errorThrown);
+                        },
+                        success: function (data) {
+                            console.log(data);
+                            window.open(data.Result);
+                        }
+                    });
+                });
+            });
+        </script>
+
+        @*<button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
             <span class="caret"></span>
             <span class="sr-only">&nbsp;</span>
-        </button>
-        <ul class="dropdown-menu" role="menu">
+        </button>*@
+        @*<ul class="dropdown-menu" role="menu">
             <li>
                 <button type="submit" asp-route="@EasyPostDefaults.DownloadLabelRouteName" asp-route-labelFormat="png">
                     <i class="far fa-file-image"></i>
@@ -45,7 +75,7 @@ else
                     @T("Plugins.Shipping.EasyPost.Shipment.DownloadLabel.Zpl")
                 </button>
             </li>
-        </ul>
+        </ul>*@
     </div>
     if (Model.InvoiceExists)
     {

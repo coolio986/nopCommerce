@@ -193,6 +193,7 @@
                             $(document).ready(function () {
                                 $('#select-shipments').click(function (e) {
                                     e.preventDefault();
+
                                     var postData = {
                                         batchId: '@Context.Request.Query["batchId"]',
                                         selectedIds: selectedIds

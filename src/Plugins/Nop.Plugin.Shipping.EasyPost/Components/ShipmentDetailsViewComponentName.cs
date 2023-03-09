@@ -203,6 +203,10 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
                 foreach (var rate in rates.OrderBy(rate => rate.Rate))
                 {
                     var rateName = $"{rate.Carrier} {rate.Service}".TrimEnd(' ');
+                    
+                    if (rateName.Contains("UPSDAP"))
+                        rateName = rateName.Replace("DAP", "");
+                    
                     var text = $"{await _priceFormatter.FormatShippingPriceAsync(rate.Rate, true)} {rateName}";
                     var selected = string.Equals(rateName, order.ShippingMethod, StringComparison.InvariantCultureIgnoreCase);
                     if (selected)
