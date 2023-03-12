@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
+using LinqToDB.Common;
 using Microsoft.AspNetCore.SignalR;
 using Nop.Core;
 using Nop.Core.Configuration;
@@ -27,8 +28,8 @@ namespace Nop.Services.Customers
 
         private readonly TimeZoneInfo _timeZone;
 
-        public LiveCustomerActivityService(CustomerSettings customerSettings, 
-            IHubContext<SignalREventHub> hubContext, 
+        public LiveCustomerActivityService(CustomerSettings customerSettings,
+            IHubContext<SignalREventHub> hubContext,
             ICustomerService customerService,
             IWorkContext workContext,
             IOrderReportService orderReportService,
@@ -54,7 +55,7 @@ namespace Nop.Services.Customers
         {
             SendDataToDashboard();
         }
-        
+
         private async void SendDataToDashboard()
         {
             await PrepareOnlineCustomerListModelAsync();
@@ -79,15 +80,20 @@ namespace Nop.Services.Customers
                 startDateValue = startDateValue.AddDays(-1);
 
 
-            var customerSessions = await _customerService.GetTotalSessionsAsync(endDateValue, startDateValue);
-            
-            foreach(var customerSession in customerSessions.ToList())
+            var customerSessions = await _customerService.GetOnlineCustomersAsync(startDateValue, customerRoleIds: null);
+
+            foreach (var customerSession in customerSessions.ToList())
             {
                 if (alreadyUsedIPs.Contains(customerSession.LastIpAddress))
                 {
                     customerSessions.Remove(customerSession);
-                    if (customers.Contains(customerSession))
-                        customers.Remove(customerSession);
+                    var customerList = customers.Where(x => x.Id == customerSession.Id);
+
+                    if (customerList.Any())
+                        foreach (var customer in customerList.ToList())
+                        {
+                            customers.Remove(customer);
+                        }
                 }
                 alreadyUsedIPs.Add(customerSession.LastIpAddress);
             }
@@ -95,9 +101,9 @@ namespace Nop.Services.Customers
             //var totalSessionCount = (await _customerService.GetTotalSessionsAsync(DateTime.UtcNow, DateTime.Today)).Count;
 
             var salesSummary = await GetSalesSummaryReportAsync();
-            if(salesSummary != null && salesSummary.Count > 0)
+            if (salesSummary != null && salesSummary.Count > 0)
             {
-               var profit = String.Format("{0:C}", salesSummary.Sum(x => x.Profit));
+                var profit = String.Format("{0:C}", salesSummary.Sum(x => x.Profit));
 
                 await _hubContext.Clients.All.SendAsync("TotalDailySales", profit);
                 await _hubContext.Clients.All.SendAsync("TotalDailyOrders", salesSummary.Sum(x => x.NumberOfOrders).ToString());
