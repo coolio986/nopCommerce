@@ -103,6 +103,14 @@ namespace Nop.Services.Helpers
                     return false;
 
                 var userAgent = _httpContextAccessor.HttpContext.Request.Headers[HeaderNames.UserAgent];
+
+                //hack to fix uptime pinging
+                if (!string.IsNullOrWhiteSpace(userAgent))
+                {
+                    if (userAgent.ToString().ToLower().Contains("bot")) //dont log bots
+                        return true;
+                }
+
                 return !string.IsNullOrWhiteSpace(userAgent) && browscapXmlHelper.IsCrawler(userAgent);
             }
             catch

@@ -114,17 +114,7 @@ namespace Nop.Web.Framework.Mvc.Filters
                         currentIpAddress = ipaddress;
                 }
 
-                //hack to fix uptime pinging
-                if (context.HttpContext.Request.Headers.ContainsKey("user-agent"))
-                {
-                    string userAgent = context.HttpContext.Request.Headers["user-agent"];
-                    if(userAgent != null)
-                    {
-                        userAgent = userAgent.ToLower();
-                        if (userAgent.Contains("bot")) //dont log bots
-                            return;
-                    }
-                }
+                
 
                 if (string.IsNullOrEmpty(currentIpAddress))
                     return;
