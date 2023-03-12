@@ -8,8 +8,11 @@
 }
 
 @{
-    const string hideInfoBlockAttributeName = "OrderPage.HideInfoBlock";
+    const string hideBasicInfoBlockAttributeName = "OrderPage.HideBasicInfoBlock";
     var customer = await workContext.GetCurrentCustomerAsync();
+    var hideBasicInfoBlock = await genericAttributeService.GetAttributeAsync<bool>(customer, hideBasicInfoBlockAttributeName);
+
+    const string hideInfoBlockAttributeName = "OrderPage.HideInfoBlock";
     var hideInfoBlock = await genericAttributeService.GetAttributeAsync<bool>(customer, hideInfoBlockAttributeName);
 
     const string hideBillingAndShippingBlockAttributeName = "OrderPage.HideBillingAndShippingBlock";
@@ -63,6 +66,7 @@
                 <div class="form-horizontal">
 
                     <nop-cards id="order-cards">
+                        <nop-card asp-name="order-info-reduced" asp-icon="fas fa-info" asp-title="Basic Info" asp-hide-block-attribute-name="@hideBasicInfoBlockAttributeName" asp-hide="@hideBasicInfoBlock" asp-advanced="false">@await Html.PartialAsync("_OrderDetails.Reduced", Model)</nop-card>
                         <nop-card asp-name="order-info" asp-icon="fas fa-info" asp-title="@T("Admin.Orders.Info")" asp-hide-block-attribute-name="@hideInfoBlockAttributeName" asp-hide="@hideInfoBlock" asp-advanced="false">@await Html.PartialAsync("_OrderDetails.Info", Model)</nop-card>
                         <nop-card asp-name="order-billing-shipping" asp-icon="fas fa-truck" asp-title="@T("Admin.Orders.BillingShippingInfo")" asp-hide-block-attribute-name="@hideBillingAndShippingBlockAttributeName" asp-hide="@hideBillingAndShippingBlock" asp-advanced="false">@await Html.PartialAsync("_OrderDetails.BillingShipping", Model)</nop-card>
                         <nop-card asp-name="order-products" asp-icon="fas fa-th-list" asp-title="@T("Admin.Orders.Products")" asp-hide-block-attribute-name="@hideProductsBlockAttributeName" asp-hide="@hideProductsBlock" asp-advanced="true">@await Html.PartialAsync("_OrderDetails.Products", Model)</nop-card>

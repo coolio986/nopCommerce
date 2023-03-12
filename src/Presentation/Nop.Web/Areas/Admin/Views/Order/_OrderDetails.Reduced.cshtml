@@ -1,0 +1,392 @@
+@model OrderModel
+
+@inject IStateProvinceService stateProvinceService
+@inject ICountryService countryService
+@inject IAddressService addressService
+@inject IShipmentService shipmentService
+
+@using Nop.Services.Directory;
+@using Nop.Core.Domain.Tax;
+@using Nop.Core.Domain.Orders;
+@using Nop.Services;
+@using Nop.Services.Shipping;
+
+<div class="card-body">
+    <div class="card card-default" style="box-shadow: none; background-color:rgba(223, 226, 231, 0.5)">
+        <div style="margin:0 auto; max-width:69.375rem;">
+            <div style="display:grid; align-items: start;grid-template-columns: 3fr 1.25fr; grid-template-rows: repeat(100,minmax(0,auto));">
+                <div style="grid-column: 1; grid-row: 1">
+                    <div class="card-body" style="padding-bottom:0">
+                        <div class="card card-default">
+                            <div class="card-body">
+                                <div class="form-group row">
+                                    <div class="col-md-2" style="flex:0 0 4%">
+                                        <div class="form-text-row">@(string.Format("#{0}", Model.CustomOrderNumber))</div>
+                                    </div>
+                                    <div class="col-md-2" style="flex:0 0 4%">
+                                        <div class="form-text-row">
+                                            <span class="grid-report-item @( Model.PaymentStatus == "Paid" ? "green" : "")">@(string.Format("{0}", Model.PaymentStatus))</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-text-row">
+                                            <span class="font-weight-bold">@(string.Format("{0}", @Model.OrderStatus))</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group row">
+                                    <div class="col-md-12">
+                                        <div class="form-text-row">@(string.Format("{0} {1}, {2} at {3}", Model.CreatedOn.ToString("MMMM"), Model.CreatedOn.Day, Model.CreatedOn.Year, Model.CreatedOn.ToShortTimeString()))</div>
+                                    </div>
+                                </div>
+                                <ul style="list-style-type: none; padding-left: 0;">
+                                    @foreach (var item in Model.Items)
+                                    {
+                                        <li>
+                                            <div style="display:grid; grid-template-columns: auto 5fr; justify-content: space-between;">
+                                                <div style="grid-row: 1/span 2;">
+                                                    <img style="height:40px;" src="@item.PictureThumbnailUrl" alt="" title="" />
+                                                </div>
+                                                <div style="display:grid; grid-template-areas: 'row-1' 'row-2';">
+                                                    <div style="display:grid; grid-template-areas: 'col-2 col-3 col-4'; grid-template-columns: 6fr minmax(5.625rem,auto) minmax(5rem,auto);">
+                                                        <div style="grid-area: col-2">
+                                                            <a style="margin-left:10px" asp-controller="Product" asp-action="Edit" asp-route-id="@item.ProductId">@item.ProductName</a>
+                                                            <div style="margin-left:10px">
+                                                                <p>
+                                                                    @T("Admin.Orders.Products.SKU")<text>:</text>
+                                                                    @item.Sku
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <div style="grid-area: col-3;">
+                                                            <div style="align-items:center; display:flex;">
+                                                                <div>
+
+                                                                    @if (item.DiscountExclTaxValue != 0)
+                                                                    {
+                                                                        <span style="margin-right:0.5vw"><s>@((item.UnitPriceExclTaxValue + item.DiscountExclTaxValue).ToString("C", CultureInfo.CurrentCulture))</s></span>
+                                                                    }
+                                                                    <span style="margin-right:2vw">@(string.Format("{0} x {1}", item.UnitPriceExclTaxValue.ToString("C", CultureInfo.CurrentCulture), @item.Quantity))</span>
+
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div style="grid-area: col-4; justify-self:end">
+                                                            <span>@(item.SubTotalExclTaxValue.ToString("C", CultureInfo.CurrentCulture))</span>
+                                                        </div>
+
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    }
+                                </ul>
+
+                                <div>
+                                    @{
+                                        int orderNumber = -1;
+                                        int.TryParse(Model.CustomOrderNumber, out orderNumber);
+                                        if (orderNumber != -1)
+                                        {
+                                            var shipments = await (shipmentService.GetAllShipmentsAsync(orderId: orderNumber, vendorId: 0));
+                                            foreach (var item in shipments)
+                                            {
+                                                <div>
+                                                    @item.TrackingNumber
+                                                </div>
+                                                if (Model.OrderStatusId != 30 && Model.ShippingStatusId == 0 && !Model.CanAddNewShipments)
+                                                {
+                                                    <button type="button" id="@(string.Format("btnViewOrder-{0}", item.Id))" onclick="javascript:setLocation('@(Url.Action("ShipmentDetails", "Order", new { id = item.Id }))'); return false;" class="btn btn-primary">
+                                                        @(string.Format("Contiune existing shipment #{0}", item.Id))
+                                                    </button>
+                                                }
+                                            }
+                                        }
+                                    }
+                                </div>
+
+                                @if (Model.CanAddNewShipments)
+                                {
+                                    <button type="submit" id="btnAddNewShipment" name="btnAddNewShipment" onclick="javascript:setLocation('@(Url.Action("AddShipment", "Order", new { id = Model.Id }))'); return false;" class="btn btn-primary">
+                                        @T("Admin.Orders.Shipments.AddNew")
+                                    </button>
+                                }
+
+
+                                @if (!Model.IsLoggedInAsVendor)
+                                {
+
+                                }
+                                else
+                                {
+                                    //vendors should see whether or order is cancelled
+                                    if (Model.OrderStatusId == (int)OrderStatus.Cancelled)
+                                    {
+                                        <div class="form-group row">
+                                            <div class="col-md-3">
+                                                &nbsp;
+                                            </div>
+                                            <div class="col-md-9">
+                                                <strong>
+                                                    @T("Admin.Orders.Fields.OrderStatus.CancelledNotification")
+                                                </strong>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body" style="padding-top:0">
+                        <div class="card card-default">
+                            <div class="card-body">
+                                <div class="form-group row;">
+                                    <div class="col-md-2" style="flex:0 0 4%">
+                                        <div class="form-text-row">
+                                            <span class="grid-report-item @( Model.PaymentStatus == "Paid" ? "green" : "")">@(string.Format("{0}", Model.PaymentStatus))</span>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <div style="padding-top:10px">
+                                    <div style="display: grid;
+                                    grid-template-columns: repeat(3, 1fr);
+                                    grid-template-rows: 1fr;
+                                    grid-column-gap: 0px;
+                                    grid-row-gap: 0px;
+                                    height: 30px;">
+
+                                        <div style="grid-area: 1 / 1 / 2 / 2;">
+                                            <span>Subtotal</span>
+                                        </div>
+                                        <div style="grid-area: 1 / 2 / 2 / 3;">
+                                            <p>
+                                                <span>
+                                                    @{
+                                                        var totalQuantity = 0;
+                                                        foreach (var item in Model.Items)
+                                                        {
+                                                            totalQuantity += item.Quantity;
+                                                        }
+                                                    }
+                                                    @totalQuantity @(totalQuantity == 1 ? "item" : "items")
+                                                </span>
+                                            </p>
+                                        </div>
+                                        <div style="grid-area: 1 / 3 / 2 / 4; justify-self:end ">
+                                            <span>
+                                                @Model.OrderSubtotalExclTax
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div style="display: grid;
+                                    grid-template-columns: repeat(3, 1fr);
+                                    grid-template-rows: 1fr;
+                                    grid-column-gap: 0px;
+                                    grid-row-gap: 0px;
+                                    height: 30px;">
+
+                                        <div style="grid-area: 1 / 1 / 2 / 2;">
+                                            <span>Original shipping</span>
+                                        </div>
+                                        <div style="grid-area: 1 / 2 / 2 / 3;">
+                                            <p>
+                                                <span>
+                                                    @Model.OriginalShippingMethod
+                                                </span>
+                                            </p>
+                                        </div>
+                                        <div style="grid-area: 1 / 3 / 2 / 4; justify-self:end ">
+                                            <span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div style="display: grid;
+                                    grid-template-columns: repeat(3, 1fr);
+                                    grid-template-rows: 1fr;
+                                    grid-column-gap: 0px;
+                                    grid-row-gap: 0px;
+                                    height: 30px;">
+
+                                        <div style="grid-area: 1 / 1 / 2 / 2;">
+                                            <span>Selected shipping</span>
+                                        </div>
+                                        <div style="grid-area: 1 / 2 / 2 / 3;">
+                                            <p>
+                                                <span>
+                                                    @Model.ShippingMethod
+                                                </span>
+                                            </p>
+                                        </div>
+                                        <div style="grid-area: 1 / 3 / 2 / 4; justify-self:end ">
+                                            <span>
+                                                @Model.OrderShippingExclTax
+                                            </span>
+                                        </div>
+                                    </div>
+                                    @if (Model.DisplayTax && Model.TaxValue != 0)
+                                    {
+                                        <div style="display: grid;
+                                    grid-template-columns: repeat(3, 1fr);
+                                    grid-template-rows: 1fr;
+                                    grid-column-gap: 0px;
+                                    grid-row-gap: 0px;
+                                    height: 30px;">
+
+                                            <div style="grid-area: 1 / 1 / 2 / 2;">
+                                                <span>Tax</span>
+                                            </div>
+                                            <div style="grid-area: 1 / 2 / 2 / 3;">
+                                                <p>
+                                                    <span>
+                                                        WORK IN PROGRESS
+                                                    </span>
+                                                </p>
+                                            </div>
+                                            <div style="grid-area: 1 / 3 / 2 / 4; justify-self:end ">
+                                                <span>
+                                                    @Model.Tax
+                                                </span>
+                                            </div>
+                                        </div>
+                                    }
+
+                                    <div style="display: grid;
+                                    grid-template-columns: repeat(3, 1fr);
+                                    grid-template-rows: 1fr;
+                                    grid-column-gap: 0px;
+                                    grid-row-gap: 0px;
+                                    height: 30px;">
+
+                                        <div style="grid-area: 1 / 1 / 2 / 2;">
+                                            <span>Total</span>
+                                        </div>
+                                        <div style="grid-area: 1 / 2 / 2 / 3;">
+                                            <p>
+                                                <span>
+
+                                                </span>
+                                            </p>
+                                        </div>
+                                        <div style="grid-area: 1 / 3 / 2 / 4; justify-self:end ">
+                                            <span>
+                                                @Model.OrderTotal
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+
+                                @if (!Model.IsLoggedInAsVendor)
+                                {
+
+                                }
+                                else
+                                {
+                                    //vendors should see whether or order is cancelled
+                                    if (Model.OrderStatusId == (int)OrderStatus.Cancelled)
+                                    {
+                                        <div class="form-group row">
+                                            <div class="col-md-3">
+                                                &nbsp;
+                                            </div>
+                                            <div class="col-md-9">
+                                                <strong>
+                                                    @T("Admin.Orders.Fields.OrderStatus.CancelledNotification")
+                                                </strong>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="grid-column: 2; grid-row:1/-1">
+                    <div class="card-body">
+                        <div class="card card-default">
+                            <div class="card-body">
+                                <div class="form-group row">
+                                    @if (Model.IsShippable)
+                                    {
+                                        <div class="col-md-12">
+                                            <span><strong>Shipping address</strong></span>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <span>@Model.ShippingAddress.FirstName @Model.ShippingAddress.LastName</span>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <span>@Model.ShippingAddress.Address1</span>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <span>@Model.ShippingAddress.Address2</span>
+                                        </div>
+                                        <div class="col-md-12">
+                                            @{
+                                                var stateprovince = await stateProvinceService.GetStateProvinceByIdAsync((int)Model.ShippingAddress.StateProvinceId);
+                                            }
+                                            <span>@Model.ShippingAddress.City @stateprovince.Abbreviation, @Model.ShippingAddress.ZipPostalCode</span>
+                                        </div>
+                                        <div class="col-md-12">
+                                            @{
+                                                var country = await countryService.GetCountryByIdAsync((int)Model.ShippingAddress.CountryId);
+                                            }
+                                            <span>@country.ThreeLetterIsoCode</span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body" style="padding-top:0">
+                        <div class="card card-default">
+                            <div class="card-body">
+                                <div class="form-group row">
+
+                                    <div class="col-md-12">
+                                        <span><strong>Billing address</strong></span>
+                                    </div>
+                                    @if (!addressService.IsEqualTo(Model.ShippingAddress, Model.BillingAddress, "Id"))
+                                    {
+                                        <div class="col-md-12">
+                                            <span>@Model.BillingAddress.FirstName @Model.ShippingAddress.LastName</span>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <span>@Model.BillingAddress.Address1</span>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <span>@Model.BillingAddress.Address2</span>
+                                        </div>
+                                        <div class="col-md-12">
+                                            @{
+                                                var stateprovincebilling = await stateProvinceService.GetStateProvinceByIdAsync((int)Model.BillingAddress.StateProvinceId);
+                                            }
+                                            <span>@Model.BillingAddress.City @stateprovincebilling.Abbreviation, @Model.BillingAddress.ZipPostalCode</span>
+                                        </div>
+                                        <div class="col-md-12">
+                                            @{
+                                                var countrybilling = await countryService.GetCountryByIdAsync((int)Model.BillingAddress.CountryId);
+                                            }
+                                            <span>@countrybilling.ThreeLetterIsoCode</span>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="col-md-12">
+                                            <span style="color:rgb(109,113,117)">Same as shipping address</span>
+                                        </div>
+                                    }
+
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>

@@ -202,3 +202,4 @@ src/packages/*
 src/Tests/Nop.Tests/Connections.resx
 /NopCommerce_App_Data
 /docker-compose.yml
+/mysql-docker-compose.yml

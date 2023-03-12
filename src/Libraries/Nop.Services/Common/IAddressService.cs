@@ -98,5 +98,11 @@ namespace Nop.Services.Common
         /// </summary>
         /// <returns>A deep copy of address</returns>
         Address CloneAddress(Address address);
+
+        /// <summary>
+        /// Compare addresses
+        /// </summary>
+        /// <returns>A shallow compare of addresses</returns>
+        bool IsEqualTo(object address1, object address2, params string[] ignore);
     }
 }

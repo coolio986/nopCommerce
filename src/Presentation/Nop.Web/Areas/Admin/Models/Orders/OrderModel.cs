@@ -187,6 +187,7 @@ namespace Nop.Web.Areas.Admin.Models.Orders
         public AddressModel ShippingAddress { get; set; }
         [NopResourceDisplayName("Admin.Orders.Fields.ShippingMethod")]
         public string ShippingMethod { get; set; }
+        public string OriginalShippingMethod { get; set; }
         public string ShippingAddressGoogleMapsUrl { get; set; }
         public bool CanAddNewShipments { get; set; }
 

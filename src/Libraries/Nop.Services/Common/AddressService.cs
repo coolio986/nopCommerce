@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -313,6 +314,37 @@ namespace Nop.Services.Common
             };
 
             return addr;
+        }
+
+        public virtual bool IsEqualTo(object address1, object address2, params string[] ignore)
+        {
+            if (address1 != null && address2 != null)
+            {
+                List<string> ignoreList = new List<string>(ignore);
+
+                Type type = address1.GetType();
+                foreach (System.Reflection.PropertyInfo pi in type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+                {
+                    
+                    object selfValue = type.GetProperty(pi.Name).GetValue(address1, null);
+                    Type selfType = selfValue?.GetType();
+                    object toValue = type.GetProperty(pi.Name).GetValue(address2, null);
+                    if ( !typeof(ICollection).IsAssignableFrom(selfType))
+                    {
+                        if (!ignoreList.Contains(pi.Name))
+                        {
+                            if (selfValue != toValue && (selfValue == null || !selfValue.Equals(toValue)))
+                            {
+                                return false;
+                            }
+                        }
+                    }
+
+                }
+                return true;
+            }
+
+            return address1 == address2;
         }
 
         #endregion
