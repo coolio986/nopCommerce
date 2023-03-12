@@ -1002,6 +1002,97 @@ namespace Nop.Web.Areas.Admin.Factories
         }
 
         /// <summary>
+        /// Prepare order search model
+        /// </summary>
+        /// <param name="searchModel">Order search model</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the order search model
+        /// </returns>
+        public virtual async Task<DraftOrderSearchModel> PrepareDraftOrderSearchModelAsync(DraftOrderSearchModel searchModel)
+        {
+            if (searchModel == null)
+                throw new ArgumentNullException(nameof(searchModel));
+
+            searchModel.IsLoggedInAsVendor = await _workContext.GetCurrentVendorAsync() != null;
+            searchModel.BillingPhoneEnabled = _addressSettings.PhoneEnabled;
+
+            //prepare available order, payment and shipping statuses
+            await _baseAdminModelFactory.PrepareOrderStatusesAsync(searchModel.AvailableOrderStatuses);
+            if (searchModel.AvailableOrderStatuses.Any())
+            {
+                if (searchModel.OrderStatusIds?.Any() ?? false)
+                {
+                    var ids = searchModel.OrderStatusIds.Select(id => id.ToString());
+                    var statusItems = searchModel.AvailableOrderStatuses.Where(statusItem => ids.Contains(statusItem.Value)).ToList();
+                    foreach (var statusItem in statusItems)
+                    {
+                        statusItem.Selected = true;
+                    }
+                }
+                else
+                    searchModel.AvailableOrderStatuses.FirstOrDefault().Selected = true;
+            }
+
+            await _baseAdminModelFactory.PreparePaymentStatusesAsync(searchModel.AvailablePaymentStatuses);
+            if (searchModel.AvailablePaymentStatuses.Any())
+            {
+                if (searchModel.PaymentStatusIds?.Any() ?? false)
+                {
+                    var ids = searchModel.PaymentStatusIds.Select(id => id.ToString());
+                    var statusItems = searchModel.AvailablePaymentStatuses.Where(statusItem => ids.Contains(statusItem.Value)).ToList();
+                    foreach (var statusItem in statusItems)
+                    {
+                        statusItem.Selected = true;
+                    }
+                }
+                else
+                    searchModel.AvailablePaymentStatuses.FirstOrDefault().Selected = true;
+            }
+
+            await _baseAdminModelFactory.PrepareShippingStatusesAsync(searchModel.AvailableShippingStatuses);
+            if (searchModel.AvailableShippingStatuses.Any())
+            {
+                if (searchModel.ShippingStatusIds?.Any() ?? false)
+                {
+                    var ids = searchModel.ShippingStatusIds.Select(id => id.ToString());
+                    var statusItems = searchModel.AvailableShippingStatuses.Where(statusItem => ids.Contains(statusItem.Value)).ToList();
+                    foreach (var statusItem in statusItems)
+                    {
+                        statusItem.Selected = true;
+                    }
+                }
+                else
+                    searchModel.AvailableShippingStatuses.FirstOrDefault().Selected = true;
+            }
+
+            //prepare available stores
+            await _baseAdminModelFactory.PrepareStoresAsync(searchModel.AvailableStores);
+
+            //prepare available vendors
+            await _baseAdminModelFactory.PrepareVendorsAsync(searchModel.AvailableVendors);
+
+            //prepare available warehouses
+            await _baseAdminModelFactory.PrepareWarehousesAsync(searchModel.AvailableWarehouses);
+
+            //prepare available payment methods
+            searchModel.AvailablePaymentMethods = (await _paymentPluginManager.LoadAllPluginsAsync()).Select(method =>
+                new SelectListItem { Text = method.PluginDescriptor.FriendlyName, Value = method.PluginDescriptor.SystemName }).ToList();
+            searchModel.AvailablePaymentMethods.Insert(0, new SelectListItem { Text = await _localizationService.GetResourceAsync("Admin.Common.All"), Value = string.Empty });
+
+            //prepare available billing countries
+            searchModel.AvailableCountries = (await _countryService.GetAllCountriesForBillingAsync(showHidden: true))
+                .Select(country => new SelectListItem { Text = country.Name, Value = country.Id.ToString() }).ToList();
+            searchModel.AvailableCountries.Insert(0, new SelectListItem { Text = await _localizationService.GetResourceAsync("Admin.Common.All"), Value = "0" });
+
+            //prepare grid
+            searchModel.SetGridPageSize();
+
+            searchModel.HideStoresList = _catalogSettings.IgnoreStoreLimitations || searchModel.AvailableStores.SelectionIsNotPossible();
+
+            return searchModel;
+        }
+        /// <summary>
         /// Prepare paged order list model
         /// </summary>
         /// <param name="searchModel">Order search model</param>

@@ -223,7 +223,25 @@ namespace Nop.Web.Areas.Admin.Controllers
             return View(model);
         }
 
-       
+        public virtual async Task<IActionResult> DraftList(List<int> orderStatuses = null, List<int> paymentStatuses = null, List<int> shippingStatuses = null)
+        {
+            if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
+                return AccessDeniedView();
+
+
+
+            //prepare model
+            var model = await _orderModelFactory.PrepareDraftOrderSearchModelAsync(new DraftOrderSearchModel
+            {
+                OrderStatusIds = orderStatuses,
+                PaymentStatusIds = paymentStatuses,
+                ShippingStatusIds = shippingStatuses
+            });
+
+            return View(model);
+        }
+
+
         [HttpPost]
         public virtual async Task<IActionResult> OrderList(OrderSearchModel searchModel)
         {
@@ -1899,7 +1917,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                 return AccessDeniedView();
 
             //prepare model
-            var model = await _orderModelFactory.PrepareOrderSearchModelAsync(new OrderSearchModel());
+            var model = await _orderModelFactory.PrepareDraftOrderSearchModelAsync(new DraftOrderSearchModel());
 
             return View(model);
         }

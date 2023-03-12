@@ -24,6 +24,16 @@ namespace Nop.Web.Areas.Admin.Factories
         Task<OrderSearchModel> PrepareOrderSearchModelAsync(OrderSearchModel searchModel);
 
         /// <summary>
+        /// Prepare draft order search model
+        /// </summary>
+        /// <param name="searchModel">Draft order search model</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the order search model
+        /// </returns>
+        Task<DraftOrderSearchModel> PrepareDraftOrderSearchModelAsync(DraftOrderSearchModel searchModel);
+
+        /// <summary>
         /// Prepare paged order list model
         /// </summary>
         /// <param name="searchModel">Order search model</param>
