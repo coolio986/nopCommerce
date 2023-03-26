@@ -325,15 +325,15 @@
                                         </div>
                                         <div class="col-md-12">
                                             @{
-                                                var stateprovince = await stateProvinceService.GetStateProvinceByIdAsync((int)Model.ShippingAddress.StateProvinceId);
+                                                var stateprovince = await stateProvinceService.GetStateProvinceByIdAsync((int)(Model.ShippingAddress.StateProvinceId ?? 0));
                                             }
-                                            <span>@Model.ShippingAddress.City @stateprovince.Abbreviation, @Model.ShippingAddress.ZipPostalCode</span>
+                                            <span>@Model.ShippingAddress.City @stateprovince?.Abbreviation, @Model.ShippingAddress.ZipPostalCode</span>
                                         </div>
                                         <div class="col-md-12">
                                             @{
-                                                var country = await countryService.GetCountryByIdAsync((int)Model.ShippingAddress.CountryId);
+                                                var country = await countryService.GetCountryByIdAsync((int)(Model.ShippingAddress.CountryId ?? 0));
                                             }
-                                            <span>@country.ThreeLetterIsoCode</span>
+                                            <span>@country?.ThreeLetterIsoCode</span>
                                         </div>
                                     }
                                 </div>
