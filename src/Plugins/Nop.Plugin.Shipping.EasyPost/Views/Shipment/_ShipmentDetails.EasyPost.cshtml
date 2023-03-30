@@ -56,7 +56,7 @@
 </script>
 
 <div class="card card-secondary card-outline">
-    <div> <!-- to avoid binding click trigger: .card.card-secondary > .card-header  --> 
+    <div> 
         <div class="card-header with-border clearfix">
         <div class="card-title">
             <i class="fas fa-truck"></i>
@@ -386,7 +386,7 @@
                             <span asp-validation-for="RegisteredMail"></span>
                         </div>
                     </div>
-                    <nop-nested-setting asp-for="RegisteredMail" id="registered-mail-amount" disable-auto-generation="true">
+                    <div asp-for="RegisteredMail" id="registered-mail-amount" disable-auto-generation="true">
                         <div class="form-group row">
                             <div class="col-md-3">
                                 <nop-label asp-for="RegisteredMailAmount" />
@@ -396,7 +396,7 @@
                                 <span asp-validation-for="RegisteredMailAmount"></span>
                             </div>
                         </div>
-                    </nop-nested-setting>
+                    </div>
                     <div class="form-group row">
                         <div class="col-md-3">
                             <nop-label asp-for="ReturnReceipt" />
@@ -482,7 +482,7 @@
                             <span asp-validation-for="UseCustomsInfo"></span>
                         </div>
                     </div>
-                    <nop-nested-setting asp-for="UseCustomsInfo" id="customs-info" disable-auto-generation="true">
+                    <div asp-for="UseCustomsInfo" id="customs-info" disable-auto-generation="true">
                         <div class="form-group row">
                             <div class="col-md-3">
                                 <nop-label asp-for="ContentsType" />
@@ -555,7 +555,7 @@
                                 <span asp-validation-for="EelPfc"></span>
                             </div>
                         </div>
-                    </nop-nested-setting>
+                    </div>
                 </div>
             </div>
         }
