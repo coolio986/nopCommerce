@@ -158,7 +158,7 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
             }
 
             //this needs to be changed to just "shippingstatus = shipped", remove the computation method
-            if (order.ShippingStatus == Core.Domain.Shipping.ShippingStatus.Shipped)
+            if (order.ShippingRateComputationMethodSystemName == "Shipping.FixedByWeightByTotal" && order.ShippingStatus == Core.Domain.Shipping.ShippingStatus.Shipped)
                 return Content(string.Empty);
 
 
