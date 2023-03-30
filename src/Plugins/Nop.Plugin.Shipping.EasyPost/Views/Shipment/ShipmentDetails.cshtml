@@ -9,7 +9,7 @@
 
     //we need to replace some specific symbols here
     var content = await card.RenderHtmlContentAsync();
-    //content = content.Replace("</script>", "<\\/script>");
+    content = content.Replace("</script>", "<\\/script>");
     card = Html.Raw(content);
 
   @*  var rateContent = await rates.RenderHtmlContentAsync();
