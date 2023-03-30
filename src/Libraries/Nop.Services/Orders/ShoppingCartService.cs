@@ -1518,7 +1518,7 @@ namespace Nop.Services.Orders
             ShoppingCartType shoppingCartType, int storeId, string attributesXml = null,
             decimal customerEnteredPrice = decimal.Zero,
             DateTime? rentalStartDate = null, DateTime? rentalEndDate = null,
-            int quantity = 1, bool addRequiredProducts = true)
+            int quantity = 1, bool addRequiredProducts = true, bool ignoreDeletedProductWarnings = false)
         {
             if (customer == null)
                 throw new ArgumentNullException(nameof(customer));
@@ -1569,6 +1569,13 @@ namespace Nop.Services.Orders
                     customerEnteredPrice, rentalStartDate, rentalEndDate,
                     newQuantity, addRequiredProducts, shoppingCartItem.Id));
 
+                if (ignoreDeletedProductWarnings && warnings.Any())
+                {
+                    var deletedLanguage = await _localizationService.GetResourceAsync("ShoppingCart.ProductDeleted");
+                    if (warnings.Contains(deletedLanguage))
+                        warnings.Remove(deletedLanguage);
+                }
+
                 if (warnings.Any())
                     return warnings;
 
@@ -1590,6 +1597,13 @@ namespace Nop.Services.Orders
                     storeId, attributesXml, customerEnteredPrice,
                     rentalStartDate, rentalEndDate,
                     quantity, addRequiredProducts));
+
+                if (ignoreDeletedProductWarnings && warnings.Any())
+                {
+                    var deletedLanguage = await _localizationService.GetResourceAsync("ShoppingCart.ProductDeleted");
+                    if(warnings.Contains(deletedLanguage))
+                        warnings.Remove(deletedLanguage); 
+                }
 
                 if (warnings.Any())
                     return warnings;

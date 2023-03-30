@@ -27,6 +27,7 @@ using Nop.Services.Installation;
 using Nop.Services.Localization;
 using Nop.Services.Logging;
 using Nop.Services.Media.RoxyFileman;
+using Nop.Services.Orders;
 using Nop.Services.Plugins;
 using Nop.Services.ScheduleTasks;
 using Nop.Web.Framework.Globalization;
@@ -456,6 +457,19 @@ namespace Nop.Web.Framework.Infrastructure.Extensions
                 return;
 
             application.UseWebMarkupMin();
+        }
+
+        /// <summary>
+        /// Adds the draft order middleware, which enables draft order capabilities.
+        /// </summary>
+        /// <param name="application">Builder for configuring an application's request pipeline</param>
+        public static void UseDraftOrderMiddleware(this IApplicationBuilder application)
+        {
+            //check whether database is installed
+            if (!DataSettingsManager.IsDatabaseInstalled())
+                return;
+
+            application.UseMiddleware<DraftOrderMiddleware>();
         }
     }
 }

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using Nop.Core;
+using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Common;
 using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Orders;
@@ -36,7 +37,7 @@ namespace Nop.Web.Controllers
 
         private readonly AddressSettings _addressSettings;
         private readonly CustomerSettings _customerSettings;
-        private readonly IAddressAttributeParser _addressAttributeParser;        
+        private readonly IAddressAttributeParser _addressAttributeParser;
         private readonly IAddressModelFactory _addressModelFactory;
         private readonly IAddressService _addressService;
         private readonly ICheckoutModelFactory _checkoutModelFactory;
@@ -59,7 +60,7 @@ namespace Nop.Web.Controllers
         private readonly PaymentSettings _paymentSettings;
         private readonly RewardPointsSettings _rewardPointsSettings;
         private readonly ShippingSettings _shippingSettings;
-
+        private readonly IDraftOrderService _draftOrderService;
         #endregion
 
         #region Ctor
@@ -88,7 +89,8 @@ namespace Nop.Web.Controllers
             OrderSettings orderSettings,
             PaymentSettings paymentSettings,
             RewardPointsSettings rewardPointsSettings,
-            ShippingSettings shippingSettings)
+            ShippingSettings shippingSettings,
+            IDraftOrderService draftOrderService)
         {
             _addressSettings = addressSettings;
             _customerSettings = customerSettings;
@@ -115,6 +117,7 @@ namespace Nop.Web.Controllers
             _paymentSettings = paymentSettings;
             _rewardPointsSettings = rewardPointsSettings;
             _shippingSettings = shippingSettings;
+            _draftOrderService = draftOrderService;
         }
 
         #endregion
@@ -367,7 +370,7 @@ namespace Nop.Web.Controllers
                 var customAttributes = await _addressAttributeParser.ParseCustomAddressAttributesAsync(form);
                 var customAttributeWarnings = await _addressAttributeParser.GetAttributeWarningsAsync(customAttributes);
 
-                if(customAttributeWarnings.Any())
+                if (customAttributeWarnings.Any())
                 {
                     return Json(new { error = 1, message = customAttributeWarnings });
                 }
@@ -1346,6 +1349,56 @@ namespace Nop.Web.Controllers
             var store = await _storeContext.GetCurrentStoreAsync();
             var cart = await _shoppingCartService.GetShoppingCartAsync(customer, ShoppingCartType.ShoppingCart, store.Id);
 
+            string orderQuery = HttpContext.Request.Query["order"];
+            orderQuery = orderQuery ?? Guid.Empty.ToString();
+
+            bool isDraftOrder = false;
+
+            var draftOrderGuid = Guid.Parse(orderQuery);
+            if (draftOrderGuid != Guid.Empty)
+            {
+
+                var draftOrder = await _draftOrderService.GetOrderByGuidAsync(draftOrderGuid);
+
+                if (draftOrder != null && draftOrder.PaymentStatusId < (int)OrderStatus.Complete)
+                {
+                    if (customer.Id == draftOrder.CustomerId)
+                    {
+                        //need to remove any cart items so we can add our own draft items
+                        if (cart.Any())
+                        {
+                            foreach (var item in cart)
+                            {
+                                await _shoppingCartService.DeleteShoppingCartItemAsync(item);
+                            }
+
+                        }
+
+
+                        //move shopping cart items (if possible)
+                        foreach (var draftOrderItem in await _draftOrderService.GetOrderItemsAsync(draftOrder.Id))
+                        {
+                            var product = await _productService.GetProductByIdAsync(draftOrderItem.ProductId);
+
+                            await _shoppingCartService.AddToCartAsync(customer, product,
+                                ShoppingCartType.ShoppingCart, draftOrder.StoreId,
+                                draftOrderItem.AttributesXml, draftOrderItem.UnitPriceExclTax,
+                                draftOrderItem.RentalStartDateUtc, draftOrderItem.RentalEndDateUtc,
+                                draftOrderItem.Quantity, false, ignoreDeletedProductWarnings: true);
+                        }
+
+                        cart = await _shoppingCartService.GetShoppingCartAsync(customer, ShoppingCartType.ShoppingCart, store.Id);
+                        isDraftOrder = true;
+                        _workContext.SetDraftOrderCookie(draftOrder.OrderGuid);
+                    }
+
+                }
+            }
+
+
+            if (await _customerService.IsGuestAsync(customer) && draftOrderGuid != Guid.Empty)
+                return Challenge();
+
             if (!cart.Any())
                 return RedirectToRoute("ShoppingCart");
 
@@ -1356,6 +1409,9 @@ namespace Nop.Web.Controllers
                 return Challenge();
 
             var model = await _checkoutModelFactory.PrepareOnePageCheckoutModelAsync(cart);
+            model.IsDraftOrder = isDraftOrder;
+            model.DraftOrderGuid = draftOrderGuid;
+
             return View(model);
         }
 
@@ -1852,6 +1908,8 @@ namespace Nop.Web.Controllers
         {
             try
             {
+                List<Product> listOfDeletedCustomProducts = new List<Product>();
+                DraftOrder draftOrder = null;
                 //validation
                 if (_orderSettings.CheckoutDisabled)
                     throw new Exception(await _localizationService.GetResourceAsync("Checkout.Disabled"));
@@ -1859,6 +1917,28 @@ namespace Nop.Web.Controllers
                 var customer = await _workContext.GetCurrentCustomerAsync();
                 var store = await _storeContext.GetCurrentStoreAsync();
                 var cart = await _shoppingCartService.GetShoppingCartAsync(customer, ShoppingCartType.ShoppingCart, store.Id);
+
+                var draftOrderGuidCookie = _workContext.GetDraftOrderCookie();
+                if (draftOrderGuidCookie != null)
+                {
+                    draftOrder = await _draftOrderService.GetOrderByGuidAsync(Guid.Parse(draftOrderGuidCookie));
+                    if (draftOrder != null)
+                    {
+                        var listOfDraftItems = await _draftOrderService.GetOrderItemsAsync(draftOrder.Id);
+                        foreach (var item in cart)
+                        {
+                            var product = await _productService.GetProductByIdAsync(item.ProductId);
+                            if (product != null && listOfDraftItems.Any(x => x.ProductId == product.Id) && product.Deleted)
+                            {
+                                product.Deleted = false;
+                                await _productService.UpdateProductAsync(product);
+                                //we need to flip these back to deleted after we are done processing the order
+                                listOfDeletedCustomProducts.Add(product);
+                            }
+
+                        }
+                    }
+                }
 
                 if (!cart.Any())
                     throw new Exception("Your cart is empty");
@@ -1920,6 +2000,18 @@ namespace Nop.Web.Controllers
                     }
 
                     await _paymentService.PostProcessPaymentAsync(postProcessPaymentRequest);
+
+                    if (draftOrder != null)
+                    {
+                        draftOrder.PaymentStatusId = (int)OrderStatus.Complete;
+                        await _draftOrderService.UpdateOrderAsync(draftOrder);
+                    }
+                    foreach (var deletedProduct in listOfDeletedCustomProducts)
+                    {
+                        deletedProduct.Deleted = true;
+                        await _productService.UpdateProductAsync(deletedProduct);
+                    }
+
                     //success
                     return Json(new { success = 1 });
                 }

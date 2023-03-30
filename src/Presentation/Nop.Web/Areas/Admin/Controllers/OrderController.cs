@@ -28,11 +28,15 @@ using Nop.Services.Security;
 using Nop.Services.Shipping;
 using Nop.Web.Areas.Admin.Factories;
 using Nop.Web.Areas.Admin.Infrastructure.Mapper.Extensions;
+using Nop.Web.Areas.Admin.Models.Catalog;
+using Nop.Web.Areas.Admin.Models.Common;
 using Nop.Web.Areas.Admin.Models.Orders;
 using Nop.Web.Areas.Admin.Models.Reports;
 using Nop.Web.Framework.Controllers;
 using Nop.Web.Framework.Mvc;
 using Nop.Web.Framework.Mvc.Filters;
+using Nop.Core.Domain.Customers;
+using Nop.Web.Areas.Admin.Models.Customers;
 
 namespace Nop.Web.Areas.Admin.Controllers
 {
@@ -55,6 +59,7 @@ namespace Nop.Web.Areas.Admin.Controllers
         private readonly IOrderModelFactory _orderModelFactory;
         private readonly IOrderProcessingService _orderProcessingService;
         private readonly IOrderService _orderService;
+        private readonly IDraftOrderService _draftOrderService;
         private readonly IPaymentService _paymentService;
         private readonly IPdfService _pdfService;
         private readonly IPermissionService _permissionService;
@@ -69,7 +74,10 @@ namespace Nop.Web.Areas.Admin.Controllers
         private readonly IWorkContext _workContext;
         private readonly IWorkflowMessageService _workflowMessageService;
         private readonly OrderSettings _orderSettings;
-        
+        private readonly IProductTemplateService _productTemplateService;
+        private readonly IGenericAttributeService _genericAttributeService;
+        private readonly IStoreContext _storeContext;
+
         #endregion
 
         #region Ctor
@@ -89,6 +97,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             IOrderModelFactory orderModelFactory,
             IOrderProcessingService orderProcessingService,
             IOrderService orderService,
+            IDraftOrderService draftOrderService,
             IPaymentService paymentService,
             IPdfService pdfService,
             IPermissionService permissionService,
@@ -102,7 +111,10 @@ namespace Nop.Web.Areas.Admin.Controllers
             IShoppingCartService shoppingCartService,
             IWorkContext workContext,
             IWorkflowMessageService workflowMessageService,
-            OrderSettings orderSettings
+            OrderSettings orderSettings,
+            IProductTemplateService productTemplateService,
+            IGenericAttributeService genericAttributeService,  
+            IStoreContext storeContext
             )
         {
             _addressAttributeParser = addressAttributeParser;
@@ -120,6 +132,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             _orderModelFactory = orderModelFactory;
             _orderProcessingService = orderProcessingService;
             _orderService = orderService;
+            _draftOrderService = draftOrderService;
             _paymentService = paymentService;
             _pdfService = pdfService;
             _permissionService = permissionService;
@@ -134,11 +147,14 @@ namespace Nop.Web.Areas.Admin.Controllers
             _workContext = workContext;
             _workflowMessageService = workflowMessageService;
             _orderSettings = orderSettings;
+            _productTemplateService = productTemplateService;
+            _genericAttributeService = genericAttributeService; 
+            _storeContext = storeContext;
         }
 
         #endregion
 
-            #region Utilities
+        #region Utilities
 
         protected virtual async ValueTask<bool> HasAccessToOrderAsync(Order order)
         {
@@ -210,7 +226,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
                 return AccessDeniedView();
 
-            
+
 
             //prepare model
             var model = await _orderModelFactory.PrepareOrderSearchModelAsync(new OrderSearchModel
@@ -223,23 +239,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             return View(model);
         }
 
-        public virtual async Task<IActionResult> DraftList(List<int> orderStatuses = null, List<int> paymentStatuses = null, List<int> shippingStatuses = null)
-        {
-            if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
-                return AccessDeniedView();
 
-
-
-            //prepare model
-            var model = await _orderModelFactory.PrepareDraftOrderSearchModelAsync(new DraftOrderSearchModel
-            {
-                OrderStatusIds = orderStatuses,
-                PaymentStatusIds = paymentStatuses,
-                ShippingStatusIds = shippingStatuses
-            });
-
-            return View(model);
-        }
 
 
         [HttpPost]
@@ -1074,7 +1074,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                 return RedirectToAction("List");
             }
         }
-        
+
         //currently we use this method on the add product to order details pages
         [HttpPost]
         public virtual async Task<IActionResult> ProductDetails_AttributeChange(int productId, bool validateAttributeConditions, IFormCollection form)
@@ -1922,6 +1922,410 @@ namespace Nop.Web.Areas.Admin.Controllers
             return View(model);
         }
 
+        public virtual async Task<IActionResult> DraftList(DraftOrderSearchModel searchModel)
+        {
+            if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
+                return await AccessDeniedDataTablesJson();
+
+            //prepare model
+            var model = await _orderModelFactory.PrepareDraftOrderListModelAsync(searchModel);
+
+            return Json(model);
+        }
+
+        [HttpPost, ActionName("CreateNewDraft")]
+        [FormValueRequired("createdraft")]
+        public virtual IActionResult CreateNewDraft(DraftOrderSearchModel model)
+        {
+            return RedirectToAction("EditDraft", "Order");
+        }
+
+        [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
+        [FormValueRequired("save", "save-continue")]
+        public virtual async Task<IActionResult> EditDraft(DraftOrderModel model, bool continueEditing)
+        {
+            var store = await _storeContext.GetCurrentStoreAsync();
+
+            DraftOrder draftOrder = await _draftOrderService.GetOrderByIdAsync(model.Id);
+            if (draftOrder != null)
+            {
+                if (model.ShippingAddress.Id != 0)
+                {
+                    var address = await _addressService.GetAddressByIdAsync(model.ShippingAddress.Id);
+                    if (address != null)
+                    {
+                        var customer = await _customerService.GetCustomerByEmailAsync(address.Email);
+
+                        draftOrder.CustomerId = customer.Id;
+                        draftOrder.CustomOrderNumber = draftOrder.CustomOrderNumber;
+                        draftOrder.PickupAddressId = address.Id;
+                        draftOrder.ShippingAddressId = address.Id;
+                        draftOrder.BillingAddressId = address.Id;
+                        draftOrder.StoreId = store.Id;
+
+                        await _draftOrderService.UpdateOrderAsync(draftOrder);
+                    }
+                }
+                else
+                {
+                    draftOrder.CustomerId = 0;
+                    draftOrder.CustomOrderNumber = draftOrder.CustomOrderNumber;
+                    draftOrder.PickupAddressId = 0;
+                    draftOrder.ShippingAddressId = 0;
+                    draftOrder.BillingAddressId = 0;
+                    draftOrder.StoreId = store.Id;
+
+                    await _draftOrderService.UpdateOrderAsync(draftOrder);
+                }
+            }
+            return RedirectToAction("EditDraft", "Order", new { id = model.Id });
+        }
+        public virtual async Task<IActionResult> EditDraft(int id)
+        {
+            if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
+                return AccessDeniedView();
+
+            //Create new order, enter draft into DB
+            if (id == 0)
+            {
+                DraftOrder draftOrder = new DraftOrder();
+                draftOrder.OrderGuid = Guid.NewGuid();
+                draftOrder.CreatedOnUtc = DateTime.UtcNow;
+                draftOrder.BillingAddressId = 0;
+                draftOrder.ShippingAddressId = 0;
+                draftOrder.PickupAddressId = 0;
+                await _draftOrderService.InsertOrderAsync(draftOrder);
+                draftOrder.CustomOrderNumber = string.Format("D{0}", draftOrder.Id);
+                await _draftOrderService.UpdateOrderAsync(draftOrder);
+                return RedirectToAction("EditDraft", "Order", new { id = draftOrder.Id });
+
+            }
+
+            var order = await _draftOrderService.GetOrderByIdAsync(id);
+
+            var model = await _orderModelFactory.PrepareDraftOrderModelAsync(null, order);
+
+
+            return View(model);
+        }
+        public virtual async Task<IActionResult> ProductAddPopup(int draftOrderId)
+        {
+            if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageCategories))
+                return AccessDeniedView();
+
+            //prepare model
+            var model = await _orderModelFactory.PrepareAddProductToDraftOrderSearchModelAsync(new AddProductToDraftOrderSearchModel(), new DraftOrder() { Id = draftOrderId });
+
+            return View(model);
+
+        }
+
+        [HttpPost]
+        public virtual async Task<IActionResult> ProductAddPopupList(AddProductToDraftOrderSearchModel searchModel)
+        {
+            if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageCategories))
+                return await AccessDeniedDataTablesJson();
+
+            //prepare model
+            var model = await _orderModelFactory.PrepareAddProductToDraftOrderListModelAsync(searchModel, new DraftOrder() { Id = searchModel.DraftOrderId });
+
+            return Json(model);
+        }
+
+        [HttpPost]
+        [FormValueRequired("save")]
+        public virtual async Task<IActionResult> ProductAddPopup(AddProductToDraftOrderModel model)
+        {
+            if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageCategories))
+                return AccessDeniedView();
+
+            //get selected products
+            var selectedProducts = await _productService.GetProductsByIdsAsync(model.SelectedProductIds.ToArray());
+            if (selectedProducts.Any())
+            {
+                var items = await _draftOrderService.GetOrderItemsAsync(model.DraftOrderId);
+
+                //    var existingProductCategories = await _categoryService.GetProductCategoriesByCategoryIdAsync(model.CategoryId, showHidden: true);
+                foreach (var product in selectedProducts)
+                {
+                    var item = items.FirstOrDefault(x => x.ProductId == product.Id);
+
+                    if (item != null)
+                    {
+                        item.Quantity++;
+                        await _draftOrderService.UpdateOrderItemAsync(item);
+                    }
+                    else
+                    {
+                        await _draftOrderService.InsertOrderItemAsync(new DraftOrderItem()
+                        {
+                            ProductId = product.Id,
+                            OrderId = model.DraftOrderId,
+                            Quantity = 1,
+                            UnitPriceInclTax = product.Price,
+                            UnitPriceExclTax = product.Price,
+                            PriceInclTax = product.Price,
+                            PriceExclTax = product.Price,
+                            DiscountAmountExclTax = 0,
+                            DiscountAmountInclTax = 0,
+                            OriginalProductCost = 0,
+                            DownloadCount = 0,
+                            IsDownloadActivated = false,
+                            OrderItemGuid = Guid.NewGuid(),
+                            IsCustomItem = false
+
+                        });
+                    }
+                }
+            }
+
+            ViewBag.RefreshPage = true;
+
+            return View(new AddProductToDraftOrderSearchModel());
+        }
+
+        [HttpPost]
+        public virtual async Task<IActionResult> RefreshProducts(int id)
+        {
+            var order = await _draftOrderService.GetOrderByIdAsync(id);
+
+            var model = await _orderModelFactory.PrepareDraftOrderModelAsync(null, order);
+
+            return PartialView("_ProductPanel", model);
+        }
+
+        [HttpPost]
+        public virtual async Task<IActionResult> SearchCustomer(string customerName)
+        {
+            var customers = await _customerService.GetAllCustomersAsync(customerRoleIds: new[] { (await _customerService.GetCustomerRoleBySystemNameAsync(NopCustomerDefaults.RegisteredRoleName)).Id }, firstName: customerName, pageSize: 15);
+
+            List<Customer> sortedCustomers = await customers.OrderByDescending(x => x.LastActivityDateUtc).ToListAsync();
+
+            List<CustomerModel> customersModel = await sortedCustomers.SelectAwait(async customer =>
+            {
+                var customerModel = customer.ToModel<CustomerModel>();
+                customerModel.FullName = await _customerService.GetCustomerFullNameAsync(customer);
+                customerModel.Email = customer.Email;
+                return customerModel;
+            }).ToListAsync();
+            
+            return PartialView("_Draft.Addresses", customersModel);
+        }
+
+        [HttpPost]
+        public virtual async Task<IActionResult> CustomerById(int customerId)
+        {
+
+            //get customer addresses
+            var addresses = (await _customerService.GetAddressesByCustomerIdAsync(customerId))
+                .OrderByDescending(address => address.CreatedOnUtc).ThenByDescending(address => address.Id).ToList();
+
+
+            var addressModel = await addresses.SelectAwait(async address =>
+            {
+                //fill in model values from the entity        
+                var addressModel = address.ToModel<AddressModel>();
+
+                //addressModel.CountryName = (await _countryService.GetCountryByAddressAsync(address))?.Name;
+                //addressModel.StateProvinceName = (await _stateProvinceService.GetStateProvinceByAddressAsync(address))?.Name;
+
+                //fill in additional values (not existing in the entity)
+
+
+                return addressModel;
+            }).ToListAsync();
+
+            return PartialView("_Draft.AddressSingle", addressModel.FirstOrDefault());
+        }
+
+        [HttpPost]
+        public virtual async Task<IActionResult> ProductCountChange(int productId, int draftOrderId, int quantityTotal)
+        {
+            if (productId != 0 && draftOrderId != 0 && quantityTotal != -1)
+            {
+                var order = await _draftOrderService.GetOrderByIdAsync(draftOrderId);
+                if (order != null)
+                {
+                    var vendor = await _workContext.GetCurrentVendorAsync();
+                    var orderItems = await _draftOrderService.GetOrderItemsAsync(order.Id, vendorId: vendor?.Id ?? 0);
+                    var orderItem = orderItems.FirstOrDefault(x => x.Id == productId);
+
+                    if (orderItem != null && orderItem.Quantity != quantityTotal)
+                    {
+                        var product = await _productService.GetProductByIdAsync(productId);
+
+                        orderItem.Quantity = quantityTotal;
+                        orderItem.PriceExclTax = product.Price * quantityTotal;
+                        orderItem.PriceInclTax = product.Price * quantityTotal;
+                        await _draftOrderService.UpdateOrderItemAsync(orderItem);
+
+                        var model = await _orderModelFactory.PrepareDraftOrderModelAsync(null, order);
+                        return PartialView("_ProductPanel", model);
+                    }
+
+                }
+            }
+
+            return default;
+        }
+        [HttpPost]
+        public virtual async Task<IActionResult> DraftPricing(int id)
+        {
+            var order = await _draftOrderService.GetOrderByIdAsync(id);
+
+            var model = await _orderModelFactory.PrepareDraftOrderModelAsync(null, order);
+
+            return PartialView("_DraftPricing", model);
+        }
+
+        [HttpPost]
+        public virtual async Task<IActionResult> RemoveProduct(int productId, int draftOrderId, bool isCustomItem = false)
+        {
+            var order = await _draftOrderService.GetOrderByIdAsync(draftOrderId);
+
+            if (order != null)
+            {
+                var vendor = await _workContext.GetCurrentVendorAsync();
+                var orderItems = await _draftOrderService.GetOrderItemsAsync(order.Id, vendorId: vendor?.Id ?? 0);
+                var orderItem = orderItems.FirstOrDefault(x => x.Id == productId);
+
+                if (orderItem != null)
+                {
+                    if (isCustomItem)
+                    {
+                        var product = await _productService.GetProductByIdAsync(orderItem.ProductId);
+                        await _productService.DeleteProductAsync(product);
+
+                    }
+                    await _draftOrderService.DeleteOrderItemAsync(orderItem);
+
+                    var model = await _orderModelFactory.PrepareDraftOrderModelAsync(null, order);
+                    return PartialView("_ProductPanel", model);
+                }
+
+            }
+
+            return default;
+        }
+        [HttpPost]
+        public virtual async Task<IActionResult> AddCustomProduct(int draftOrderId, string itemName, string itemPrice, int itemQuantity)
+        {
+            var order = await _draftOrderService.GetOrderByIdAsync(draftOrderId);
+
+            if (order != null)
+            {
+                if (decimal.TryParse(itemPrice, out var unitPriceExclTax))
+                {
+
+                    //product
+                    ProductModel productModel = new ProductModel()
+                    {
+                        Name = itemName,
+                        ProductTypeId = (int)ProductType.SimpleProduct,
+                        VisibleIndividually = true,
+                        ProductTemplateId = (await _productTemplateService.GetAllProductTemplatesAsync())?.FirstOrDefault()?.Id ?? 1,
+                        AllowCustomerReviews = false,
+                        UnlimitedDownloads = false,
+                        MaxNumberOfDownloads = 0,
+                        RecurringCycleLength = 100,
+                        RecurringTotalCycles = 10,
+                        RentalPriceLength = 1,
+                        IsShipEnabled = true,
+                        ManageInventoryMethodId = (int)ManageInventoryMethod.DontManageStock,
+                        StockQuantity = itemQuantity,
+                        LowStockActivityId = (int)LowStockActivity.Nothing,
+                        NotifyAdminForQuantityBelow = 0,
+                        AllowBackInStockSubscriptions = false,
+                        OrderMaximumQuantity = 10000,
+                        OrderMinimumQuantity = 0,
+                        Price = unitPriceExclTax,
+                        MaximumCustomerEnteredPrice = 1000,
+                        BasepriceBaseUnitId = 1,
+                        BasepriceUnitId = 1,
+                        Published = true,
+                    };
+
+                    var product = productModel.ToEntity<Product>();
+                    product.CreatedOnUtc = DateTime.UtcNow;
+                    product.UpdatedOnUtc = DateTime.UtcNow;
+                    product.Deleted = true;
+                    await _productService.InsertProductAsync(product);
+
+
+                    var draftOrderItem = new DraftOrderItem()
+                    {
+                        ProductId = product.Id,
+                        OrderId = draftOrderId,
+                        Quantity = itemQuantity,
+                        UnitPriceInclTax = unitPriceExclTax,
+                        UnitPriceExclTax = unitPriceExclTax,
+                        PriceInclTax = unitPriceExclTax,
+                        PriceExclTax = unitPriceExclTax,
+                        DiscountAmountExclTax = 0,
+                        DiscountAmountInclTax = 0,
+                        OriginalProductCost = 0,
+                        DownloadCount = 0,
+                        IsDownloadActivated = false,
+                        OrderItemGuid = Guid.NewGuid(),
+                        IsCustomItem = true,
+
+                    };
+                    await _draftOrderService.InsertOrderItemAsync(draftOrderItem);
+                }
+                var model = await _orderModelFactory.PrepareDraftOrderModelAsync(null, order);
+                return PartialView("_ProductPanel", model);
+            }
+
+
+            //}
+            return Json("{}");
+        }
+
+        [HttpPost, ActionName("CreateOrder")]
+        [FormValueRequired("createOrder")]
+        public virtual async Task<IActionResult> CreateOrder(DraftOrderModel model)
+        {
+            if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
+                return AccessDeniedView();
+
+            var draftOrder = await _draftOrderService.GetOrderByIdAsync(model.Id);
+            draftOrder.OrderStatusId = (int)OrderStatus.Processing;
+            await _draftOrderService.UpdateOrderAsync(draftOrder);
+
+            return RedirectToAction("Draft");
+        }
+
+        [HttpPost]
+        public virtual async Task<IActionResult> DraftOrderDelete(int id)
+        {
+            if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
+                return AccessDeniedView();
+
+            //try to get an order with the specified id
+            var order = await _draftOrderService.GetOrderByIdAsync(id);
+            if (order == null)
+                return RedirectToAction("Draft");
+
+            //a vendor does not have access to this functionality
+            if (await _workContext.GetCurrentVendorAsync() != null)
+                return RedirectToAction("EditDraft", "Order", new { id });
+
+            var draftItems = await _draftOrderService.GetOrderItemsAsync(id);
+
+            foreach (var item in draftItems)
+            {
+                await _draftOrderService.DeleteOrderItemAsync(item);
+            }
+
+            await _draftOrderService.DeleteOrderAsync(order);
+
+            //activity log
+            await _customerActivityService.InsertActivityAsync("DeleteDraftOrder",
+                string.Format(await _localizationService.GetResourceAsync("ActivityLog.DeleteOrder"), order.Id), order);
+
+            return RedirectToAction("Draft");
+        }
+
         #endregion
 
         #region Shipments
@@ -2618,9 +3022,9 @@ namespace Nop.Web.Areas.Admin.Controllers
                 byte[] bytes;
                 await using (var stream = new MemoryStream())
                 {
-                    if(shipment != null)
+                    if (shipment != null)
                         await _pdfService.PrintPackagingSlipsToPdfAsync(stream, shipment, _orderSettings.GeneratePdfInvoiceInCustomerLanguage ? 0 : (await _workContext.GetWorkingLanguageAsync()).Id);
-                    else if(order != null)
+                    else if (order != null)
                         await _pdfService.PrintPackagingSlipsToPdfAsync(stream, order, _orderSettings.GeneratePdfInvoiceInCustomerLanguage ? 0 : (await _workContext.GetWorkingLanguageAsync()).Id, vendorId);
                     bytes = stream.ToArray();
                 }

@@ -1,4 +1,5 @@
-﻿using Nop.Web.Framework.Models;
+﻿using System;
+using Nop.Web.Framework.Models;
 
 namespace Nop.Web.Models.Checkout
 {
@@ -6,6 +7,10 @@ namespace Nop.Web.Models.Checkout
     {
         public bool ShippingRequired { get; set; }
         public bool DisableBillingAddressCheckoutStep { get; set; }
+
+        public bool IsDraftOrder { get; set; }
+
+        public Guid DraftOrderGuid { get; set; }
 
         public CheckoutBillingAddressModel BillingAddress { get; set; }
     }

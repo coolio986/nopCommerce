@@ -64,5 +64,10 @@
         /// Gets a cookie name of the Eu Cookie Law Warning
         /// </summary>
         public static string IgnoreEuCookieLawWarning => ".IgnoreEuCookieLawWarning";
+
+        /// <summary>
+        /// Gets a cookie name of the draft order context
+        /// </summary>
+        public static string DraftOrderCookie => ".DraftOrder";
     }
 }

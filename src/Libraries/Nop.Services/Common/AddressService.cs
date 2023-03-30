@@ -78,6 +78,24 @@ namespace Nop.Services.Common
         }
 
         /// <summary>
+        /// Gets address by first name
+        /// </summary>
+        /// <param name="customerFirstName">Customer first name</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains an address
+        /// </returns>
+        public virtual async Task<IEnumerable<Address>> GetAddressesByFirstName(string customerFirstName)
+        {
+
+            var query = from a in _addressRepository.Table
+                        where a.FirstName == customerFirstName
+                        select a;
+
+            return await query.ToListAsync();
+        }
+
+        /// <summary>
         /// Gets total number of addresses by state/province identifier
         /// </summary>
         /// <param name="stateProvinceId">State/province identifier</param>

@@ -178,6 +178,7 @@ namespace Nop.Web.Framework.Infrastructure
             services.AddScoped<ICheckoutAttributeService, CheckoutAttributeService>();
             services.AddScoped<IGiftCardService, GiftCardService>();
             services.AddScoped<IOrderService, OrderService>();
+            services.AddScoped<IDraftOrderService, DraftOrderService>();
             services.AddScoped<IOrderReportService, OrderReportService>();
             services.AddScoped<IOrderProcessingService, OrderProcessingService>();
             services.AddScoped<IOrderTotalCalculationService, OrderTotalCalculationService>();

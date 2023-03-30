@@ -72,6 +72,7 @@ namespace Nop.Web.Areas.Admin.Factories
         private readonly IOrderProcessingService _orderProcessingService;
         private readonly IOrderReportService _orderReportService;
         private readonly IOrderService _orderService;
+        private readonly IDraftOrderService _draftOrderService;
         private readonly IPaymentPluginManager _paymentPluginManager;
         private readonly IPaymentService _paymentService;
         private readonly IPictureService _pictureService;
@@ -120,6 +121,7 @@ namespace Nop.Web.Areas.Admin.Factories
             IOrderProcessingService orderProcessingService,
             IOrderReportService orderReportService,
             IOrderService orderService,
+            IDraftOrderService draftOrderService,
             IPaymentPluginManager paymentPluginManager,
             IPaymentService paymentService,
             IPictureService pictureService,
@@ -164,6 +166,7 @@ namespace Nop.Web.Areas.Admin.Factories
             _orderProcessingService = orderProcessingService;
             _orderReportService = orderReportService;
             _orderService = orderService;
+            _draftOrderService = draftOrderService;
             _paymentPluginManager = paymentPluginManager;
             _paymentService = paymentService;
             _pictureService = pictureService;
@@ -363,6 +366,122 @@ namespace Nop.Web.Areas.Admin.Factories
 
                 //prepare return request models
                 await PrepareReturnRequestBriefModelsAsync(orderItemModel.ReturnRequests, orderItem);
+
+                //gift card identifiers
+                orderItemModel.PurchasedGiftCardIds = (await _giftCardService
+                    .GetGiftCardsByPurchasedWithOrderItemIdAsync(orderItem.Id)).Select(card => card.Id).ToList();
+
+                models.Add(orderItemModel);
+            }
+        }
+
+        /// <summary>
+        /// Prepare draft order item models
+        /// </summary>
+        /// <param name="models">List of draft order item models</param>
+        /// <param name="order">Draft Order</param>
+        /// <returns>A task that represents the asynchronous operation</returns>
+        protected virtual async Task PrepareOrderItemModelsAsync(IList<OrderItemModel> models, DraftOrder order)
+        {
+            if (models == null)
+                throw new ArgumentNullException(nameof(models));
+
+            if (order == null)
+                throw new ArgumentNullException(nameof(order));
+
+            var primaryStoreCurrency = await _currencyService.GetCurrencyByIdAsync(_currencySettings.PrimaryStoreCurrencyId);
+
+            //get order items
+            var vendor = await _workContext.GetCurrentVendorAsync();
+            var orderItems = await _draftOrderService.GetOrderItemsAsync(order.Id, vendorId: vendor?.Id ?? 0);
+
+            foreach (var orderItem in orderItems)
+            {
+                var product = await _productService.GetProductByIdAsync(orderItem.ProductId);
+
+                //fill in model values from the entity
+                var orderItemModel = new OrderItemModel
+                {
+                    Id = orderItem.Id,
+                    ProductId = orderItem.ProductId,
+                    ProductName = product.Name,
+                    Quantity = orderItem.Quantity,
+                    IsDownload = product.IsDownload,
+                    DownloadCount = orderItem.DownloadCount,
+                    DownloadActivationType = product.DownloadActivationType,
+                    IsDownloadActivated = orderItem.IsDownloadActivated,
+                    UnitPriceInclTaxValue = orderItem.UnitPriceInclTax,
+                    UnitPriceExclTaxValue = orderItem.UnitPriceExclTax,
+                    DiscountInclTaxValue = orderItem.DiscountAmountInclTax,
+                    DiscountExclTaxValue = orderItem.DiscountAmountExclTax,
+                    SubTotalInclTaxValue = orderItem.PriceInclTax,
+                    SubTotalExclTaxValue = orderItem.PriceExclTax,
+                    AttributeInfo = orderItem.AttributeDescription,
+                    IsCustomItem = orderItem.IsCustomItem
+                    
+                };
+
+                //fill in additional values (not existing in the entity)
+                orderItemModel.Sku = await _productService.FormatSkuAsync(product, orderItem.AttributesXml);
+                orderItemModel.VendorName = (await _vendorService.GetVendorByIdAsync(product.VendorId))?.Name;
+
+                //picture
+                var orderItemPicture = await _pictureService.GetProductPictureAsync(product, orderItem.AttributesXml);
+                (orderItemModel.PictureThumbnailUrl, _) = await _pictureService.GetPictureUrlAsync(orderItemPicture, 75);
+
+                //license file
+                if (orderItem.LicenseDownloadId.HasValue)
+                {
+                    orderItemModel.LicenseDownloadGuid = (await _downloadService
+                        .GetDownloadByIdAsync(orderItem.LicenseDownloadId.Value))?.DownloadGuid ?? Guid.Empty;
+                }
+
+                var languageId = (await _workContext.GetWorkingLanguageAsync()).Id;
+
+                //unit price
+                orderItemModel.UnitPriceInclTax = await _priceFormatter
+                    .FormatOrderPriceAsync(orderItem.UnitPriceInclTax, order.CurrencyRate, order.CustomerCurrencyCode,
+                    _orderSettings.DisplayCustomerCurrencyOnOrders, primaryStoreCurrency, languageId, true, true);
+                orderItemModel.UnitPriceExclTax = await _priceFormatter
+                    .FormatOrderPriceAsync(orderItem.UnitPriceExclTax, order.CurrencyRate, order.CustomerCurrencyCode,
+                    _orderSettings.DisplayCustomerCurrencyOnOrders, primaryStoreCurrency, languageId, false, true);
+
+                //discounts
+                orderItemModel.DiscountInclTax = await _priceFormatter
+                    .FormatOrderPriceAsync(orderItem.DiscountAmountInclTax, order.CurrencyRate, order.CustomerCurrencyCode,
+                    _orderSettings.DisplayCustomerCurrencyOnOrders, primaryStoreCurrency, languageId, true, true);
+                orderItemModel.DiscountExclTax = await _priceFormatter
+                    .FormatOrderPriceAsync(orderItem.DiscountAmountExclTax, order.CurrencyRate, order.CustomerCurrencyCode,
+                    _orderSettings.DisplayCustomerCurrencyOnOrders, primaryStoreCurrency, languageId, false, true);
+
+                //subtotal
+                orderItemModel.SubTotalInclTax = await _priceFormatter
+                    .FormatOrderPriceAsync(orderItem.PriceInclTax, order.CurrencyRate, order.CustomerCurrencyCode,
+                    _orderSettings.DisplayCustomerCurrencyOnOrders, primaryStoreCurrency, languageId, true, true);
+                orderItemModel.SubTotalExclTax = await _priceFormatter
+                    .FormatOrderPriceAsync(orderItem.PriceExclTax, order.CurrencyRate, order.CustomerCurrencyCode,
+                    _orderSettings.DisplayCustomerCurrencyOnOrders, primaryStoreCurrency, languageId, false, true);
+
+                //recurring info
+                if (product.IsRecurring)
+                {
+                    orderItemModel.RecurringInfo = string.Format(await _localizationService.GetResourceAsync("Admin.Orders.Products.RecurringPeriod"),
+                        product.RecurringCycleLength, await _localizationService.GetLocalizedEnumAsync(product.RecurringCyclePeriod));
+                }
+
+                //rental info
+                if (product.IsRental)
+                {
+                    var rentalStartDate = orderItem.RentalStartDateUtc.HasValue
+                        ? _productService.FormatRentalDate(product, orderItem.RentalStartDateUtc.Value) : string.Empty;
+                    var rentalEndDate = orderItem.RentalEndDateUtc.HasValue
+                        ? _productService.FormatRentalDate(product, orderItem.RentalEndDateUtc.Value) : string.Empty;
+                    orderItemModel.RentalInfo = string.Format(await _localizationService.GetResourceAsync("Order.Rental.FormattedDate"),
+                        rentalStartDate, rentalEndDate);
+                }
+
+                //prepare return request models
+                //await PrepareReturnRequestBriefModelsAsync(orderItemModel.ReturnRequests, orderItem);
 
                 //gift card identifiers
                 orderItemModel.PurchasedGiftCardIds = (await _giftCardService
@@ -630,6 +749,96 @@ namespace Nop.Web.Areas.Admin.Factories
         }
 
         /// <summary>
+        /// Prepare draft order model payment info
+        /// </summary>
+        /// <param name="model">Draft Order model</param>
+        /// <param name="order">Draft Order</param>
+        /// <returns>A task that represents the asynchronous operation</returns>
+        protected virtual async Task PrepareDraftOrderModelPaymentInfoAsync(DraftOrderModel model, DraftOrder order)
+        {
+            if (model == null)
+                throw new ArgumentNullException(nameof(model));
+
+            if (order == null)
+                throw new ArgumentNullException(nameof(order));
+
+            var billingAddress = await _addressService.GetAddressByIdAsync(order.BillingAddressId);
+            if (billingAddress == null)
+            {
+                billingAddress = new Address()
+                {
+                    CountryId = 0,
+                    StateProvinceId = 0,
+                };
+                
+            }
+
+            //prepare billing address
+            model.BillingAddress = billingAddress.ToModel(model.BillingAddress);
+
+            model.BillingAddress.CountryName = (await _countryService.GetCountryByAddressAsync(billingAddress))?.Name;
+            model.BillingAddress.StateProvinceName = (await _stateProvinceService.GetStateProvinceByAddressAsync(billingAddress))?.Name;
+
+            await _addressModelFactory.PrepareAddressModelAsync(model.BillingAddress, billingAddress);
+            SetAddressFieldsAsRequired(model.BillingAddress);
+
+            if (order.AllowStoringCreditCardNumber)
+            {
+                //card type
+                model.CardType = _encryptionService.DecryptText(order.CardType);
+                //cardholder name
+                model.CardName = _encryptionService.DecryptText(order.CardName);
+                //card number
+                model.CardNumber = _encryptionService.DecryptText(order.CardNumber);
+                //cvv
+                model.CardCvv2 = _encryptionService.DecryptText(order.CardCvv2);
+                //expiry date
+                var cardExpirationMonthDecrypted = _encryptionService.DecryptText(order.CardExpirationMonth);
+                if (!string.IsNullOrEmpty(cardExpirationMonthDecrypted) && cardExpirationMonthDecrypted != "0")
+                    model.CardExpirationMonth = cardExpirationMonthDecrypted;
+                var cardExpirationYearDecrypted = _encryptionService.DecryptText(order.CardExpirationYear);
+                if (!string.IsNullOrEmpty(cardExpirationYearDecrypted) && cardExpirationYearDecrypted != "0")
+                    model.CardExpirationYear = cardExpirationYearDecrypted;
+
+                model.AllowStoringCreditCardNumber = true;
+            }
+            else
+            {
+                var maskedCreditCardNumberDecrypted = _encryptionService.DecryptText(order.MaskedCreditCardNumber);
+                if (!string.IsNullOrEmpty(maskedCreditCardNumberDecrypted))
+                    model.CardNumber = maskedCreditCardNumberDecrypted;
+            }
+
+            //payment transaction info
+            model.AuthorizationTransactionId = order.AuthorizationTransactionId;
+            model.CaptureTransactionId = order.CaptureTransactionId;
+            model.SubscriptionTransactionId = order.SubscriptionTransactionId;
+
+            //payment method info
+            var pm = await _paymentPluginManager.LoadPluginBySystemNameAsync(order.PaymentMethodSystemName);
+            model.PaymentMethod = pm != null ? pm.PluginDescriptor.FriendlyName : order.PaymentMethodSystemName;
+            model.PaymentStatus = await _localizationService.GetLocalizedEnumAsync(order.PaymentStatus);
+            model.PaymentStatusId = order.PaymentStatusId;
+
+            //payment method buttons
+            //model.CanCancelOrder = _orderProcessingService.CanCancelOrder(order);
+            //model.CanCapture = await _orderProcessingService.CanCaptureAsync(order);
+            //model.CanMarkOrderAsPaid = _orderProcessingService.CanMarkOrderAsPaid(order);
+            //model.CanRefund = await _orderProcessingService.CanRefundAsync(order);
+            //model.CanRefundOffline = _orderProcessingService.CanRefundOffline(order);
+            //model.CanPartiallyRefund = await _orderProcessingService.CanPartiallyRefundAsync(order, decimal.Zero);
+            //model.CanPartiallyRefundOffline = _orderProcessingService.CanPartiallyRefundOffline(order, decimal.Zero);
+            //model.CanVoid = await _orderProcessingService.CanVoidAsync(order);
+            //model.CanVoidOffline = _orderProcessingService.CanVoidOffline(order);
+
+            model.PrimaryStoreCurrencyCode = (await _currencyService.GetCurrencyByIdAsync(_currencySettings.PrimaryStoreCurrencyId))?.CurrencyCode;
+            model.MaxAmountToRefund = order.OrderTotal - order.RefundedAmount;
+
+            //recurring payment record
+            model.RecurringPaymentId = (await _orderService.SearchRecurringPaymentsAsync(initialOrderId: order.Id, showHidden: true)).FirstOrDefault()?.Id ?? 0;
+        }
+
+        /// <summary>
         /// Prepare order model shipping info
         /// </summary>
         /// <param name="model">Order model</param>
@@ -680,6 +889,69 @@ namespace Nop.Web.Areas.Admin.Factories
             }
         }
 
+        /// <summary>
+        /// Prepare draft order model shipping info
+        /// </summary>
+        /// <param name="model">Draft Order model</param>
+        /// <param name="order">Draft Order</param>
+        /// <returns>A task that represents the asynchronous operation</returns>
+        protected virtual async Task PrepareDraftOrderModelShippingInfoAsync(DraftOrderModel model, DraftOrder order)
+        {
+            if (model == null)
+                throw new ArgumentNullException(nameof(model));
+
+            if (order == null)
+                throw new ArgumentNullException(nameof(order));
+
+            model.ShippingStatus = await _localizationService.GetLocalizedEnumAsync(order.ShippingStatus);
+            if (order.ShippingStatus == ShippingStatus.ShippingNotRequired)
+                return;
+
+            
+            model.ShippingMethod = order.ShippingMethod;
+            model.OriginalShippingMethod = order.OriginalShippingMethod;
+            //model.CanAddNewShipments = await _orderService.HasItemsToAddToShipmentAsync(order);
+            model.PickupInStore = order.PickupInStore;
+            if (!order.PickupInStore)
+            {
+                var shippingAddress = await _addressService.GetAddressByIdAsync(order.ShippingAddressId.Value);
+                if (shippingAddress != null)
+                {
+                    model.IsShippable = true;
+
+                    var shippingCountry = await _countryService.GetCountryByAddressAsync(shippingAddress);
+
+                    model.ShippingAddress = shippingAddress.ToModel(model.ShippingAddress);
+                    model.ShippingAddress.CountryName = shippingCountry?.Name;
+                    model.ShippingAddress.StateProvinceName = (await _stateProvinceService.GetStateProvinceByAddressAsync(shippingAddress))?.Name;
+                    await _addressModelFactory.PrepareAddressModelAsync(model.ShippingAddress, shippingAddress);
+                    SetAddressFieldsAsRequired(model.ShippingAddress);
+                    model.ShippingAddressGoogleMapsUrl = "https://maps.google.com/maps?f=q&hl=en&ie=UTF8&oe=UTF8&geocode=&q=" +
+                        $"{WebUtility.UrlEncode(shippingAddress.Address1 + " " + shippingAddress.ZipPostalCode + " " + shippingAddress.City + " " + (shippingCountry?.Name ?? string.Empty))}";
+                }
+                else
+                {
+                    model.ShippingAddress = new AddressModel()
+                    {
+                        StateProvinceId = 0,
+                        CountryId = 0,
+                    };
+                }
+            }
+            else
+            {
+                if (order.PickupAddressId is null)
+                    return;
+
+                var pickupAddress = await _addressService.GetAddressByIdAsync(order.PickupAddressId.Value);
+
+                var pickupCountry = await _countryService.GetCountryByAddressAsync(pickupAddress);
+
+                model.PickupAddress = pickupAddress.ToModel(model.PickupAddress);
+                model.PickupAddressGoogleMapsUrl = $"https://maps.google.com/maps?f=q&hl=en&ie=UTF8&oe=UTF8&geocode=&q=" +
+                    $"{WebUtility.UrlEncode($"{pickupAddress.Address1} {pickupAddress.ZipPostalCode} {pickupAddress.City} {(pickupCountry?.Name ?? string.Empty)}")}";
+            }
+        }
         /// <summary>
         /// Prepare product attribute models
         /// </summary>
@@ -1018,7 +1290,7 @@ namespace Nop.Web.Areas.Admin.Factories
             searchModel.BillingPhoneEnabled = _addressSettings.PhoneEnabled;
 
             //prepare available order, payment and shipping statuses
-            await _baseAdminModelFactory.PrepareOrderStatusesAsync(searchModel.AvailableOrderStatuses);
+            await _baseAdminModelFactory.PrepareDraftOrderStatusesAsync(searchModel.AvailableOrderStatuses);
             if (searchModel.AvailableOrderStatuses.Any())
             {
                 if (searchModel.OrderStatusIds?.Any() ?? false)
@@ -1177,6 +1449,90 @@ namespace Nop.Web.Areas.Admin.Factories
         }
 
         /// <summary>
+        /// Prepare paged draft order list model
+        /// </summary>
+        /// <param name="searchModel">Draft order search model</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the order list model
+        /// </returns>
+        public virtual async Task<DraftOrderListModel> PrepareDraftOrderListModelAsync(DraftOrderSearchModel searchModel)
+        {
+            if (searchModel == null)
+                throw new ArgumentNullException(nameof(searchModel));
+
+            //get parameters to filter orders
+            var orderStatusIds = (searchModel.OrderStatusIds?.Contains(0) ?? true) ? null : searchModel.OrderStatusIds.ToList();
+            var paymentStatusIds = (searchModel.PaymentStatusIds?.Contains(0) ?? true) ? null : searchModel.PaymentStatusIds.ToList();
+            var shippingStatusIds = (searchModel.ShippingStatusIds?.Contains(0) ?? true) ? null : searchModel.ShippingStatusIds.ToList();
+            var currentVendor = await _workContext.GetCurrentVendorAsync();
+            if (currentVendor != null)
+                searchModel.VendorId = currentVendor.Id;
+            var startDateValue = !searchModel.StartDate.HasValue ? null
+                : (DateTime?)_dateTimeHelper.ConvertToUtcTime(searchModel.StartDate.Value, await _dateTimeHelper.GetCurrentTimeZoneAsync());
+            var endDateValue = !searchModel.EndDate.HasValue ? null
+                : (DateTime?)_dateTimeHelper.ConvertToUtcTime(searchModel.EndDate.Value, await _dateTimeHelper.GetCurrentTimeZoneAsync()).AddDays(1);
+            var product = await _productService.GetProductByIdAsync(searchModel.ProductId);
+            var filterByProductId = product != null && (currentVendor == null || product.VendorId == currentVendor.Id)
+                ? searchModel.ProductId : 0;
+
+            //get orders
+            var draftOrders = await _draftOrderService.SearchDraftOrdersAsync(storeId: searchModel.StoreId,
+                vendorId: searchModel.VendorId,
+                productId: filterByProductId,
+                warehouseId: searchModel.WarehouseId,
+                paymentMethodSystemName: searchModel.PaymentMethodSystemName,
+                createdFromUtc: startDateValue,
+                createdToUtc: endDateValue,
+                osIds: orderStatusIds,
+                psIds: paymentStatusIds,
+                ssIds: shippingStatusIds,
+                billingPhone: searchModel.BillingPhone,
+                billingEmail: searchModel.BillingEmail,
+                billingLastName: searchModel.BillingLastName,
+                billingCountryId: searchModel.BillingCountryId,
+                orderNotes: searchModel.OrderNotes,
+                pageIndex: searchModel.Page - 1, pageSize: searchModel.PageSize);
+
+            //prepare list model
+            var model = await new DraftOrderListModel().PrepareToGridAsync(searchModel, draftOrders, () =>
+            {
+                //fill in model values from the entity
+                return draftOrders.SelectAwait(async order =>
+                {
+                    var billingAddress = await _addressService.GetAddressByIdAsync(order.BillingAddressId);
+
+                    //fill in model values from the entity
+                    var draftOrderModel = new DraftOrderModel
+                    {
+                        Id = order.Id,
+                        OrderStatusId = order.OrderStatusId,
+                        PaymentStatusId = order.PaymentStatusId,
+                        ShippingStatusId = order.ShippingStatusId,
+                        CustomerEmail = billingAddress?.Email,
+                        CustomerFullName = $"{billingAddress?.FirstName} {billingAddress?.LastName}",
+                        CustomerId = order.CustomerId,
+                        CustomOrderNumber = order.CustomOrderNumber
+                    };
+
+                    //convert dates to the user time
+                    draftOrderModel.CreatedOn = await _dateTimeHelper.ConvertToUserTimeAsync(order.CreatedOnUtc, DateTimeKind.Utc);
+
+                    //fill in additional values (not existing in the entity)
+                    draftOrderModel.StoreName = (await _storeService.GetStoreByIdAsync(order.StoreId))?.Name ?? "Deleted";
+                    draftOrderModel.OrderStatus = await _localizationService.GetLocalizedEnumAsync(order.OrderStatus);
+                    draftOrderModel.PaymentStatus = await _localizationService.GetLocalizedEnumAsync(order.PaymentStatus);
+                    draftOrderModel.ShippingStatus = await _localizationService.GetLocalizedEnumAsync(order.ShippingStatus);
+                    draftOrderModel.OrderTotal = await _priceFormatter.FormatPriceAsync(order.OrderTotal, true, false);
+
+                    return draftOrderModel;
+                });
+            });
+
+            return model;
+        }
+
+        /// <summary>
         /// Prepare order aggregator model
         /// </summary>
         /// <param name="searchModel">Order search model</param>
@@ -1326,6 +1682,73 @@ namespace Nop.Web.Areas.Admin.Factories
         }
 
         /// <summary>
+        /// Prepare draft order model
+        /// </summary>
+        /// <param name="model">Draft order model</param>
+        /// <param name="order">Draft order</param>
+        /// <param name="excludeProperties">Whether to exclude populating of some properties of model</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the draft order model
+        /// </returns>
+        public virtual async Task<DraftOrderModel> PrepareDraftOrderModelAsync(DraftOrderModel model, DraftOrder order, bool excludeProperties = false)
+        {
+            if (order != null)
+            {
+                //fill in model values from the entity
+                model ??= new DraftOrderModel
+                {
+                    Id = order.Id,
+                    OrderStatusId = order.OrderStatusId,
+                    VatNumber = order.VatNumber,
+                    CheckoutAttributeInfo = order.CheckoutAttributeDescription
+                };
+
+                var customer = await _customerService.GetCustomerByIdAsync(order.CustomerId);
+
+                model.OrderGuid = order.OrderGuid;
+                model.CustomOrderNumber = order.CustomOrderNumber;
+                model.CustomerIp = order.CustomerIp;
+                model.CustomerId = customer?.Id ?? 0;
+                model.OrderStatus = await _localizationService.GetLocalizedEnumAsync(order.OrderStatus);
+                model.StoreName = (await _storeService.GetStoreByIdAsync(order.StoreId))?.Name ?? "Deleted";
+                model.CustomerInfo = await _customerService.IsRegisteredAsync(customer ?? new Customer()) ? customer.Email : await _localizationService.GetResourceAsync("Admin.Customers.Guest");
+                model.CreatedOn = await _dateTimeHelper.ConvertToUserTimeAsync(order.CreatedOnUtc, DateTimeKind.Utc);
+                model.OrderStatusId = order.OrderStatusId;
+
+                var affiliate = await _affiliateService.GetAffiliateByIdAsync(order.AffiliateId);
+                if (affiliate != null)
+                {
+                    model.AffiliateId = affiliate.Id;
+                    model.AffiliateName = await _affiliateService.GetAffiliateFullNameAsync(affiliate);
+                }
+
+                ////prepare order totals
+                //await PrepareOrderModelTotalsAsync(model, order);
+
+                ////prepare order items
+                await PrepareOrderItemModelsAsync(model.Items, order);
+                //model.HasDownloadableProducts = model.Items.Any(item => item.IsDownload);
+
+                ////prepare payment info
+                await PrepareDraftOrderModelPaymentInfoAsync(model, order);
+
+                //prepare shipping info
+                await PrepareDraftOrderModelShippingInfoAsync(model, order);
+
+                //prepare nested search model
+                //PrepareOrderShipmentSearchModel(model.OrderShipmentSearchModel, order);
+                //PrepareOrderNoteSearchModel(model.OrderNoteSearchModel, order);
+            }
+
+            model.IsLoggedInAsVendor = await _workContext.GetCurrentVendorAsync() != null;
+            model.AllowCustomersToSelectTaxDisplayType = _taxSettings.AllowCustomersToSelectTaxDisplayType;
+            model.TaxDisplayType = _taxSettings.TaxDisplayType;
+
+            return model;
+        }
+
+        /// <summary>
         /// Prepare upload license model
         /// </summary>
         /// <param name="model">Upload license model</param>
@@ -1388,6 +1811,40 @@ namespace Nop.Web.Areas.Admin.Factories
         }
 
         /// <summary>
+        /// Prepare product search model to add to the draft order
+        /// </summary>
+        /// <param name="searchModel">Product search model to add to the draft order</param>
+        /// <param name="order">Draft order</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the product search model to add to the draft order
+        /// </returns>
+        public virtual async Task<AddProductToDraftOrderSearchModel> PrepareAddProductToDraftOrderSearchModelAsync(AddProductToDraftOrderSearchModel searchModel, DraftOrder order)
+        {
+            if (searchModel == null)
+                throw new ArgumentNullException(nameof(searchModel));
+
+            if (order == null)
+                throw new ArgumentNullException(nameof(order));
+
+            searchModel.DraftOrderId = order.Id;
+
+            //prepare available categories
+            await _baseAdminModelFactory.PrepareCategoriesAsync(searchModel.AvailableCategories);
+
+            //prepare available manufacturers
+            await _baseAdminModelFactory.PrepareManufacturersAsync(searchModel.AvailableManufacturers);
+
+            //prepare available product types
+            await _baseAdminModelFactory.PrepareProductTypesAsync(searchModel.AvailableProductTypes);
+
+            //prepare page parameters
+            searchModel.SetGridPageSize();
+
+            return searchModel;
+        }
+
+        /// <summary>
         /// Prepare paged product list model to add to the order
         /// </summary>
         /// <param name="searchModel">Product search model to add to the order</param>
@@ -1397,6 +1854,45 @@ namespace Nop.Web.Areas.Admin.Factories
         /// The task result contains the product search model to add to the order
         /// </returns>
         public virtual async Task<AddProductToOrderListModel> PrepareAddProductToOrderListModelAsync(AddProductToOrderSearchModel searchModel, Order order)
+        {
+            if (searchModel == null)
+                throw new ArgumentNullException(nameof(searchModel));
+
+            //get products
+            var products = await _productService.SearchProductsAsync(showHidden: true,
+                categoryIds: new List<int> { searchModel.SearchCategoryId },
+                manufacturerIds: new List<int> { searchModel.SearchManufacturerId },
+                productType: searchModel.SearchProductTypeId > 0 ? (ProductType?)searchModel.SearchProductTypeId : null,
+                keywords: searchModel.SearchProductName,
+                pageIndex: searchModel.Page - 1, pageSize: searchModel.PageSize);
+
+            //prepare grid model
+            var model = await new AddProductToOrderListModel().PrepareToGridAsync(searchModel, products, () =>
+            {
+                //fill in model values from the entity
+                return products.SelectAwait(async product =>
+                {
+                    var productModel = product.ToModel<ProductModel>();
+
+                    productModel.SeName = await _urlRecordService.GetSeNameAsync(product, 0, true, false);
+
+                    return productModel;
+                });
+            });
+
+            return model;
+        }
+
+        /// <summary>
+        /// Prepare paged product list model to add to the draft order
+        /// </summary>
+        /// <param name="searchModel">Product search model to add to the draft order</param>
+        /// <param name="order">Draft order</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the product search model to add to the draft order
+        /// </returns>
+        public virtual async Task<AddProductToOrderListModel> PrepareAddProductToDraftOrderListModelAsync(AddProductToDraftOrderSearchModel searchModel, DraftOrder order)
         {
             if (searchModel == null)
                 throw new ArgumentNullException(nameof(searchModel));
