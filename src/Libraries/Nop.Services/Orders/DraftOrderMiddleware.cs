@@ -38,22 +38,27 @@ namespace Nop.Services.Orders
         {
             if (context.Request.Path.HasValue && !context.Request.Path.Value.ToLower().StartsWith("/checkout"))
             {
-                var draftOrderService = EngineContext.Current.Resolve<IDraftOrderService>();
-                var workContext = EngineContext.Current.Resolve<IWorkContext>();
-                var draftOrderGuidCookie = workContext.GetDraftOrderCookie();
-                if (draftOrderGuidCookie != null )
+                string draftOrderQuery = context.Request.Query["draftorder"];
+                if (draftOrderQuery != null && draftOrderQuery != "ignoreCart" || draftOrderQuery == null)
                 {
 
-                    var shoppingCartService = EngineContext.Current.Resolve<IShoppingCartService>();
-                    var storeContext = EngineContext.Current.Resolve<IStoreContext>();
-                    var store = await storeContext.GetCurrentStoreAsync();
-                    var cart = await shoppingCartService.GetShoppingCartAsync(await workContext.GetCurrentCustomerAsync(), ShoppingCartType.ShoppingCart, store.Id);
-
-                    foreach (var item in cart)
+                    var draftOrderService = EngineContext.Current.Resolve<IDraftOrderService>();
+                    var workContext = EngineContext.Current.Resolve<IWorkContext>();
+                    var draftOrderGuidCookie = workContext.GetDraftOrderCookie();
+                    if (draftOrderGuidCookie != null)
                     {
-                        await shoppingCartService.DeleteShoppingCartItemAsync(item);
+
+                        var shoppingCartService = EngineContext.Current.Resolve<IShoppingCartService>();
+                        var storeContext = EngineContext.Current.Resolve<IStoreContext>();
+                        var store = await storeContext.GetCurrentStoreAsync();
+                        var cart = await shoppingCartService.GetShoppingCartAsync(await workContext.GetCurrentCustomerAsync(), ShoppingCartType.ShoppingCart, store.Id);
+
+                        foreach (var item in cart)
+                        {
+                            await shoppingCartService.DeleteShoppingCartItemAsync(item);
+                        }
+                        workContext.DeleteDraftOrderCookie();
                     }
-                    workContext.DeleteDraftOrderCookie();
                 }
             }
             await _next(context);
