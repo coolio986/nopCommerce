@@ -145,6 +145,13 @@ namespace Nop.Web.Areas.Admin.Factories
         Task<AddProductToOrderListModel> PrepareAddProductToDraftOrderListModelAsync(AddProductToDraftOrderSearchModel searchModel, DraftOrder order);
 
         /// <summary>
+        /// Update order totals
+        /// </summary>
+        /// <param name="model">Draft Order model</param>
+        /// <param name="order">Draft Order</param>
+        /// <returns>A task that represents the asynchronous operation</returns>
+        Task UpdateOrderModelTotalsAsync(DraftOrder order, DraftOrderModel orderModel);
+        /// <summary>
         /// Prepare product model to add to the order
         /// </summary>
         /// <param name="model">Product model to add to the order</param>

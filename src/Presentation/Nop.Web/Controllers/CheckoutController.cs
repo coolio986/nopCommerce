@@ -1211,7 +1211,23 @@ namespace Nop.Web.Controllers
         protected virtual async Task<JsonResult> OpcLoadStepAfterShippingAddress(IList<ShoppingCartItem> cart)
         {
             var customer = await _workContext.GetCurrentCustomerAsync();
-            var shippingMethodModel = await _checkoutModelFactory.PrepareShippingMethodModelAsync(cart, await _customerService.GetCustomerShippingAddressAsync(customer));
+
+            var draftOrderGuidCookie = _workContext.GetDraftOrderCookie();
+            CheckoutShippingMethodModel checkoutShippingMethodModel = null;
+            if (draftOrderGuidCookie != null)
+            {
+                var draftOrder = await _draftOrderService.GetOrderByGuidAsync(Guid.Parse(draftOrderGuidCookie));
+                if (draftOrder != null)
+                {
+                    checkoutShippingMethodModel = await _checkoutModelFactory.PrepareShippingMethodModelDraftOrderAsync(await _customerService.GetCustomerShippingAddressAsync(customer), draftOrder, cart);
+                }
+            }
+
+
+            var shippingMethodModel = checkoutShippingMethodModel == null ? 
+                await _checkoutModelFactory.PrepareShippingMethodModelAsync(cart, await _customerService.GetCustomerShippingAddressAsync(customer))
+                :
+                checkoutShippingMethodModel;
             if (_shippingSettings.BypassShippingMethodSelectionIfOnlyOne &&
                 shippingMethodModel.ShippingMethods.Count == 1)
             {
@@ -1387,6 +1403,13 @@ namespace Nop.Web.Controllers
                                 draftOrderItem.Quantity, false, ignoreDeletedProductWarnings: true);
                         }
 
+                        if (draftOrder.CustomDiscountValue != decimal.Zero)
+                        {
+                            //apply discount coupon codes to customer
+                            await _customerService.ApplyDiscountCouponCodeAsync(customer, draftOrder.OrderGuid.ToString());
+                            
+                        }
+
                         cart = await _shoppingCartService.GetShoppingCartAsync(customer, ShoppingCartType.ShoppingCart, store.Id);
                         isDraftOrder = true;
                         _workContext.SetDraftOrderCookie(draftOrder.OrderGuid);
@@ -1415,6 +1438,7 @@ namespace Nop.Web.Controllers
             return View(model);
         }
 
+        [HttpPost]
         [HttpPost]
         public virtual async Task<IActionResult> OpcSaveBilling(CheckoutBillingAddressModel model, IFormCollection form)
         {

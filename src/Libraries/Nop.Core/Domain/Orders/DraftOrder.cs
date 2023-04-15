@@ -303,6 +303,15 @@ namespace Nop.Core.Domain.Orders
         /// </summary>
         public virtual int? RedeemedRewardPointsEntryId { get; set; }
 
+        /// <summary>
+        /// Gets or sets the custom discount id for the draft order
+        /// </summary>
+        public virtual int? CustomDiscountId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the custom discount value for the draft order
+        /// </summary>
+        public decimal CustomDiscountValue { get; set; }
         #endregion
 
         #region Custom properties

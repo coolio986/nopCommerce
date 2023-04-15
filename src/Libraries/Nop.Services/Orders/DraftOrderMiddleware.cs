@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Nop.Core;
 using Nop.Core.Infrastructure;
 using Nop.Core.Domain.Orders;
-
+using Nop.Services.Customers;
 
 namespace Nop.Services.Orders
 {
@@ -50,8 +50,12 @@ namespace Nop.Services.Orders
 
                         var shoppingCartService = EngineContext.Current.Resolve<IShoppingCartService>();
                         var storeContext = EngineContext.Current.Resolve<IStoreContext>();
+                        var customerService = EngineContext.Current.Resolve<ICustomerService>();
+
                         var store = await storeContext.GetCurrentStoreAsync();
                         var cart = await shoppingCartService.GetShoppingCartAsync(await workContext.GetCurrentCustomerAsync(), ShoppingCartType.ShoppingCart, store.Id);
+
+                        await customerService.RemoveDiscountCouponCodeAsync(await workContext.GetCurrentCustomerAsync(), draftOrderGuidCookie);
 
                         foreach (var item in cart)
                         {

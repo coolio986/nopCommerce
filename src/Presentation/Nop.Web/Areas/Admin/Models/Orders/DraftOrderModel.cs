@@ -99,6 +99,13 @@ namespace Nop.Web.Areas.Admin.Models.Orders
         public int RedeemedRewardPoints { get; set; }
         [NopResourceDisplayName("Admin.Orders.Fields.RedeemedRewardPoints")]
         public string RedeemedRewardPointsAmount { get; set; }
+
+        public virtual int CustomDiscountId { get; set; }
+
+        public decimal CustomDiscountValue { get; set; }
+
+        public string CustomDiscount{ get; set; }
+
         [NopResourceDisplayName("Admin.Orders.Fields.OrderTotal")]
         public string OrderTotal { get; set; }
         [NopResourceDisplayName("Admin.Orders.Fields.RefundedAmount")]

@@ -37,6 +37,8 @@ using Nop.Web.Framework.Mvc;
 using Nop.Web.Framework.Mvc.Filters;
 using Nop.Core.Domain.Customers;
 using Nop.Web.Areas.Admin.Models.Customers;
+using Nop.Core.Domain.Discounts;
+using Nop.Services.Discounts;
 
 namespace Nop.Web.Areas.Admin.Controllers
 {
@@ -77,6 +79,7 @@ namespace Nop.Web.Areas.Admin.Controllers
         private readonly IProductTemplateService _productTemplateService;
         private readonly IGenericAttributeService _genericAttributeService;
         private readonly IStoreContext _storeContext;
+        private readonly IDiscountService _discountService;
 
         #endregion
 
@@ -113,8 +116,9 @@ namespace Nop.Web.Areas.Admin.Controllers
             IWorkflowMessageService workflowMessageService,
             OrderSettings orderSettings,
             IProductTemplateService productTemplateService,
-            IGenericAttributeService genericAttributeService,  
-            IStoreContext storeContext
+            IGenericAttributeService genericAttributeService,
+            IStoreContext storeContext,
+            IDiscountService discountService
             )
         {
             _addressAttributeParser = addressAttributeParser;
@@ -148,8 +152,9 @@ namespace Nop.Web.Areas.Admin.Controllers
             _workflowMessageService = workflowMessageService;
             _orderSettings = orderSettings;
             _productTemplateService = productTemplateService;
-            _genericAttributeService = genericAttributeService; 
+            _genericAttributeService = genericAttributeService;
             _storeContext = storeContext;
+            _discountService = discountService;
         }
 
         #endregion
@@ -1994,6 +1999,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                 draftOrder.BillingAddressId = 0;
                 draftOrder.ShippingAddressId = 0;
                 draftOrder.PickupAddressId = 0;
+                draftOrder.CustomDiscountId = 0;
                 await _draftOrderService.InsertOrderAsync(draftOrder);
                 draftOrder.CustomOrderNumber = string.Format("D{0}", draftOrder.Id);
                 await _draftOrderService.UpdateOrderAsync(draftOrder);
@@ -2005,6 +2011,7 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             var model = await _orderModelFactory.PrepareDraftOrderModelAsync(null, order);
 
+            await _orderModelFactory.UpdateOrderModelTotalsAsync(order, model);
 
             return View(model);
         }
@@ -2091,6 +2098,8 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             var model = await _orderModelFactory.PrepareDraftOrderModelAsync(null, order);
 
+            await _orderModelFactory.UpdateOrderModelTotalsAsync(order, model);
+
             return PartialView("_ProductPanel", model);
         }
 
@@ -2108,7 +2117,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                 customerModel.Email = customer.Email;
                 return customerModel;
             }).ToListAsync();
-            
+
             return PartialView("_Draft.Addresses", customersModel);
         }
 
@@ -2152,7 +2161,7 @@ namespace Nop.Web.Areas.Admin.Controllers
 
                     if (orderItem != null && orderItem.Quantity != quantityTotal)
                     {
-                        var product = await _productService.GetProductByIdAsync(productId);
+                        var product = await _productService.GetProductByIdAsync(orderItem.ProductId);
 
                         orderItem.Quantity = quantityTotal;
                         orderItem.PriceExclTax = product.Price * quantityTotal;
@@ -2160,6 +2169,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                         await _draftOrderService.UpdateOrderItemAsync(orderItem);
 
                         var model = await _orderModelFactory.PrepareDraftOrderModelAsync(null, order);
+
+                        await _orderModelFactory.UpdateOrderModelTotalsAsync(order, model);
                         return PartialView("_ProductPanel", model);
                     }
 
@@ -2200,6 +2211,9 @@ namespace Nop.Web.Areas.Admin.Controllers
                     await _draftOrderService.DeleteOrderItemAsync(orderItem);
 
                     var model = await _orderModelFactory.PrepareDraftOrderModelAsync(null, order);
+
+                    await _orderModelFactory.UpdateOrderModelTotalsAsync(order, model);
+
                     return PartialView("_ProductPanel", model);
                 }
 
@@ -2208,12 +2222,28 @@ namespace Nop.Web.Areas.Admin.Controllers
             return default;
         }
         [HttpPost]
-        public virtual async Task<IActionResult> AddCustomProduct(int draftOrderId, string itemName, string itemPrice, int itemQuantity)
+        public virtual async Task<IActionResult> AddCustomProduct(int draftOrderId,
+            string itemName,
+            string itemPrice,
+            int itemQuantity,
+            string itemLength,
+            string itemWidth,
+            string itemHeight,
+            string itemWeight)
         {
+            //the above arguments need a class and [FromQuery]
+
+
             var order = await _draftOrderService.GetOrderByIdAsync(draftOrderId);
 
             if (order != null)
             {
+                decimal.TryParse(itemWeight, out decimal productItemWeight);
+                decimal.TryParse(itemLength, out decimal productItemLength);
+                decimal.TryParse(itemWidth, out decimal productItemWidth);
+                decimal.TryParse(itemHeight, out decimal productItemHeight);
+
+
                 if (decimal.TryParse(itemPrice, out var unitPriceExclTax))
                 {
 
@@ -2243,6 +2273,11 @@ namespace Nop.Web.Areas.Admin.Controllers
                         BasepriceBaseUnitId = 1,
                         BasepriceUnitId = 1,
                         Published = true,
+                        Weight = productItemWeight,
+                        Length = productItemLength,
+                        Width = productItemWidth,
+                        Height = productItemHeight,
+
                     };
 
                     var product = productModel.ToEntity<Product>();
@@ -2273,6 +2308,68 @@ namespace Nop.Web.Areas.Admin.Controllers
                     await _draftOrderService.InsertOrderItemAsync(draftOrderItem);
                 }
                 var model = await _orderModelFactory.PrepareDraftOrderModelAsync(null, order);
+
+                await _orderModelFactory.UpdateOrderModelTotalsAsync(order, model);
+                return PartialView("_ProductPanel", model);
+            }
+
+
+            //}
+            return Json("{}");
+        }
+
+        [HttpPost]
+        public virtual async Task<IActionResult> UpdateDraftOrderDiscount(int draftOrderId, string discountType, string discountValue)
+        {
+
+            var order = await _draftOrderService.GetOrderByIdAsync(draftOrderId);
+
+            if (order != null)
+            {
+                int.TryParse(discountType, out int customDiscountId);
+                decimal.TryParse(discountValue, out decimal customDiscountValue);
+
+                order.CustomDiscountId = customDiscountId;
+                order.CustomDiscountValue = customDiscountValue;
+
+                await _draftOrderService.UpdateOrderAsync(order);
+
+                var model = await _orderModelFactory.PrepareDraftOrderModelAsync(null, order);
+
+                await _orderModelFactory.UpdateOrderModelTotalsAsync(order, model);
+
+
+                return PartialView("_ProductPanel", model);
+            }
+
+
+            //}
+            return Json("{}");
+        }
+
+        [HttpPost]
+        public virtual async Task<IActionResult> UpdateDraftOrderShipping(int draftOrderId, string rateName, string rateValue)
+        {
+
+            var order = await _draftOrderService.GetOrderByIdAsync(draftOrderId);
+
+            if (order != null)
+            {
+                decimal.TryParse(rateValue, out decimal shippingRateValue);
+                order.ShippingMethod = rateName;
+                order.ShippingRateComputationMethodSystemName = "Shipping.FixedByWeightByTotal";
+
+
+                order.OrderShippingExclTax = shippingRateValue;
+                order.OrderShippingInclTax = shippingRateValue;
+
+
+
+                await _draftOrderService.UpdateOrderAsync(order);
+
+                var model = await _orderModelFactory.PrepareDraftOrderModelAsync(null, order);
+
+                await _orderModelFactory.UpdateOrderModelTotalsAsync(order, model);
                 return PartialView("_ProductPanel", model);
             }
 
@@ -2291,6 +2388,45 @@ namespace Nop.Web.Areas.Admin.Controllers
             var draftOrder = await _draftOrderService.GetOrderByIdAsync(model.Id);
             draftOrder.OrderStatusId = (int)OrderStatus.Processing;
             await _draftOrderService.UpdateOrderAsync(draftOrder);
+
+            var existingDiscounts = await _discountService.GetAllDiscountsAsync(DiscountType.AssignedToOrderSubTotal, couponCode: draftOrder.OrderGuid.ToString(), discountName: "CustomDiscount");
+            if (existingDiscounts.Count > 0)
+            {
+                foreach (var discount in existingDiscounts)
+                {
+                    await _discountService.DeleteDiscountAsync(discount);
+                }
+                existingDiscounts = null;
+            }
+
+
+            if (existingDiscounts == null || existingDiscounts.Count == 0)
+            {
+                await _discountService.InsertDiscountAsync(new Discount()
+                {
+                    Name = "CustomDiscount",
+                    CouponCode = draftOrder.OrderGuid.ToString(),
+                    DiscountTypeId = (int)DiscountType.AssignedToOrderSubTotal,
+                    UsePercentage = draftOrder.CustomDiscountId == 2,
+                    DiscountPercentage = draftOrder.CustomDiscountValue,
+                    DiscountAmount = draftOrder.CustomDiscountValue,
+                    StartDateUtc = DateTime.UtcNow,
+                    RequiresCouponCode = true,
+                    DiscountLimitationId = (int)DiscountLimitationType.NTimesOnly,
+                    LimitationTimes = 1,
+
+                });
+            }
+            else
+            {
+                var existingDiscount = existingDiscounts.FirstOrDefault();
+                existingDiscount.UsePercentage = draftOrder.CustomDiscountId == 2;
+                existingDiscount.DiscountPercentage = draftOrder.CustomDiscountValue;
+                existingDiscount.DiscountAmount = draftOrder.CustomDiscountValue;
+                existingDiscount.StartDateUtc = DateTime.UtcNow;
+
+                await _discountService.UpdateDiscountAsync(existingDiscount);
+            }
 
             return RedirectToAction("Draft");
         }

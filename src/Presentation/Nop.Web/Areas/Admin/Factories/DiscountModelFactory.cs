@@ -226,7 +226,7 @@ namespace Nop.Web.Areas.Admin.Factories
                 couponCode: searchModel.SearchDiscountCouponCode,
                 discountName: searchModel.SearchDiscountName,
                 startDateUtc: startDateUtc,
-                endDateUtc: endDateUtc)).ToPagedList(searchModel);
+                endDateUtc: endDateUtc)).Where(x => x.Name != "CustomDiscount").ToList().ToPagedList(searchModel);
 
             //prepare list model
             var model = await new DiscountListModel().PrepareToGridAsync(searchModel, discounts, () =>

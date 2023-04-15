@@ -140,7 +140,7 @@ namespace Nop.Web.Factories
                 AllowPickupInStore = _shippingSettings.AllowPickupInStore
             };
 
-            if (!model.AllowPickupInStore) 
+            if (!model.AllowPickupInStore)
                 return model;
 
             model.DisplayPickupPointsOnMap = _shippingSettings.DisplayPickupPointsOnMap;
@@ -297,7 +297,7 @@ namespace Nop.Web.Factories
         /// A task that represents the asynchronous operation
         /// The task result contains the shipping address model
         /// </returns>
-        public virtual async Task<CheckoutShippingAddressModel> PrepareShippingAddressModelAsync(IList<ShoppingCartItem> cart, 
+        public virtual async Task<CheckoutShippingAddressModel> PrepareShippingAddressModelAsync(IList<ShoppingCartItem> cart,
             int? selectedCountryId = null, bool prePopulateNewAddressWithCustomerFields = false, string overrideAttributesXml = "")
         {
             var model = new CheckoutShippingAddressModel
@@ -449,6 +449,114 @@ namespace Nop.Web.Factories
             {
                 foreach (var error in getShippingOptionResponse.Errors)
                     model.Warnings.Add(error);
+            }
+
+            return model;
+        }
+
+        /// <summary>
+        /// Prepare shipping method model
+        /// </summary>
+        /// <param name="cart">Cart</param>
+        /// <param name="shippingAddress">Shipping address</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the shipping method model
+        /// </returns>
+        public virtual async Task<CheckoutShippingMethodModel> PrepareShippingMethodModelDraftOrderAsync(Address shippingAddress, DraftOrder draftOrder, IList<ShoppingCartItem> cart)
+        {
+            var model = new CheckoutShippingMethodModel();
+
+
+            var customer = await _workContext.GetCurrentCustomerAsync();
+            var store = await _storeContext.GetCurrentStoreAsync();
+
+            if (!string.IsNullOrEmpty(draftOrder.ShippingRateComputationMethodSystemName))
+            {
+                
+
+                //foreach (var shippingOption in getShippingOptionResponse.ShippingOptions)
+                //{
+                var soModel = new CheckoutShippingMethodModel.ShippingMethodModel
+                {
+                    Name = draftOrder.ShippingMethod,
+                    DisplayOrder = 0,
+                    Selected = true,
+                    ShippingRateComputationMethodSystemName = draftOrder.ShippingRateComputationMethodSystemName,
+
+                };
+
+                ShippingOption  shippingOption = new ShippingOption()
+                {
+                    Name = soModel.Name,
+                    ShippingRateComputationMethodSystemName = soModel.ShippingRateComputationMethodSystemName
+                };
+
+                soModel.ShippingOption = shippingOption;
+
+                
+
+
+
+                //adjust rate
+                var (shippingTotal, _) = await _orderTotalCalculationService.AdjustShippingRateAsync(draftOrder.OrderShippingExclTax, cart, false);
+
+                var (rateBase, _) = await _taxService.GetShippingPriceAsync(shippingTotal, customer);
+                var rate = await _currencyService.ConvertFromPrimaryStoreCurrencyAsync(rateBase, await _workContext.GetWorkingCurrencyAsync());
+                soModel.Fee = await _priceFormatter.FormatShippingPriceAsync(rate, true);
+                soModel.Rate = rate;
+                shippingOption.Rate = soModel.Rate;
+                model.ShippingMethods.Add(soModel);
+
+
+                //performance optimization. cache returned shipping options.
+                //we'll use them later (after a customer has selected an option).
+                await _genericAttributeService.SaveAttributeAsync(customer,
+                                                       NopCustomerDefaults.OfferedShippingOptionsAttribute,
+                                                       new List<ShippingOption>() { shippingOption },
+                                                       store.Id);
+
+
+
+                //sort shipping methods
+                if (model.ShippingMethods.Count > 1)
+                {
+                    model.ShippingMethods = (_shippingSettings.ShippingSorting switch
+                    {
+                        ShippingSortingEnum.ShippingCost => model.ShippingMethods.OrderBy(option => option.Rate),
+                        _ => model.ShippingMethods.OrderBy(option => option.DisplayOrder)
+                    }).ToList();
+                }
+
+                //find a selected (previously) shipping method
+                var selectedShippingOption = await _genericAttributeService.GetAttributeAsync<ShippingOption>(customer,
+                        NopCustomerDefaults.SelectedShippingOptionAttribute, store.Id);
+                if (selectedShippingOption != null)
+                {
+                    var shippingOptionToSelect = model.ShippingMethods.ToList()
+                        .Find(so =>
+                           !string.IsNullOrEmpty(so.Name) &&
+                           so.Name.Equals(selectedShippingOption.Name, StringComparison.InvariantCultureIgnoreCase) &&
+                           !string.IsNullOrEmpty(so.ShippingRateComputationMethodSystemName) &&
+                           so.ShippingRateComputationMethodSystemName.Equals(selectedShippingOption.ShippingRateComputationMethodSystemName, StringComparison.InvariantCultureIgnoreCase));
+                    if (shippingOptionToSelect != null)
+                    {
+                        shippingOptionToSelect.Selected = true;
+                    }
+                }
+                //if no option has been selected, let's do it for the first one
+                if (model.ShippingMethods.FirstOrDefault(so => so.Selected) == null)
+                {
+                    var shippingOptionToSelect = model.ShippingMethods.FirstOrDefault();
+                    if (shippingOptionToSelect != null)
+                    {
+                        shippingOptionToSelect.Selected = true;
+                    }
+                }
+            }
+            else
+            {
+                return null;
             }
 
             return model;
@@ -613,7 +721,7 @@ namespace Nop.Web.Factories
         public virtual Task<CheckoutProgressModel> PrepareCheckoutProgressModelAsync(CheckoutProgressStep step)
         {
             var model = new CheckoutProgressModel { CheckoutProgressStep = step };
-            
+
             return Task.FromResult(model);
         }
 
