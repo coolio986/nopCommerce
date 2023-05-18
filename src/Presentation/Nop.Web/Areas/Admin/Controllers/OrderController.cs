@@ -2106,7 +2106,14 @@ namespace Nop.Web.Areas.Admin.Controllers
         [HttpPost]
         public virtual async Task<IActionResult> SearchCustomer(string customerName)
         {
-            var customers = await _customerService.GetAllCustomersAsync(customerRoleIds: new[] { (await _customerService.GetCustomerRoleBySystemNameAsync(NopCustomerDefaults.RegisteredRoleName)).Id }, firstName: customerName, pageSize: 15);
+            string[] nameTokens = customerName.Split(' ');
+            string firstName = nameTokens[0] ?? string.Empty;
+
+            string lastName = string.Empty;
+            if (nameTokens.Length > 1)
+                lastName = nameTokens[nameTokens.Length - 1] ?? string.Empty;
+
+            var customers = await _customerService.GetAllCustomersAsync(customerRoleIds: new[] { (await _customerService.GetCustomerRoleBySystemNameAsync(NopCustomerDefaults.RegisteredRoleName)).Id }, firstName: firstName, lastName: lastName, pageSize: 15);
 
             List<Customer> sortedCustomers = await customers.OrderByDescending(x => x.LastActivityDateUtc).ToListAsync();
 
