@@ -360,10 +360,15 @@
                                             <span>@Model.BillingAddress.Address2</span>
                                         </div>
                                         <div class="col-md-12">
-                                            @{
+                                            @if (Model.BillingAddress.StateProvinceId != null)
+                                            {
                                                 var stateprovincebilling = await stateProvinceService.GetStateProvinceByIdAsync((int)Model.BillingAddress.StateProvinceId);
+                                                <span>@Model.BillingAddress.City @stateprovincebilling.Abbreviation, @Model.BillingAddress.ZipPostalCode</span>
                                             }
-                                            <span>@Model.BillingAddress.City @stateprovincebilling.Abbreviation, @Model.BillingAddress.ZipPostalCode</span>
+                                            else
+                                            {
+                                                <span>@Model.BillingAddress.City, @Model.BillingAddress.ZipPostalCode</span>
+                                            }
                                         </div>
                                         <div class="col-md-12">
                                             @{
