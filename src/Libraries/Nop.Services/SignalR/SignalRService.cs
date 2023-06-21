@@ -31,7 +31,7 @@ namespace Nop.Services.SignalR
         {
             if(_hubContext != null && audit != null && audit.TriggerType == "INSERT")
             {
-                await _hubContext.Clients.All.SendAsync("RecieveEvent", audit);
+                await _hubContext.Clients.All.SendAsync("ReceiveEvent", audit);
             }
         }
     }

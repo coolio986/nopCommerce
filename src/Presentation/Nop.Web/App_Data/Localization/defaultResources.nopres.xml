@@ -12444,6 +12444,9 @@
   <LocaleResource Name="Admin.Orders">
     <Value>Orders</Value>
   </LocaleResource>
+    <LocaleResource Name="AdminDraft.Orders">
+        <Value>Draft Orders</Value>
+    </LocaleResource>
   <LocaleResource Name="Admin.Orders.Address.Address1">
     <Value>Address 1</Value>
   </LocaleResource>

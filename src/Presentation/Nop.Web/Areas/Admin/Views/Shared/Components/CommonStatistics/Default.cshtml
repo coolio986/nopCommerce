@@ -17,6 +17,11 @@
         .configureLogging(signalR.LogLevel.Information)
         .build();
 
+    
+    connection.on('ReceiveEvent', (sender, message) => {
+    console.log(`${sender}:${message}`);
+
+
     connection.on('VisitorCount', (sender, message) => {
     //console.log(`${sender}:${message}`);
     if(sender !== 0)

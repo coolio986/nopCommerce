@@ -31,7 +31,6 @@ namespace Nop.Web.Areas.Admin.Controllers
         private readonly IGenericAttributeService _genericAttributeService;
         private readonly IWorkContext _workContext;
         private readonly ILiveCustomerActivityService _liveCustomerActivityService;
-        private readonly ISignalRService _signalRService;
 
         #endregion
 
@@ -46,8 +45,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             ISettingService settingService,
             IGenericAttributeService genericAttributeService,
             IWorkContext workContext,
-            ILiveCustomerActivityService liveCustomerActivityService,
-            ISignalRService signalRService)
+            ILiveCustomerActivityService liveCustomerActivityService)
         {
             _adminAreaSettings = adminAreaSettings;
             _commonModelFactory = commonModelFactory;
@@ -59,7 +57,6 @@ namespace Nop.Web.Areas.Admin.Controllers
             _workContext = workContext;
             _genericAttributeService = genericAttributeService;
             _liveCustomerActivityService = liveCustomerActivityService;
-            _signalRService = signalRService;
         }
 
         #endregion

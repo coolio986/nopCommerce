@@ -39,6 +39,7 @@ using Nop.Core.Domain.Customers;
 using Nop.Web.Areas.Admin.Models.Customers;
 using Nop.Core.Domain.Discounts;
 using Nop.Services.Discounts;
+using Nop.Services.SignalR;
 
 namespace Nop.Web.Areas.Admin.Controllers
 {
@@ -80,6 +81,7 @@ namespace Nop.Web.Areas.Admin.Controllers
         private readonly IGenericAttributeService _genericAttributeService;
         private readonly IStoreContext _storeContext;
         private readonly IDiscountService _discountService;
+        private readonly ISignalRService _signalRService;
 
         #endregion
 
@@ -118,7 +120,8 @@ namespace Nop.Web.Areas.Admin.Controllers
             IProductTemplateService productTemplateService,
             IGenericAttributeService genericAttributeService,
             IStoreContext storeContext,
-            IDiscountService discountService
+            IDiscountService discountService,
+            ISignalRService signalRService
             )
         {
             _addressAttributeParser = addressAttributeParser;
@@ -155,6 +158,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             _genericAttributeService = genericAttributeService;
             _storeContext = storeContext;
             _discountService = discountService;
+            _signalRService = signalRService;
         }
 
         #endregion
