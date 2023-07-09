@@ -203,3 +203,5 @@ src/Tests/Nop.Tests/Connections.resx
 /NopCommerce_App_Data
 /docker-compose.yml
 /mysql-docker-compose.yml
+/docker-compose-prod.yml
+/docker-compose_DBONLY.yml

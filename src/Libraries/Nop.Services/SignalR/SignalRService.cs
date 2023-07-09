@@ -15,13 +15,19 @@ namespace Nop.Services.SignalR
     {
         private readonly IHubContext<SignalREventHub> _hubContext;
         private readonly HubConnection? hubConnection;
+        protected readonly AppSettings _appSettings;
 
-        public SignalRService(IHubContext<SignalREventHub> hubContext)
+        public SignalRService(IHubContext<SignalREventHub> hubContext, AppSettings appSettings)
         {
             _hubContext = hubContext;
+            _appSettings = appSettings;
+
+            string hubURL = _appSettings.Get<SignalRConfig>().OrderEventURL;
+
+
 
             hubConnection = new HubConnectionBuilder()
-            .WithUrl("http://localhost:5154/nopSqlEventServer").Build();
+            .WithUrl($"http://{hubURL}/nopSqlEventServer").Build();
 
             hubConnection.On<Audit>("orderEvent", OnOrderChange);
             hubConnection.StartAsync();
@@ -29,6 +35,7 @@ namespace Nop.Services.SignalR
         }
         public async Task OnOrderChange(Audit audit)
         {
+            Console.WriteLine("Received order");
             if(_hubContext != null && audit != null && audit.TriggerType == "INSERT")
             {
                 await _hubContext.Clients.All.SendAsync("ReceiveEvent", audit);
