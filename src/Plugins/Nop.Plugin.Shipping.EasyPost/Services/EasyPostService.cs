@@ -1291,9 +1291,21 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
                 if (shipmentEntry is null)
                     throw new ArgumentNullException(nameof(shipmentEntry));
 
+                var order = await _orderService.GetOrderByIdAsync(shipmentEntry.OrderId);
+                
+
                 //clear attributes of the deleted entry
                 await _genericAttributeService.SaveAttributeAsync<string>(shipmentEntry, EasyPostDefaults.ShipmentIdAttribute, null);
                 await _genericAttributeService.SaveAttributeAsync<string>(shipmentEntry, EasyPostDefaults.PickupIdAttribute, null);
+
+                if (order is not null)
+                {
+                    await _genericAttributeService.SaveAttributeAsync<string>(order, EasyPostDefaults.ShipmentIdAttribute, null);
+                    order.ShippingMethod = order.OriginalShippingMethod;
+                    order.ShippingRateComputationMethodSystemName = order.OriginalShippingRateComputationMethodSystemName;
+                    order.ShippingStatusId = (int)ShippingStatus.NotYetShipped;
+                    await _orderService.UpdateOrderAsync(order);
+                }
 
                 return true;
             });

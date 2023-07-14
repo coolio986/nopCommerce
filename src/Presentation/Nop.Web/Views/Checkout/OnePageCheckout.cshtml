@@ -127,7 +127,7 @@
                                     NotAvailableMethodsError: "@T("ShippingMethod.NotAvailableMethodsError")",
                                     SpecifyMethodError: "@T("ShippingMethod.SpecifyMethodError")"
                                 };
-                                ShippingMethod.init('#co-shipping-method-form', '@(storeLocation)checkout/OpcSaveShippingMethod/', localized_data);
+                                ShippingMethod.init('#co-shipping-method-form', '@(storeLocation)checkout/OpcSaveShippingMethod@(Model.IsDraftOrder ? string.Format("{0}{1}", "?order=", Model.DraftOrderGuid) : "/")', localized_data);
                             </script>
                             <div class="buttons" id="shipping-method-buttons-container">
                                 <p class="back-link">

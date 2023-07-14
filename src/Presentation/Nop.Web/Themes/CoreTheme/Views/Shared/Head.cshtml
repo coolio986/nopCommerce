@@ -1,0 +1,25 @@
+﻿@using Nop.Core
+
+@inject IWorkContext workContext
+
+@{
+    var supportRtl = (await workContext.GetWorkingLanguageAsync()).Rtl;
+
+    //add main CSS file
+    if (supportRtl)
+    {
+        NopHtml.AppendCssFileParts($"~/Themes/CoreTheme/Content/css/theme.styles.responsive.rtl.css");
+        NopHtml.AppendCssFileParts($"~/Themes/CoreTheme/Content/css/theme.styles.rtl.css");
+        NopHtml.AppendCssFileParts($"~/Themes/CoreTheme/Content/css/bootstrap.min.rtl.css");
+    }
+    else
+    {
+        NopHtml.AppendCssFileParts($"~/Themes/CoreTheme/Content/css/theme.styles.responsive.css");
+        NopHtml.AppendCssFileParts($"~/Themes/CoreTheme/Content/css/theme.styles.css");
+        NopHtml.AppendCssFileParts($"~/Themes/CoreTheme/Content/css/bootstrap.min.css");
+    }
+    NopHtml.AppendCssFileParts($"~/Themes/CoreTheme/Content/css/font-awesome.min.css");
+
+    //add jQuery UI css file
+    NopHtml.AppendCssFileParts("~/lib_npm/jquery-ui-dist/jquery-ui.min.css");
+}
