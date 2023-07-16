@@ -387,13 +387,13 @@ var Shipping = {
 var ShippingMethod = {
     form: false,
     saveUrl: false,
-    localized_data: false,
-
+  localized_data: false,
+  
     init: function (form, saveUrl, localized_data) {
         this.form = form;
         this.saveUrl = saveUrl;
         this.localized_data = localized_data;
-    },
+  },
 
     validate: function () {
         var methods = document.getElementsByName('shippingoption');
@@ -411,29 +411,31 @@ var ShippingMethod = {
         return false;
     },
 
-    save: function () {
+    save: function (callback) {
         if (Checkout.loadWaiting !== false) return;
 
         if (this.validate()) {
             Checkout.setLoadWaiting('shipping-method');
 
-            $.ajax({
-                cache: false,
-                url: this.saveUrl,
-                data: $(this.form).serialize(),
-                type: "POST",
-                success: this.nextStep,
-                complete: this.resetLoadWaiting,
+          $.ajax({
+            cache: false,
+            url: this.saveUrl,
+            data: $(this.form).serialize(),
+            type: "POST",
+            success: function (data) {
+              ShippingMethod.nextStep(data, callback);
+            },
+              complete: this.resetLoadWaiting,
                 error: Checkout.ajaxFailure
             });
         }
     },
 
-    resetLoadWaiting: function () {
-        Checkout.setLoadWaiting(false);
+  resetLoadWaiting: function () {
+    Checkout.setLoadWaiting(false);
     },
 
-    nextStep: function (response) {
+    nextStep: function (response, callback ) {
         if (response.error) {
             if (typeof response.message === 'string') {
                 alert(response.message);
@@ -444,7 +446,10 @@ var ShippingMethod = {
             return false;
         }
 
-        Checkout.setStepResponse(response);
+      Checkout.setStepResponse(response);
+      
+      if (typeof callback == "function")
+        callback();
     }
 };
 

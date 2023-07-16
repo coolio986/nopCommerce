@@ -1855,6 +1855,12 @@ namespace Nop.Web.Controllers
             }
         }
 
+        [HttpGet]
+        public virtual IActionResult ShoppingCartSummary()
+        {
+            return ViewComponent("ShoppingCartSummary");
+        }
+
         [HttpPost]
         [IgnoreAntiforgeryToken]
         public virtual async Task<IActionResult> OpcSavePaymentInfo(IFormCollection form)

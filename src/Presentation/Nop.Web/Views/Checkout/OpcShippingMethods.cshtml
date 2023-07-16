@@ -22,24 +22,39 @@
             @await Component.InvokeAsync("Widget", new { widgetZone = PublicWidgetZones.OpCheckoutShippingMethodTop, additionalData = Model })
             @if (Model.Warnings.Count == 0)
             {
-                <ul class="method-list">
-                    @for (var i = 0; i < Model.ShippingMethods.Count; i++)
-                    {
-                        var shippingMethod = Model.ShippingMethods[i];
-                        <li>
-                            <div class="method-name">
-                                <input id="shippingoption_@(i)" type="radio" name="shippingoption" value="@(shippingMethod.Name)___@(shippingMethod.ShippingRateComputationMethodSystemName)" checked="@shippingMethod.Selected" />
-                                <label for="shippingoption_@(i)">@T("Checkout.SelectShippingMethod.MethodAndFee", shippingMethod.Name, shippingMethod.Fee)</label>
-                            </div>
-                            @if (!string.IsNullOrEmpty(shippingMethod.Description))
-                            {
-                                <div class="method-description">
-                                    @Html.Raw(shippingMethod.Description)
+                <div class="card fit-content">
+                @*<ul class="method-list">*@
+                    <ul class="list-group list-group-flush">
+                        @for (var i = 0; i < Model.ShippingMethods.Count; i++)
+                        {
+                            var shippingMethod = Model.ShippingMethods[i];
+                            @*<li>
+                                <div class="method-name">
+                                    <input id="shippingoption_@(i)" type="radio" name="shippingoption" value="@(shippingMethod.Name)___@(shippingMethod.ShippingRateComputationMethodSystemName)" checked="@shippingMethod.Selected" />
+                                    <label for="shippingoption_@(i)">@T("Checkout.SelectShippingMethod.MethodAndFee", shippingMethod.Name, shippingMethod.Fee)</label>
                                 </div>
-                            }
-                        </li>
-                    }
-                </ul>
+                                @if (!string.IsNullOrEmpty(shippingMethod.Description))
+                                {
+                                    <div class="method-description">
+                                        @Html.Raw(shippingMethod.Description)
+                                    </div>
+                                }
+                            </li>*@
+                            <li class="list-group-item">
+                                <div class="form-check">
+                                    <input  class="form-check-input" id="shippingoption_@(i)" type="radio" name="shippingoption" value="@(shippingMethod.Name)___@(shippingMethod.ShippingRateComputationMethodSystemName)" checked="@shippingMethod.Selected">
+                                    <label class="form-check-label-name" for="shippingoption_@(i)">
+                                        @shippingMethod.Name
+                                    </label>
+                                    <label class="form-check-label-fee" for="shippingoption_@(i)">
+                                        @shippingMethod.Fee
+                                    </label>
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                </div>
+                @*</ul>*@
                 if (Model.NotifyCustomerAboutShippingFromMultipleLocations)
                 {
                     <div class="multiple-locations">

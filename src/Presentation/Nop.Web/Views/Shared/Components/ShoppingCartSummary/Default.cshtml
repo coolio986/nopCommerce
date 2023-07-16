@@ -1,0 +1,149 @@
+﻿@model MiniShoppingCartModel
+
+@*Presentation\Nop.Web\Views\Shared\Components\ShoppingCartSummary\Default.cshtml*@
+
+<style>
+    .scrollbar-mini-shopping-cart {
+        margin-left: 22px;
+        /*float: left;*/
+        max-height: 450px;
+        overflow-y: auto;
+        
+    }
+
+    .mini-shopping-cart .item {
+        padding-right: 10px;
+    }
+
+    .force-overflow {
+        min-height: 450px;
+    }
+
+    #wrapper {
+        
+        margin: auto;
+    }
+
+    #style-1::-webkit-scrollbar-track {
+        -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
+        border-radius: 3px;
+        background-color: #F5F5F5;
+    }
+
+    #style-1::-webkit-scrollbar {
+        width: 6px;
+        background-color: #F5F5F5;
+    }
+
+    #style-1::-webkit-scrollbar-thumb {
+        border-radius: 3px;
+        -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,.3);
+        background-color: #555;
+    }
+
+@@media all and (max-width: 1001px) {
+    /*.mini-shopping-cart {
+        font-size: 1.25vw;
+    }*/
+
+    .mini-shopping-cart .items{
+        border-bottom: 1px solid #ddd;
+        margin: 0 0 20px;
+        font-size: 1.25vw;
+    }
+
+    .mini-shopping-cart .totals {
+        text-align: left;
+    }
+
+        
+
+    .mini-shopping-cart .picture {
+        float: left;
+    }
+
+    .mini-shopping-cart .picture a {
+        display: block;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .mini-shopping-cart .picture img {
+        width: 6vw;
+    }
+
+    .mini-shopping-cart .picture + .product {
+        margin: 0 0 0 10px;
+    }
+
+    .scrollbar-mini-shopping-cart {
+        margin-left: 0;
+    }
+    .item{
+        padding-top:20px;
+    }
+}
+
+@@media all and (max-width: 930px) and (min-width: 910px)  {
+    .item {
+        padding-top: 30px;
+    }
+}
+
+</style>
+
+<div id="cart-summary" class="cart-summary">
+    @*<div class="mini-shopping-cart">*@
+    <div class="mini-shopping-cart">
+        <div class="count">
+            @if (Model.TotalProducts == 0)
+            {
+                @T("ShoppingCart.Mini.NoItems")
+            }
+            else
+            {
+                @Html.Raw(string.Format(T("ShoppingCart.Mini.ItemsText").Text, $"<a href=\"{Url.RouteUrl("ShoppingCart")}\">{string.Format(T("ShoppingCart.Mini.Items").Text, Model.TotalProducts)}</a>"))
+            }
+        </div>
+        @if (Model.TotalProducts > 0)
+        {
+            <div id="wrapper">
+                <div class="items scrollbar-mini-shopping-cart" id="style-1">
+                    @for (var i = 0; i < Model.Items.Count; i++)
+                    {
+                        var item = Model.Items[i];
+                        <div class="item @(i == 0 ? "first" : null)">
+                            @if (Model.ShowProductImages)
+                            {
+                                <div class="picture">
+                                    <a href="@Url.RouteUrl("Product", new { SeName = item.ProductSeName })" title="@item.Picture.Title">
+                                        <img alt="@item.Picture.AlternateText" src="@item.Picture.ImageUrl" title="@item.Picture.Title" />
+                                    </a>
+                                </div>
+                            }
+                            <div class="product">
+                                <div class="name">
+                                    <a href="@Url.RouteUrl("Product", new { SeName = item.ProductSeName })">@item.ProductName</a>
+                                </div>
+                                @if (!string.IsNullOrEmpty(item.AttributeInfo))
+                                {
+                                    <div class="attributes">
+                                        @Html.Raw(item.AttributeInfo)
+                                    </div>
+                                }
+                                <div class="price">@T("ShoppingCart.Mini.UnitPrice"): <span>@item.UnitPrice</span></div>
+                                <div class="quantity">@T("ShoppingCart.Mini.Quantity"): <span>@item.Quantity</span></div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+            @if (Model.ShippingTotal != null)
+            {
+                <div class="totals">@T("ShoppingCart.Totals.Shipping"): <strong>@Model.ShippingTotal</strong></div>
+            }
+            <div class="totals">@T("ShoppingCart.Totals.SubTotal"): <strong>@Model.SubTotal</strong></div>
+            
+        }
+    </div>
+</div>

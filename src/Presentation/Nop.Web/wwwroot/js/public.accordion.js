@@ -8,12 +8,14 @@ var Accordion = {
     sections: new Array(),
     currentSection: false,
     headers: new Array(),
+    callback: new Object(),
 
-    init: function (elem, clickableEntity, checkAllow) {
+    init: function (elem, clickableEntity, checkAllow, callback) {
         this.checkAllow = checkAllow || false;
         this.disallowAccessToNextSections = false;
         this.sections = $('#' + elem + ' .tab-section');
         this.currentSectionId = false;
+        this.callback = callback;
         var headers = $('#' + elem + ' .tab-section ' + clickableEntity);
         headers.on('click', function () {
             Accordion.headerClicked($(this));
@@ -52,6 +54,8 @@ var Accordion = {
                     }
                 }
             }
+          if (typeof this.callback == "function")
+            this.callback(this.currentSectionId);
         }
     },
 

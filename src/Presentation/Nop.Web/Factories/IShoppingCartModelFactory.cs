@@ -61,6 +61,15 @@ namespace Nop.Web.Factories
         Task<MiniShoppingCartModel> PrepareMiniShoppingCartModelAsync();
 
         /// <summary>
+        /// Prepare the mini shopping cart model and subtotal
+        /// </summary>
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the mini shopping cart model
+        /// </returns>
+        Task<MiniShoppingCartModel> PrepareMiniShoppingCartModelSubtotalAsync();
+
+        /// <summary>
         /// Prepare selected checkout attributes
         /// </summary>
         /// <returns>
