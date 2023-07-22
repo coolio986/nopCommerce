@@ -21,6 +21,7 @@ using Nop.Services.Shipping;
 using Nop.Web.Areas.Admin.Models.Orders;
 using Nop.Web.Framework.Components;
 using Nop.Web.Framework.Infrastructure;
+using EasyPost;
 
 namespace Nop.Plugin.Shipping.EasyPost.Components
 {
@@ -118,7 +119,12 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
             var model = new ShipmentDetailsModel { Id = shipmentEntry.Id };
 
             var shipmentId = await _genericAttributeService.GetAttributeAsyncWithoutCache<string>(shipmentEntry, EasyPostDefaults.ShipmentIdAttribute);
-            var (shipment, shipmentError) = await _easyPostService.GetShipmentAsync(shipmentId);
+            
+            
+            Shipment shipment = null;
+            string shipmentError = null;
+
+            //(shipment, shipmentError) = await _easyPostService.GetShipmentAsync(shipmentId);
 
             //fixed weights still need rates, this allows us to use easypost even with fixed rates
             if (order.ShippingRateComputationMethodSystemName == "Shipping.FixedByWeightByTotal" &&
@@ -155,6 +161,10 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
                 }
 
                 return View("~/Plugins/Shipping.EasyPost/Views/Shipment/_ShipmentDetails.EasyPost.Rates.cshtml", shippingModel);
+            }
+            else
+            {
+                (shipment, shipmentError) = await _easyPostService.GetShipmentAsync(shipmentId);
             }
 
             //this needs to be changed to just "shippingstatus = shipped", remove the computation method

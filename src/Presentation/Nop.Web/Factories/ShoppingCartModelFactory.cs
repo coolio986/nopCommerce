@@ -1145,6 +1145,42 @@ namespace Nop.Web.Factories
                     var subtotalBase = subTotalWithoutDiscountBase;
                     var currentCurrency = await _workContext.GetWorkingCurrencyAsync();
                     var subtotal = await _currencyService.ConvertFromPrimaryStoreCurrencyAsync(subtotalBase, currentCurrency);
+
+                    var (shoppingCartTotalBase, _, _, appliedGiftCards, redeemedRewardPoints, redeemedRewardPointsAmount) = await _orderTotalCalculationService.GetShoppingCartTotalAsync(cart);
+                    
+                    //tax
+                    var shoppingCartTax = (await _orderTotalCalculationService.GetTaxTotalAsync(cart)).taxTotal;
+
+                    if (shoppingCartTotalBase.HasValue)
+                    {
+
+                        var shoppingCartTotal = await _currencyService.ConvertFromPrimaryStoreCurrencyAsync(shoppingCartTotalBase.Value, currentCurrency);
+                        //model.OrderTotal = await _priceFormatter.FormatPriceAsync(shoppingCartTotal, true, false);
+
+                        model.SubTotal = await _priceFormatter.FormatPriceAsync(shoppingCartTotal, false, currentCurrency, (await _workContext.GetWorkingLanguageAsync()).Id, subTotalIncludingTax);
+                        model.SubTotalValue = shoppingCartTotal;
+
+                        if (shoppingCartTax != decimal.Zero)
+                        {
+                            model.Tax = await _priceFormatter.FormatPriceAsync(shoppingCartTax, false, currentCurrency, (await _workContext.GetWorkingLanguageAsync()).Id, subTotalIncludingTax);
+                            model.TaxValue = shoppingCartTax;
+                        }
+                    }
+                    else
+                    {
+                        model.SubTotal = await _priceFormatter.FormatPriceAsync(subtotal, false, currentCurrency, (await _workContext.GetWorkingLanguageAsync()).Id, subTotalIncludingTax);
+                        model.SubTotalValue = subtotal;
+                    }
+                    
+
+
+                    //reward points to be spent (redeemed)
+                    if (redeemedRewardPointsAmount > decimal.Zero)
+                    {
+                        var redeemedRewardPointsAmountInCustomerCurrency = await _currencyService.ConvertFromPrimaryStoreCurrencyAsync(redeemedRewardPointsAmount, currentCurrency);
+                        model.RewardPoints = redeemedRewardPoints;
+                        model.RewardPointsTotal = await _priceFormatter.FormatPriceAsync(-redeemedRewardPointsAmountInCustomerCurrency, true, false);
+                    }
                     if (shippingOption != null)
                     {
                         model.ShippingTotalValue = await _currencyService.ConvertFromPrimaryStoreCurrencyAsync(shippingOption.Rate, currentCurrency);
@@ -1152,8 +1188,7 @@ namespace Nop.Web.Factories
                         subtotal += model.ShippingTotalValue;
                     }
 
-                    model.SubTotal = await _priceFormatter.FormatPriceAsync(subtotal, false, currentCurrency, (await _workContext.GetWorkingLanguageAsync()).Id, subTotalIncludingTax);
-                    model.SubTotalValue = subtotal;
+                    
 
                     var requiresShipping = await _shoppingCartService.ShoppingCartRequiresShippingAsync(cart);
                     //a customer should visit the shopping cart page (hide checkout button) before going to checkout if:

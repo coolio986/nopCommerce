@@ -17517,6 +17517,9 @@
   <LocaleResource Name="Messages.Order.SubTotal">
     <Value>Sub-Total:</Value>
   </LocaleResource>
+  <LocaleResource Name="Messages.Order.MiniShoppingCartRewardPoints">
+    <Value>Reward Points:</Value>
+  </LocaleResource>
   <LocaleResource Name="Messages.Order.SubTotalDiscount">
     <Value>Discount:</Value>
   </LocaleResource>

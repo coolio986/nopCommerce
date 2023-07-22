@@ -56,6 +56,13 @@
         text-align: left;
     }
 
+    .mini-shopping-cart .totals .totaltext {
+        float: left;
+    }
+
+    .mini-shopping-cart .totals .total {
+        text-align: right;
+    }
         
 
     .mini-shopping-cart .picture {
@@ -82,6 +89,16 @@
     .item{
         padding-top:20px;
     }
+}
+
+@@media all and (max-width: 732px) {
+        .mini-shopping-cart .totals .totaltext {
+            float: unset;
+        }
+
+        .mini-shopping-cart .totals .total {
+            text-align: unset;
+        }
 }
 
 @@media all and (max-width: 930px) and (min-width: 910px)  {
@@ -140,9 +157,46 @@
             </div>
             @if (Model.ShippingTotal != null)
             {
-                <div class="totals">@T("ShoppingCart.Totals.Shipping"): <strong>@Model.ShippingTotal</strong></div>
+                <div class="totals">
+                    <div class="totaltext">
+                        @T("ShoppingCart.Totals.Shipping"):
+                    </div>
+                    <div class="total">
+                        <strong>@Model.ShippingTotal </strong>
+                    </div>
+                </div>
             }
-            <div class="totals">@T("ShoppingCart.Totals.SubTotal"): <strong>@Model.SubTotal</strong></div>
+            @if (Model.RewardPointsTotal != null)
+            {
+                <div class="totals">
+                    <div class="totaltext">
+                        @T("Messages.Order.MiniShoppingCartRewardPoints")
+                    </div>
+                    <div class="total"> 
+                       <strong>@Model.RewardPointsTotal</strong>
+                    </div>
+                </div>
+            }
+
+            @if (Model.Tax != null)
+            {
+                <div class="totals">
+                    <div class="totaltext">
+                        @T("Messages.Order.Tax")
+                    </div>
+                    <div class="total">
+                        <strong>@Model.Tax</strong>
+                    </div>
+                </div>
+            }
+            <div class="totals">
+                <div class="totaltext">
+                    @T("ShoppingCart.Totals.SubTotal"):
+                </div>
+                <div class="total">
+                    <strong>@Model.SubTotal</strong>
+                </div>
+            </div>
             
         }
     </div>

@@ -103,15 +103,20 @@
         displayAjaxLoading(false);
 
         payButton.click(async function () {
-            displayAjaxLoading(true);
-            var selectedStoredCardId = $('#@Html.IdFor(model => model.StoredCardId)').val();
-            if ((!selectedStoredCardId || selectedStoredCardId == '@(Guid.Empty.ToString())')) {
-                await handlePaymentMethodSubmission(card);
-            } else if (use3ds) {
-                await verifyBuyer(payments, selectedStoredCardId);
+            var tokenResult = await card.tokenize();
+            if (tokenResult.status === 'OK') {
+
+
+                displayAjaxLoading(true);
+                var selectedStoredCardId = $('#@Html.IdFor(model => model.StoredCardId)').val();
+                if ((!selectedStoredCardId || selectedStoredCardId == '@(Guid.Empty.ToString())')) {
+                    await handlePaymentMethodSubmission(card);
+                } else if (use3ds) {
+                    await verifyBuyer(payments, selectedStoredCardId);
+                }
+                displayAjaxLoading(false);
+                $('.payment-info-next-step-button').click();
             }
-            displayAjaxLoading(false);
-            $('.payment-info-next-step-button').click();
         });
 
         async function verifyBuyer(payments, token) {
@@ -173,17 +178,25 @@
 
 @if (!Model.IsGuest)
 {
-    <table width="100%" cellspacing="2" cellpadding="1" border="0" id="square-card-details">
+    <div id="square-card-details" class="section save-card-for-future">
+        <p class="selector">
+            <input type="checkbox" asp-for="SaveCard" />
+            <label asp-for="SaveCard">@T("Plugins.Payments.Square.Fields.SaveCard")</label>
+        </p>
+    </div>
+
+    @*<table width="100%" cellspacing="2" cellpadding="1" border="0" id="square-card-details">
         <tr>
-            <td>
-                <label asp-for="SaveCard">@T("Plugins.Payments.Square.Fields.SaveCard"):</label>
-            </td>
             <td>
                 <input type="checkbox" asp-for="SaveCard" />
                 <span asp-validation-for="SaveCard"></span>
             </td>
+            <td>
+                <label asp-for="SaveCard">@T("Plugins.Payments.Square.Fields.SaveCard")</label>
+            </td>
+            
         </tr>
-    </table>
+    </table>*@
 }
 
 <div class="buttons">

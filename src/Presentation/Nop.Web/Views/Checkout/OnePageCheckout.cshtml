@@ -276,7 +276,7 @@
                         <p class="back-link">
                             <a href="#" onclick="Checkout.back(); return false;"><small>&laquo; </small>@T("Common.Back")</a>
                         </p>
-                        <button type="button" name="save" class="button-1 payment-method-next-step-button" onclick="PaymentMethod.save()">@T("Common.Continue")</button>
+                            <button type="button" name="save" class="button-1 payment-method-next-step-button" onclick="savePaymentMethod()">@T("Common.Continue")</button>
                         <span class="please-wait" id="payment-method-please-wait" style="display: none;">@T("Common.LoadingNextStep")</span>
                     </div>
                 </div>
@@ -380,6 +380,11 @@
         function saveShippingMethod(){
             ShippingMethod.save(getCartSummary);
             
+        }
+
+        function savePaymentMethod() {
+            PaymentMethod.save(getCartSummary);
+
         }
 
         function changedAccordion(section) {

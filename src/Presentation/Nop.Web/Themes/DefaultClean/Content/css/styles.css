@@ -4742,7 +4742,8 @@ label, label + * {
   text-align: center;
 }
 
-.checkout-page .ship-to-same-address .selector {
+.checkout-page .ship-to-same-address .selector,
+.checkout-page .save-card-for-future .selector {
   margin: 0 0 5px;
   font-weight: bold;
   color: #444;
@@ -4810,6 +4811,7 @@ label, label + * {
 .payment-method .use-reward-points {
   margin: 0 0 30px;
   text-align: center;
+  font-weight: bold;
   color: #444;
 }
 
@@ -4829,6 +4831,10 @@ label, label + * {
   margin: 0 0 0 10px;
   text-align: left;
   vertical-align: middle;
+}
+
+.payment-method .payment-description {
+  text-align: end;
 }
 
 .payment-info .info {
@@ -7329,10 +7335,15 @@ label, label + * {
 
   .payment-method .payment-logo {
     display: block;
-    background-color: #f6f6f6;
+    /*background-color: #f6f6f6;*/
     padding: 10px;
   }
 
+  .payment-method .payment-logo img {
+    max-height: 40px;
+    object-fit: contain;
+    width: 100%;
+  }
   .payment-method .payment-details {
     display: block;
     width: auto;
@@ -7904,7 +7915,14 @@ label, label + * {
 
   .mini-shopping-cart .totals {
     margin: 0 0 12px;
+  }
+  .mini-shopping-cart .totals .totaltext {
     font-size: 14px;
+    float: left;
+  }
+
+  .mini-shopping-cart .total {
+    text-align: right;
   }
 
   .mini-shopping-cart .totals strong {
