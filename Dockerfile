@@ -59,6 +59,8 @@ WORKDIR /src/Plugins/Nop.Plugin.Payments.Square
 RUN dotnet build Nop.Plugin.Payments.Square.csproj -c Release
 WORKDIR /src/Plugins/Nop.Plugin.Products.HTMLSnippets
 RUN dotnet build Nop.Plugin.Product.HTMLSnippets.csproj -c Release
+WORKDIR /src/Plugins/Nop.Plugin.Payments.PurchaseOrder
+RUN dotnet build Nop.Plugin.Payments.PurchaseOrder.csproj -c Release
 
 
 # publish project
