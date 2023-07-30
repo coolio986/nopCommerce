@@ -47,6 +47,17 @@
         width: 70%;
     }
 
+    @@media all and (max-width: 405px) {
+        .column-left {
+            width: 100%;
+        }
+
+        .column-right {
+            width: 0;
+            display: none;
+        }
+    }
+
     .column-right {
         float: left;
         width: 30%;
