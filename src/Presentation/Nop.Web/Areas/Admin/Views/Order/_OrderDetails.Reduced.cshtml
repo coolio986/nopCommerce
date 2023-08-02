@@ -92,12 +92,13 @@
                                             foreach (var item in shipments)
                                             {
                                                 <div>
-                                                    @item.TrackingNumber
+                                                    <a href="@(Url.Action("ShipmentDetails", "Order", new { id = item.Id }))" >@item.TrackingNumber</a>
+                                                    
                                                 </div>
                                                 if (Model.OrderStatusId != 30 && Model.ShippingStatusId == 0 && !Model.CanAddNewShipments)
                                                 {
                                                     <button type="button" id="@(string.Format("btnViewOrder-{0}", item.Id))" onclick="javascript:setLocation('@(Url.Action("ShipmentDetails", "Order", new { id = item.Id }))'); return false;" class="btn btn-primary">
-                                                        @(string.Format("Contiune existing shipment #{0}", item.Id))
+                                                        @(string.Format("Continue existing shipment #{0}", item.Id))
                                                     </button>
                                                 }
                                             }
@@ -305,14 +306,35 @@
                     </div>
                 </div>
                 <div style="grid-column: 2; grid-row:1/-1">
-                    <div class="card-body">
+                    <div class="card-body" style="padding-bottom:0.75rem">
+                        <div class="card card-default">
+                            <div class="card-body">
+                                <div class="form-group row">
+                                    <div class="col-md-12">
+                                        <span><strong>Notes</strong></span>
+                                    </div>
+                                    <div class="col-md-12">
+                                        @if (string.IsNullOrEmpty(Model.CheckoutAttributeInfo))
+                                        {
+                                            <span>No notes from customer</span>
+                                        }
+                                        else
+                                        {
+                                            <span>@Html.Raw(Model.CheckoutAttributeInfo.Substring(Model.CheckoutAttributeInfo.LastIndexOf(':') + 1))</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body" style="padding-top:0;padding-bottom:0.75rem">
                         <div class="card card-default">
                             <div class="card-body">
                                 <div class="form-group row">
                                     @if (Model.IsShippable)
                                     {
                                         <div class="col-md-12">
-                                            <span><strong>Shipping address</strong></span>
+                                            <span><strong>@T("Admin.Orders.Fields.ShippingAddress")</strong></span>
                                         </div>
                                         <div class="col-md-12">
                                             <span>@Model.ShippingAddress.FirstName @Model.ShippingAddress.LastName</span>
@@ -346,7 +368,7 @@
                                 <div class="form-group row">
 
                                     <div class="col-md-12">
-                                        <span><strong>Billing address</strong></span>
+                                        <span><strong>@T("Admin.Orders.Fields.BillingAddress")</strong></span>
                                     </div>
                                     @if (!addressService.IsEqualTo(Model.ShippingAddress, Model.BillingAddress, "Id"))
                                     {
