@@ -1419,8 +1419,8 @@ namespace Nop.Web.Controllers
             }
 
 
-            if (await _customerService.IsGuestAsync(customer) && draftOrderGuid != Guid.Empty)
-                return Challenge();
+            //if (await _customerService.IsGuestAsync(customer) && draftOrderGuid != Guid.Empty)
+            //    return Challenge();
 
             if (!cart.Any())
                 return RedirectToRoute("ShoppingCart");
