@@ -40,6 +40,8 @@ using Nop.Web.Areas.Admin.Models.Customers;
 using Nop.Core.Domain.Discounts;
 using Nop.Services.Discounts;
 using Nop.Services.SignalR;
+using System.Text.RegularExpressions;
+using Nop.Core.Domain.Common;
 
 namespace Nop.Web.Areas.Admin.Controllers
 {
@@ -1963,7 +1965,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                     var address = await _addressService.GetAddressByIdAsync(model.ShippingAddress.Id);
                     if (address != null)
                     {
-                        var customer = await _customerService.GetCustomerByEmailAsync(address.Email);
+                        var customer = await _customerService.GetCustomerByIdAsync(model.CustomerId);
 
                         draftOrder.CustomerId = customer.Id;
                         draftOrder.CustomOrderNumber = draftOrder.CustomOrderNumber;
@@ -1977,7 +1979,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                 }
                 else
                 {
-                    draftOrder.CustomerId = 0;
+                    draftOrder.CustomerId = model.CustomerId;
                     draftOrder.CustomOrderNumber = draftOrder.CustomOrderNumber;
                     draftOrder.PickupAddressId = 0;
                     draftOrder.ShippingAddressId = 0;
@@ -2110,22 +2112,76 @@ namespace Nop.Web.Areas.Admin.Controllers
         [HttpPost]
         public virtual async Task<IActionResult> SearchCustomer(string customerName)
         {
-            string[] nameTokens = customerName.Split(' ');
-            string firstName = nameTokens[0] ?? string.Empty;
+            List<Address> addresses = new List<Address>();
+            List<Customer> sortedCustomers = new List<Customer>();
+            IPagedList<Customer> customers = null;
 
-            string lastName = string.Empty;
-            if (nameTokens.Length > 1)
-                lastName = nameTokens[nameTokens.Length - 1] ?? string.Empty;
+            string emailAddress = string.Empty;
+            //check for email address
+            Regex regex = new Regex("^(?(\")(\".+?(?<!\\\\)\"@)|(([0-9a-z]((\\.(?!\\.))|[-!#\\$%&'\\*\\+/=\\?\\^`\\{\\}\\|~\\w])*)(?<=[0-9a-z])@))(?(\\[)(\\[(\\d{1,3}\\.){3}\\d{1,3}\\])|(([0-9a-z][-\\w]*[0-9a-z]*\\.)+[a-z0-9][\\-a-z0-9]{0,22}[a-z0-9]))$");
+            if (regex.Match(customerName).Success)
+            {
+                emailAddress = customerName;
+                customers = await _customerService.GetAllCustomersAsync(customerRoleIds: new[] { (await _customerService.GetCustomerRoleBySystemNameAsync(NopCustomerDefaults.RegisteredRoleName)).Id }, email: emailAddress, pageSize: 15);
 
-            var customers = await _customerService.GetAllCustomersAsync(customerRoleIds: new[] { (await _customerService.GetCustomerRoleBySystemNameAsync(NopCustomerDefaults.RegisteredRoleName)).Id }, firstName: firstName, lastName: lastName, pageSize: 15);
+                addresses = (await _addressService.GetAddressesByEmail(emailAddress)).ToList();
+            }
+            else
+            {
+                string[] nameTokens = customerName.Split(' ');
+                string firstName = nameTokens[0] ?? string.Empty;
 
-            List<Customer> sortedCustomers = await customers.OrderByDescending(x => x.LastActivityDateUtc).ToListAsync();
+                string lastName = string.Empty;
+                if (nameTokens.Length > 1)
+                    lastName = nameTokens[nameTokens.Length - 1] ?? string.Empty;
+
+                customers = await _customerService.GetAllCustomersAsync(customerRoleIds: new[] { (await _customerService.GetCustomerRoleBySystemNameAsync(NopCustomerDefaults.RegisteredRoleName)).Id }, firstName: firstName, lastName: lastName, pageSize: 15);
+
+                //try looking up last name only
+                if (!customers.Any())
+                    customers = await _customerService.GetAllCustomersAsync(customerRoleIds: new[] { (await _customerService.GetCustomerRoleBySystemNameAsync(NopCustomerDefaults.RegisteredRoleName)).Id }, lastName: firstName, pageSize: 15);
+
+                addresses = (await _addressService.GetAddressesByName(firstName: firstName, lastName: lastName)).ToList();
+
+                if(!addresses.Any())
+                    addresses = (await _addressService.GetAddressesByName(lastName: firstName)).ToList();
+            }
+
+            foreach (var address in addresses.ToList())
+            {
+                var customer = await _customerService.GetCustomerByShippinngAddressIdAsync(address.Id);
+                if (customer != null && customers != null)
+                    customers.Add(customer);
+                else
+                    addresses.Remove(address);
+            }
+
+
+            sortedCustomers = await customers?.OrderByDescending(x => x.LastActivityDateUtc).ToListAsync();
+
 
             List<CustomerModel> customersModel = await sortedCustomers.SelectAwait(async customer =>
             {
                 var customerModel = customer.ToModel<CustomerModel>();
                 customerModel.FullName = await _customerService.GetCustomerFullNameAsync(customer);
+                if (string.IsNullOrEmpty(customerModel.FullName))
+                {
+                    var customerAddress = addresses.FirstOrDefault(x => x.Id == customer.ShippingAddressId);
+                    if (customerAddress != null)
+                    {
+                        customerModel.FirstName = customerAddress.FirstName;
+                        customerModel.LastName = customerAddress.LastName;
+                        customerModel.FullName = $"{customerAddress.FirstName} {customerAddress.LastName}";
+                    }
+                }
                 customerModel.Email = customer.Email;
+
+                if (string.IsNullOrEmpty(customerModel.Email))
+                {
+                    var customerAddress = addresses.FirstOrDefault(x => x.Id == customer.ShippingAddressId);
+                    if (customerAddress != null)
+                        customerModel.Email = customerAddress.Email;
+                }
                 return customerModel;
             }).ToListAsync();
 

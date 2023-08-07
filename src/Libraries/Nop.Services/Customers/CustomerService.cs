@@ -1774,6 +1774,28 @@ namespace Nop.Services.Customers
         }
 
         /// <summary>
+        /// Gets a address mapped to customer
+        /// </summary>
+        /// <param name="addressId">Address identifier</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the result
+        /// </returns>
+        public virtual async Task<Customer> GetCustomerByShippinngAddressIdAsync(int addressId)
+        {
+            if (addressId == 0)
+                return null;
+
+            var query = from customer in _customerRepository.Table
+                        join cam in _customerAddressMappingRepository.Table on customer.ShippingAddressId equals cam.AddressId
+                        where cam.AddressId == addressId
+                        select customer;
+
+
+            return await query.FirstOrDefaultAsync();
+        }
+
+        /// <summary>
         /// Gets a customer billing address
         /// </summary>
         /// <param name="customer">Customer identifier</param>

@@ -13,7 +13,7 @@
     ViewBag.OrderStatusId = Model.OrderStatusId;
     //active menu item (system name)
     NopHtml.SetActiveMenuItemSystemName("Draft Orders");
-
+    
     var baseUrl = Context.Request.Host.ToString();
 }
 
@@ -61,12 +61,15 @@
                 return false;
             });
 
-
+        
 
 
     });
 
     function addressSelected(n) {
+        var custId = document.getElementById('CustomerId');
+        custId.value = n;
+
         var postData = {
             customerId: n,
 
@@ -81,6 +84,7 @@
 
             error: function (jqXHR, textStatus, errorThrown) {
                 console.log(errorThrown);
+                custId.value = 0;
             },
             success: function (data) {
                 //console.log(data);
@@ -88,8 +92,6 @@
 
             }
         });
-
-        return false;
     }
 
     function searchCustomer() {
@@ -176,6 +178,7 @@
 
 
 <form asp-controller="Order" asp-action="EditDraft" method="post" id="draft-order-form">
+    <input type="hidden" id="CustomerId" name="CustomerId" value="@Model.CustomerId" />
     <div class="content-header clearfix">
         <h1 class="float-left">
             @T("Admin.Orders.EditOrderDetails") - @Model.CustomOrderNumber

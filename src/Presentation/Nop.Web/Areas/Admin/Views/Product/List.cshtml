@@ -244,7 +244,7 @@
                                       new ColumnProperty(nameof(ProductModel.PictureThumbnailUrl))
                                       {
                                           Title = T("Admin.Catalog.Products.Fields.PictureThumbnailUrl").Text,
-                                          Width = "100",
+                                          Width = "50",
                                           Render = new RenderPicture()
                                       },
                                       new ColumnProperty(nameof(ProductModel.Name))
@@ -474,3 +474,19 @@
         });
     </script>
 	<nop-alert asp-alert-id="exportExcelSelected" />
+
+    <style>
+    
+
+        #products-grid td > img {
+            max-height: 50px;
+            object-fit: contain;
+            width: 100%;
+        }
+
+        .table td {
+            padding-top: 2px;
+            padding-bottom: 2px;
+        }
+
+    </style>

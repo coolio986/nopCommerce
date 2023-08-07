@@ -595,6 +595,16 @@ namespace Nop.Services.Customers
         Task<Address> GetCustomerAddressAsync(int customerId, int addressId);
 
         /// <summary>
+        /// Gets a address mapped to customer
+        /// </summary>
+        /// <param name="addressId">Address identifier</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the result
+        /// </returns>
+        Task<Customer> GetCustomerByShippinngAddressIdAsync(int addressId);
+
+        /// <summary>
         /// Gets a customer billing address
         /// </summary>
         /// <param name="customer">Customer identifier</param>

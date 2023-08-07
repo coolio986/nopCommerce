@@ -17,14 +17,25 @@ namespace Nop.Services.Common
         Task DeleteAddressAsync(Address address);
 
         /// <summary>
-        /// Gets address by first name
+        /// Gets address by name
         /// </summary>
-        /// <param name="customerFirstName">Customer first name</param>
+        /// <param name="firstName">Customer first name</param>
+        /// <param name="lastName">Customer last name (optional)</param>
         /// <returns>
         /// A task that represents the asynchronous operation
         /// The task result contains an address
         /// </returns>
-        Task<IEnumerable<Address>> GetAddressesByFirstName(string customerFirstName);
+        Task<IEnumerable<Address>> GetAddressesByName(string firstName = null, string lastName = null);
+
+        /// <summary>
+        /// Gets address by email address
+        /// </summary>
+        /// <param name="email">Customer email address</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains an address
+        /// </returns>
+        Task<IEnumerable<Address>> GetAddressesByEmail(string email);
 
 
         /// <summary>

@@ -80,17 +80,36 @@ namespace Nop.Services.Common
         /// <summary>
         /// Gets address by first name
         /// </summary>
-        /// <param name="customerFirstName">Customer first name</param>
+        /// <param name="firstName">Customer first name</param>
+        /// <param name="lirstName">Customer last name (optional)</param>
         /// <returns>
         /// A task that represents the asynchronous operation
         /// The task result contains an address
         /// </returns>
-        public virtual async Task<IEnumerable<Address>> GetAddressesByFirstName(string customerFirstName)
+        public virtual async Task<IEnumerable<Address>> GetAddressesByName(string firstName = null, string lastName = null)
         {
+            IQueryable<Address> query = _addressRepository.Table;
 
-            var query = from a in _addressRepository.Table
-                        where a.FirstName == customerFirstName
-                        select a;
+            if (!string.IsNullOrEmpty(firstName))
+                query = query.Where(a => a.FirstName == firstName);
+
+            if (!string.IsNullOrEmpty(lastName))
+                query = query.Where(a => a.LastName == lastName);
+            
+            return await query.ToListAsync();
+        }
+
+        /// <summary>
+        /// Gets address by email address
+        /// </summary>
+        /// <param name="email">Customer email address</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains an address
+        /// </returns>
+        public virtual async Task<IEnumerable<Address>> GetAddressesByEmail(string email)
+        {
+            var query = _addressRepository.Table.Where(a => a.Email == email);
 
             return await query.ToListAsync();
         }
