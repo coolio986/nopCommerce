@@ -1,5 +1,18 @@
 ﻿@model AddressModel
 
+<style>
+@@media (min-width: 1367px){
+    .inputs label {
+       width: 27%;
+    }
+}
+@@media (min-width: 1001px) and (max-width: 1366px){
+    .inputs label {
+       width: 22%;
+    }
+}
+</style>
+
 <input class="address-id" asp-for="Id" type="hidden"/>
 <div class="edit-address">
     <div class="inputs">

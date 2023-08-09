@@ -34,6 +34,8 @@
 
         public static string SelectShippingRate => "Plugin.Shipping.EasyPost.AdminSelectShippingRate";
 
+        public static string SelectShippingRateAndBuy => "Plugin.Shipping.EasyPost.AdminSelectShippingRateAndBuy";
+
         /// <summary>
         /// Gets the configuration route name
         /// </summary>

@@ -835,7 +835,6 @@ namespace Nop.Plugin.Shipping.EasyPost.Controllers
 
                 shippingModel = _easyPostService.SortShippingOptions(shippingModel);
             }
-            
             return RedirectToAction("ShipmentDetails", "Order", new { id = shippingModel.Id });
         }
 
@@ -883,6 +882,87 @@ namespace Nop.Plugin.Shipping.EasyPost.Controllers
             await _easyPostService.SaveShipmentAsync(shipmentEntry, true);
 
             return RedirectToAction("ShipmentDetails", "Order", new { id = model.Id });
+
+        }
+
+        [HttpPost]
+        [AuthorizeAdmin]
+        [Area(AreaNames.Admin)]
+        public async Task<IActionResult> AdminSelectShippingRateAndBuy(ShippingModel model)
+        {
+            if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
+                return AccessDeniedView();
+
+            bool isError = false;
+
+            if (string.IsNullOrEmpty(model.SelectedShippingOptionId))
+            {
+                await _notificationService.ErrorNotificationAsync(new Exception("No shipping option selected!"));
+                isError = true;
+            }
+
+            var order = await _easyPostService.GetOrderByIdAsync(model.OrderId);
+            if (order is null)
+            {
+                await _notificationService.ErrorNotificationAsync(new Exception("Unable to find order with Id " + model.OrderId));
+                isError = true;
+            }
+
+            var shippingOption = model.ShippingOptions.FirstOrDefault(x => x.Id == model.SelectedShippingOptionId);
+
+            order.ShippingRateComputationMethodSystemName = EasyPostDefaults.SystemName;
+            order.ShippingMethod = shippingOption.Description;
+
+            var shipmentEntry = await _shipmentService.GetShipmentByIdAsync(model.Id);
+            if (shipmentEntry is null)
+            {
+                await _notificationService.ErrorNotificationAsync(new Exception("Unable to find shipment with Id " + model.Id));
+                isError = true;
+            }
+            if (isError)
+                return RedirectToAction("ShipmentDetails", "Order", new { id = model.Id });
+
+            await _easyPostService.UpdateOrderAsync(order);
+
+            await _easyPostService.SaveShipmentAsync(order);
+
+            await _easyPostService.SaveShipmentAsync(shipmentEntry, true);
+
+            var shipment = await _shipmentService.GetShipmentByIdAsync(model.Id);
+            if (shipment is not null)
+            {
+                var (_, error) = await _easyPostService.BuyLabelAsync(shipment, model.SelectedShippingOptionId, model.Insurance);
+                if (!string.IsNullOrEmpty(error))
+                {
+                    var locale = await _localizationService.GetResourceAsync("Plugins.Shipping.EasyPost.Error");
+                    _notificationService.ErrorNotification(string.Format(locale, error, Url.Action("List", "Log")), false);
+                }
+                else
+                {
+                    var locale = await _localizationService.GetResourceAsync("Plugins.Shipping.EasyPost.Success");
+                    _notificationService.SuccessNotification(locale);
+
+                    if (model.NotifyCustomerOfShipment)
+                    {
+                        try
+                        {
+                            await _easyPostService.ShipAsync(shipment, true);
+                            await _easyPostService.LogEditOrderAsync(shipment.OrderId);
+                            return RedirectToAction("ShipmentDetails", "Order", new { id = shipment?.Id ?? 0 });
+                        }
+                        catch (Exception exc)
+                        {
+                            //error
+                            await _notificationService.ErrorNotificationAsync(exc);
+                            return RedirectToAction("ShipmentDetails", "Order", new { id = shipment?.Id ?? 0 });
+                        }
+                    }
+                }
+            }
+
+            return RedirectToAction("ShipmentDetails", "Order", new { id = shipment?.Id ?? 0 });
+
+            //return RedirectToAction("ShipmentDetails", "Order", new { id = model.Id });
 
         }
         #endregion

@@ -55,6 +55,10 @@ namespace Nop.Plugin.Shipping.EasyPost.Infrastructure
                 pattern: "Admin/EasyPost/AdminSelectShippingRate",
                 defaults: new { controller = "EasyPost", action = "AdminSelectShippingRate" });
 
+            endpointRouteBuilder.MapControllerRoute(name: EasyPostDefaults.SelectShippingRateAndBuy,
+                pattern: "Admin/EasyPost/AdminSelectShippingRateAndBuy",
+                defaults: new { controller = "EasyPost", action = "AdminSelectShippingRateAndBuy" });
+
             endpointRouteBuilder.MapControllerRoute(name: EasyPostDefaults.WebhookRouteName,
                 pattern: "easypost/webhook",
                 defaults: new { controller = "EasyPostPublic", action = "Webhook" });

@@ -89,9 +89,33 @@
                                  
                     </ul>
                 </div>
-                    <button type="submit" asp-route="@EasyPostDefaults.SelectShippingRate"  >
+                <div class="col-md-4" style="padding-left:40px;border-color:black;border-width:1px;border-style:solid;margin:20px">
+                    <div class="form-group row">
+                        <div>
+                            <nop-label asp-for="NotifyCustomerOfShipment" />
+                        </div>
+                        <div class="col-md-1">
+                            <nop-editor asp-for="NotifyCustomerOfShipment" />
+                            <span asp-validation-for="NotifyCustomerOfShipment"></span>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div>
+                            <nop-label asp-for="Insurance" />
+                        </div>
+                        <div class="col-md-8">
+                            <nop-editor asp-for="Insurance" />
+                            <span asp-validation-for="Insurance"></span>
+                        </div>
+                    </div>
+                    <button style="margin-bottom:20px" type="submit" asp-route="@EasyPostDefaults.SelectShippingRateAndBuy">
+                        Select and Buy
+                    </button>
+                </div>
+                <button type="submit" asp-route="@EasyPostDefaults.SelectShippingRate"  >
                     Select Rate
                 </button>
+                
                 
             }
             else

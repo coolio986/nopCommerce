@@ -25,5 +25,11 @@ namespace Nop.Plugin.Shipping.EasyPost.Models.Shipment
 
         public int OrderId { get; set; }
 
+        [NopResourceDisplayName("Plugins.Shipping.EasyPost.Shipment.Insurance")]
+        public decimal Insurance { get; set; }
+
+        [NopResourceDisplayName("Plugins.Shipping.EasyPost.Shipment.NotifyCustomer")]
+        public bool NotifyCustomerOfShipment { get; set; }
+
     }
 }

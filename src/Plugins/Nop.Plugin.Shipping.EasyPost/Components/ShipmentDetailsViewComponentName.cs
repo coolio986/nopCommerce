@@ -134,7 +134,8 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
                 ShippingModel shippingModel = new ShippingModel()
                 {
                     OrderId = shipmentEntry.OrderId,
-                    Id = shipmentEntry.Id
+                    Id = shipmentEntry.Id,
+                    NotifyCustomerOfShipment = true
                 };
 
                 var customer = await _easyPostService.GetCustomerByIdAsync(order.CustomerId);
