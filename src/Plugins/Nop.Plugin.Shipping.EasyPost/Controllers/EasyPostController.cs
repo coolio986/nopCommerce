@@ -20,6 +20,7 @@ using Nop.Plugin.Shipping.EasyPost.Models.Pickup;
 using Nop.Plugin.Shipping.EasyPost.Models.Shipment;
 using Nop.Plugin.Shipping.EasyPost.Services;
 using Nop.Services;
+using Nop.Services.Common;
 using Nop.Services.Configuration;
 using Nop.Services.Directory;
 using Nop.Services.Helpers;
@@ -34,6 +35,7 @@ using Nop.Web.Framework;
 using Nop.Web.Framework.Controllers;
 using Nop.Web.Framework.Models.Extensions;
 using Nop.Web.Framework.Mvc.Filters;
+using Shipment = EasyPost.Shipment;
 
 namespace Nop.Plugin.Shipping.EasyPost.Controllers
 {
@@ -59,6 +61,7 @@ namespace Nop.Plugin.Shipping.EasyPost.Controllers
         private readonly ISettingService _settingService;
         private readonly IShipmentService _shipmentService;
         private readonly ShippingSettings _shippingSettings;
+        private readonly IGenericAttributeService _genericAttributeService;
 
         #endregion
 
@@ -78,7 +81,8 @@ namespace Nop.Plugin.Shipping.EasyPost.Controllers
             IPermissionService permissionService,
             ISettingService settingService,
             IShipmentService shipmentService,
-            ShippingSettings shippingSettings)
+            ShippingSettings shippingSettings,
+            IGenericAttributeService genericAttributeService)
         {
             _easyPostModelFactory = easyPostModelFactory;
             _easyPostService = easyPostService;
@@ -95,6 +99,7 @@ namespace Nop.Plugin.Shipping.EasyPost.Controllers
             _settingService = settingService;
             _shipmentService = shipmentService;
             _shippingSettings = shippingSettings;
+            _genericAttributeService = genericAttributeService;
         }
 
         #endregion
@@ -928,10 +933,26 @@ namespace Nop.Plugin.Shipping.EasyPost.Controllers
 
             await _easyPostService.SaveShipmentAsync(shipmentEntry, true);
 
-            var shipment = await _shipmentService.GetShipmentByIdAsync(model.Id);
-            if (shipment is not null)
+            if (shipmentEntry is not null)
             {
-                var (_, error) = await _easyPostService.BuyLabelAsync(shipment, model.SelectedShippingOptionId, model.Insurance);
+                Shipment shipment = null;
+                string shipmentError = null;
+
+                var shipmentId = await _genericAttributeService.GetAttributeAsyncWithoutCache<string>(shipmentEntry, EasyPostDefaults.ShipmentIdAttribute);
+
+                var shipmentDetailsModel = new ShipmentDetailsModel { Id = shipmentEntry.Id };
+                (shipment, shipmentError) = await _easyPostService.GetShipmentAsync(shipmentId);
+
+                if (!string.IsNullOrEmpty(shipmentError))
+                {
+                    await _notificationService.ErrorNotificationAsync(new Exception(shipmentError));
+                    return RedirectToAction("ShipmentDetails", "Order", new { id = shipmentEntry?.Id ?? 0 });
+                    
+                }
+
+                await _easyPostService.ProcessSelectableShippingRates(shipmentDetailsModel, shipment, shipmentEntry.OrderId);
+
+                var (_, error) = await _easyPostService.BuyLabelAsync(shipmentEntry, shipmentDetailsModel.RateId, model.Insurance);
                 if (!string.IsNullOrEmpty(error))
                 {
                     var locale = await _localizationService.GetResourceAsync("Plugins.Shipping.EasyPost.Error");
@@ -946,24 +967,21 @@ namespace Nop.Plugin.Shipping.EasyPost.Controllers
                     {
                         try
                         {
-                            await _easyPostService.ShipAsync(shipment, true);
-                            await _easyPostService.LogEditOrderAsync(shipment.OrderId);
-                            return RedirectToAction("ShipmentDetails", "Order", new { id = shipment?.Id ?? 0 });
+                            await _easyPostService.ShipAsync(shipmentEntry, true);
+                            await _easyPostService.LogEditOrderAsync(shipmentEntry.OrderId);
+                            return RedirectToAction("ShipmentDetails", "Order", new { id = shipmentEntry?.Id ?? 0 });
                         }
                         catch (Exception exc)
                         {
                             //error
                             await _notificationService.ErrorNotificationAsync(exc);
-                            return RedirectToAction("ShipmentDetails", "Order", new { id = shipment?.Id ?? 0 });
+                            return RedirectToAction("ShipmentDetails", "Order", new { id = shipmentEntry?.Id ?? 0 });
                         }
                     }
                 }
             }
 
-            return RedirectToAction("ShipmentDetails", "Order", new { id = shipment?.Id ?? 0 });
-
-            //return RedirectToAction("ShipmentDetails", "Order", new { id = model.Id });
-
+            return RedirectToAction("ShipmentDetails", "Order", new { id = shipmentEntry?.Id ?? 0 });
         }
         #endregion
         #endregion

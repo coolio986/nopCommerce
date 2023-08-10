@@ -209,37 +209,39 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
             }
 
             //prepare shipment rates to select
-            var (rates, _) = await _easyPostService.GetShippingRatesAsync(shipment, true);
-            if (rates?.Any() ?? false)
-            {
-                foreach (var rate in rates.OrderBy(rate => rate.Rate))
-                {
-                    var rateName = $"{rate.Carrier} {rate.Service}".TrimEnd(' ');
-                    
-                    if (rateName.Contains("UPSDAP"))
-                        rateName = rateName.Replace("DAP", "");
-                    
-                    var text = $"{await _priceFormatter.FormatShippingPriceAsync(rate.Rate, true)} {rateName}";
-                    var selected = string.Equals(rateName, order.ShippingMethod, StringComparison.InvariantCultureIgnoreCase);
-                    if (selected)
-                    {
-                        model.RateId = rate.Id;
-                        text = $"{text} {await _localizationService.GetResourceAsync("Plugins.Shipping.EasyPost.Shipment.Rate.Selected")}";
-                    }
-                    model.AvailableRates.Add(new SelectListItem(text, rate.Id, selected));
+            await _easyPostService.ProcessSelectableShippingRates(model, shipment, order.Id);
 
-                    if (rate.TimeInTransit?.Any(pair => pair.DeliveryDays.HasValue) ?? false)
-                    {
-                        var timeInTransit = rate.TimeInTransit.ToDictionary(pair => pair.Percentile, pair => pair.DeliveryDays);
-                        model.SmartRates.Add((rateName, rate.DeliveryDays, timeInTransit));
-                    }
-                }
-            }
-            else
-            {
-                var locale = await _localizationService.GetResourceAsync("Plugins.Shipping.EasyPost.Shipment.Rate.None");
-                model.AvailableRates.Add(new SelectListItem(locale, string.Empty));
-            }
+            //var (rates, _) = await _easyPostService.GetShippingRatesAsync(shipment, true);
+            //if (rates?.Any() ?? false)
+            //{
+            //    foreach (var rate in rates.OrderBy(rate => rate.Rate))
+            //    {
+            //        var rateName = $"{rate.Carrier} {rate.Service}".TrimEnd(' ');
+
+            //        if (rateName.Contains("UPSDAP"))
+            //            rateName = rateName.Replace("DAP", "");
+
+            //        var text = $"{await _priceFormatter.FormatShippingPriceAsync(rate.Rate, true)} {rateName}";
+            //        var selected = string.Equals(rateName, order.ShippingMethod, StringComparison.InvariantCultureIgnoreCase);
+            //        if (selected)
+            //        {
+            //            model.RateId = rate.Id;
+            //            text = $"{text} {await _localizationService.GetResourceAsync("Plugins.Shipping.EasyPost.Shipment.Rate.Selected")}";
+            //        }
+            //        model.AvailableRates.Add(new SelectListItem(text, rate.Id, selected));
+
+            //        if (rate.TimeInTransit?.Any(pair => pair.DeliveryDays.HasValue) ?? false)
+            //        {
+            //            var timeInTransit = rate.TimeInTransit.ToDictionary(pair => pair.Percentile, pair => pair.DeliveryDays);
+            //            model.SmartRates.Add((rateName, rate.DeliveryDays, timeInTransit));
+            //        }
+            //    }
+            //}
+            //else
+            //{
+            //    var locale = await _localizationService.GetResourceAsync("Plugins.Shipping.EasyPost.Shipment.Rate.None");
+            //    model.AvailableRates.Add(new SelectListItem(locale, string.Empty));
+            //}
 
             if (shipment.options is not null)
             {

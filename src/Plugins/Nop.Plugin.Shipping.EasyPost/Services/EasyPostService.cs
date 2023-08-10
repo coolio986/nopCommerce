@@ -35,6 +35,7 @@ using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Shipping;
 using Shipment = EasyPost.Shipment;
 using Nop.Plugin.Shipping.EasyPost.Models.Shipment;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Nop.Plugin.Shipping.EasyPost.Services
 {
@@ -74,6 +75,7 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
         private readonly IPriceCalculationService _priceCalculationService;
         private readonly IOrderProcessingService _orderProcessingService;
         private readonly ICustomerActivityService _customerActivityService;
+        private readonly IPriceFormatter _priceFormatter;
 
         private static bool? _isConfigured;
 
@@ -109,7 +111,8 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
             ShoppingCartSettings shoppingCartSettings,
             IPriceCalculationService priceCalculationService,
             IOrderProcessingService orderProcessingService,
-            ICustomerActivityService customerActivityService)
+            ICustomerActivityService customerActivityService,
+            IPriceFormatter priceFormatter)
         {
             _currencySettings = currencySettings;
             _easyPostSettings = easyPostSettings;
@@ -140,6 +143,7 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
             _priceCalculationService = priceCalculationService;
             _orderProcessingService = orderProcessingService;
             _customerActivityService = customerActivityService;
+            _priceFormatter = priceFormatter;
         }
 
         #endregion
@@ -2214,6 +2218,43 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
 
             await _customerActivityService.InsertActivityAsync("EditOrder",
                 string.Format(await _localizationService.GetResourceAsync("ActivityLog.EditOrder"), order.CustomOrderNumber), order);
+        }
+
+        public virtual async Task ProcessSelectableShippingRates(ShipmentDetailsModel model, Shipment shipment, int orderId)
+        {
+            var order = await _orderService.GetOrderByIdAsync(orderId);
+
+            var (rates, _) = await GetShippingRatesAsync(shipment, true);
+            if (rates?.Any() ?? false)
+            {
+                foreach (var rate in rates.OrderBy(rate => rate.Rate))
+                {
+                    var rateName = $"{rate.Carrier} {rate.Service}".TrimEnd(' ');
+
+                    if (rateName.Contains("UPSDAP"))
+                        rateName = rateName.Replace("DAP", "");
+
+                    var text = $"{await _priceFormatter.FormatShippingPriceAsync(rate.Rate, true)} {rateName}";
+                    var selected = string.Equals(rateName, order.ShippingMethod, StringComparison.InvariantCultureIgnoreCase);
+                    if (selected)
+                    {
+                        model.RateId = rate.Id;
+                        text = $"{text} {await _localizationService.GetResourceAsync("Plugins.Shipping.EasyPost.Shipment.Rate.Selected")}";
+                    }
+                    model.AvailableRates.Add(new SelectListItem(text, rate.Id, selected));
+
+                    if (rate.TimeInTransit?.Any(pair => pair.DeliveryDays.HasValue) ?? false)
+                    {
+                        var timeInTransit = rate.TimeInTransit.ToDictionary(pair => pair.Percentile, pair => pair.DeliveryDays);
+                        model.SmartRates.Add((rateName, rate.DeliveryDays, timeInTransit));
+                    }
+                }
+            }
+            else
+            {
+                var locale = await _localizationService.GetResourceAsync("Plugins.Shipping.EasyPost.Shipment.Rate.None");
+                model.AvailableRates.Add(new SelectListItem(locale, string.Empty));
+            }
         }
 
         #endregion
