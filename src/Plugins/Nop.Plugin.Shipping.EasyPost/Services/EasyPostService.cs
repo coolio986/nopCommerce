@@ -1304,6 +1304,8 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
 
                 if (order is not null)
                 {
+                    var customer = await _customerService.GetCustomerByIdAsync(order.CustomerId);
+                    await _genericAttributeService.SaveAttributeAsync<string>(customer, EasyPostDefaults.ShipmentIdAttribute, null, order.StoreId);
                     await _genericAttributeService.SaveAttributeAsync<string>(order, EasyPostDefaults.ShipmentIdAttribute, null);
                     order.ShippingMethod = order.OriginalShippingMethod;
                     order.ShippingRateComputationMethodSystemName = order.OriginalShippingRateComputationMethodSystemName;
