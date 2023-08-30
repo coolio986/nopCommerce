@@ -376,7 +376,7 @@
                                 gridModel.ColumnCollection.Add(new ColumnProperty(nameof(OrderModel.PaymentStatus))
                                 {
                                     Title = T("Admin.Orders.Fields.PaymentStatus").Text,
-                                    Width = "150"
+                                    Width = "130"
                                 });
                                 //a vendor does not have access to this functionality
                                 if (!Model.IsLoggedInAsVendor)
@@ -392,6 +392,11 @@
                                     Title = T("Admin.Orders.Fields.Customer").Text,
                                     Render = new RenderLink(new DataUrl("~/Admin/Customer/Edit", nameof(OrderModel.CustomerId)))
                                 });
+                                gridModel.ColumnCollection.Add(new ColumnProperty(nameof(OrderModel.ShippingMethod))
+                                {
+                                    Title = T("Admin.Orders.Fields.ShippingMethod").Text,
+                                    Width = "150"
+                                });
                                 gridModel.ColumnCollection.Add(new ColumnProperty(nameof(OrderModel.StoreName))
                                 {
                                     Title = T("Admin.Orders.Fields.Store").Text,
@@ -401,7 +406,7 @@
                                 gridModel.ColumnCollection.Add(new ColumnProperty(nameof(OrderModel.CreatedOn))
                                 {
                                     Title = T("Admin.Orders.Fields.CreatedOn").Text,
-                                    Width = "220",
+                                    Width = "180",
                                     Render = new RenderDate()
                                 });
                                 //a vendor does not have access to this functionality

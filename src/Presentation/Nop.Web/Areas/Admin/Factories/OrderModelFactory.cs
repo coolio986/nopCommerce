@@ -1639,7 +1639,8 @@ namespace Nop.Web.Areas.Admin.Factories
                         CustomerEmail = billingAddress.Email,
                         CustomerFullName = $"{billingAddress.FirstName} {billingAddress.LastName}",
                         CustomerId = order.CustomerId,
-                        CustomOrderNumber = order.CustomOrderNumber
+                        CustomOrderNumber = order.CustomOrderNumber,
+                        ShippingMethod = order.OriginalShippingMethod,
                     };
 
                     //convert dates to the user time
