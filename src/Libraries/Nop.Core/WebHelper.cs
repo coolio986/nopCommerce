@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
+using Nop.Core.Configuration;
 using Nop.Core.Http;
 
 namespace Nop.Core
@@ -28,6 +29,10 @@ namespace Nop.Core
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IUrlHelperFactory _urlHelperFactory;
         private readonly Lazy<IStoreContext> _storeContext;
+        private readonly AppSettings _appSettings;
+
+        private readonly string _forwardedForHeaderName;
+        private readonly bool _useProxy;
 
         #endregion
 
@@ -37,13 +42,25 @@ namespace Nop.Core
             IHostApplicationLifetime hostApplicationLifetime,
             IHttpContextAccessor httpContextAccessor,
             IUrlHelperFactory urlHelperFactory,
-            Lazy<IStoreContext> storeContext)
+            Lazy<IStoreContext> storeContext,
+            AppSettings appSettings)
         {
             _actionContextAccessor = actionContextAccessor;
             _hostApplicationLifetime = hostApplicationLifetime;
             _httpContextAccessor = httpContextAccessor;
             _urlHelperFactory = urlHelperFactory;
             _storeContext = storeContext;
+            _appSettings = appSettings;
+
+            //hack to fix x-forwarded-for
+            if (_appSettings.Get<HostingConfig>().UseProxy)
+            {
+                if (!string.IsNullOrEmpty(appSettings.Get<HostingConfig>().ForwardedForHeaderName))
+                {
+                    _forwardedForHeaderName = appSettings.Get<HostingConfig>().ForwardedForHeaderName;
+                    _useProxy = true;
+                }
+            }
         }
 
         #endregion
@@ -113,8 +130,16 @@ namespace Nop.Core
             if(_httpContextAccessor.HttpContext.Connection?.RemoteIpAddress is not IPAddress remoteIp)
                 return "";
 
-            if(remoteIp.Equals(IPAddress.IPv6Loopback))
+            if (remoteIp.Equals(IPAddress.IPv6Loopback))
                 return IPAddress.Loopback.ToString();
+
+            //hack to fix x-forwarded -for
+            if (_useProxy && _httpContextAccessor.HttpContext.Request.Headers.ContainsKey(_forwardedForHeaderName))
+                {
+                    var ipaddress = _httpContextAccessor.HttpContext.Request.Headers[_forwardedForHeaderName].ToString();
+                if (!string.IsNullOrEmpty(ipaddress))
+                    remoteIp = IPAddress.Parse(ipaddress);
+            }
 
             return remoteIp.MapToIPv4().ToString();
         }

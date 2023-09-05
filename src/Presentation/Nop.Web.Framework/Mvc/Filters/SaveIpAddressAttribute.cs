@@ -39,13 +39,6 @@ namespace Nop.Web.Framework.Mvc.Filters
             private readonly IRepository<Customer> _customerRepository;
             private readonly IWebHelper _webHelper;
             private readonly IWorkContext _workContext;
-            private readonly AppSettings _appSettings;
-
-
-            private readonly string _forwardedForHeaderName;
-            private readonly bool _useProxy;
-
-
             #endregion
 
             #region Ctor
@@ -60,19 +53,6 @@ namespace Nop.Web.Framework.Mvc.Filters
                 _customerRepository = customerRepository;
                 _webHelper = webHelper;
                 _workContext = workContext;
-                _appSettings = appSettings;
-
-                //hack to fix x-forwarded-for
-                if (_appSettings.Get<HostingConfig>().UseProxy)
-                {
-                    if (!string.IsNullOrEmpty(appSettings.Get<HostingConfig>().ForwardedForHeaderName))
-                    {
-                        _forwardedForHeaderName = appSettings.Get<HostingConfig>().ForwardedForHeaderName;
-                        _useProxy = true;
-                    }
-                }
-
-
             }
 
             #endregion
@@ -106,15 +86,6 @@ namespace Nop.Web.Framework.Mvc.Filters
                 //get current IP address
                 var currentIpAddress = _webHelper.GetCurrentIpAddress();
 
-                //hack to fix x-forwarded-for
-                if (_useProxy && context.HttpContext.Request.Headers.ContainsKey(_forwardedForHeaderName))
-                {
-                    var ipaddress = context.HttpContext.Request.Headers[_forwardedForHeaderName].ToString();
-                    if(!string.IsNullOrEmpty(ipaddress))
-                        currentIpAddress = ipaddress;
-                }
-
-                
 
                 if (string.IsNullOrEmpty(currentIpAddress))
                     return;
