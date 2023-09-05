@@ -3,6 +3,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Nop.Core.Domain.Catalog;
+using Nop.Core.Domain.Customers;
+using Nop.Services.Common;
+using Nop.Services.Customers;
 using Nop.Services.Helpers;
 using Nop.Services.Localization;
 using Nop.Services.Messages;
@@ -27,6 +30,8 @@ namespace Nop.Web.Areas.Admin.Factories
         private readonly ILocalizationService _localizationService;
         private readonly INewsLetterSubscriptionService _newsLetterSubscriptionService;
         private readonly IStoreService _storeService;
+        private readonly ICustomerService _customerService;
+        private readonly IGenericAttributeService _genericAttributeService;
 
         #endregion
 
@@ -37,7 +42,9 @@ namespace Nop.Web.Areas.Admin.Factories
             IDateTimeHelper dateTimeHelper,
             ILocalizationService localizationService,
             INewsLetterSubscriptionService newsLetterSubscriptionService,
-            IStoreService storeService)
+            IStoreService storeService,
+            ICustomerService customerService,
+            IGenericAttributeService genericAttributeService)
         {
             _catalogSettings = catalogSettings;
             _baseAdminModelFactory = baseAdminModelFactory;
@@ -45,6 +52,8 @@ namespace Nop.Web.Areas.Admin.Factories
             _localizationService = localizationService;
             _newsLetterSubscriptionService = newsLetterSubscriptionService;
             _storeService = storeService;
+            _customerService = customerService;
+            _genericAttributeService = genericAttributeService;
         }
 
         #endregion
@@ -123,7 +132,7 @@ namespace Nop.Web.Areas.Admin.Factories
                 createdFromUtc: startDateValue,
                 createdToUtc: endDateValue,
                 pageIndex: searchModel.Page - 1, pageSize: searchModel.PageSize);
-
+            
             //prepare list model
             var model = await new NewsletterSubscriptionListModel().PrepareToGridAsync(searchModel, newsletterSubscriptions, () =>
             {
@@ -131,6 +140,11 @@ namespace Nop.Web.Areas.Admin.Factories
                 {
                     //fill in model values from the entity
                     var subscriptionModel = subscription.ToModel<NewsletterSubscriptionModel>();
+
+                    //fill first name and last name
+                    var customer = await _customerService.GetCustomerByEmailAsync(subscriptionModel.Email);
+                    subscriptionModel.FirstName = await _genericAttributeService.GetAttributeAsync<string>(customer, NopCustomerDefaults.FirstNameAttribute);
+                    subscriptionModel.LastName = await _genericAttributeService.GetAttributeAsync<string>(customer, NopCustomerDefaults.LastNameAttribute);
 
                     //convert dates to the user time
                     subscriptionModel.CreatedOn = (await _dateTimeHelper.ConvertToUserTimeAsync(subscription.CreatedOnUtc, DateTimeKind.Utc)).ToString();
@@ -141,7 +155,7 @@ namespace Nop.Web.Areas.Admin.Factories
                     return subscriptionModel;
                 });
             });
-
+            
             return model;
         }
 

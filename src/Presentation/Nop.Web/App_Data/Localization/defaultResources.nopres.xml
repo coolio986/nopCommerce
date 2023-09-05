@@ -13914,6 +13914,12 @@
   <LocaleResource Name="Admin.Promotions.NewsLetterSubscriptions">
     <Value>Newsletter subscribers</Value>
   </LocaleResource>
+    <LocaleResource Name="Admin.Promotions.NewsLetterSubscriptions.Fields.FirstName">
+        <Value>First Name</Value>
+    </LocaleResource>
+    <LocaleResource Name="Admin.Promotions.NewsLetterSubscriptions.Fields.LastName">
+        <Value>Last Name</Value>
+    </LocaleResource>
   <LocaleResource Name="Admin.Promotions.NewsLetterSubscriptions.Fields.Active">
     <Value>Active</Value>
   </LocaleResource>
@@ -13959,6 +13965,12 @@
   <LocaleResource Name="Admin.Promotions.NewsLetterSubscriptions.List.SearchActive.NotActiveOnly">
     <Value>Not active</Value>
   </LocaleResource>
+    <LocaleResource Name="Admin.Promotions.NewsLetterSubscriptions.List.SearchFirstName">
+        <Value>First Name</Value>
+    </LocaleResource>
+    <LocaleResource Name="Admin.Promotions.NewsLetterSubscriptions.List.SearchLastName">
+        <Value>Last Name</Value>
+    </LocaleResource>
   <LocaleResource Name="Admin.Promotions.NewsLetterSubscriptions.List.SearchEmail">
     <Value>Email</Value>
   </LocaleResource>

@@ -129,6 +129,8 @@
                             LengthMenu = Model.AvailablePageSizes,
                             Filters = new List<FilterParameter>
                             {
+                                new FilterParameter(nameof(Model.FirstName)),
+                                new FilterParameter(nameof(Model.LastName)),
                                 new FilterParameter(nameof(Model.StartDate), typeof(DateTime?)),
                                 new FilterParameter(nameof(Model.EndDate), typeof(DateTime?)),
                                 new FilterParameter(nameof(Model.SearchEmail)),
@@ -138,6 +140,18 @@
                             },
                             ColumnCollection = new List<ColumnProperty>
                                 {
+                                    new ColumnProperty(nameof(NewsletterSubscriptionModel.FirstName))
+                                    {
+                                        Title = T("Admin.Promotions.NewsLetterSubscriptions.Fields.FirstName").Text,
+                                        Width = "80",
+                                        Editable = false,
+                                    },
+                                    new ColumnProperty(nameof(NewsletterSubscriptionModel.LastName))
+                                    {
+                                        Title = T("Admin.Promotions.NewsLetterSubscriptions.Fields.LastName").Text,
+                                        Width = "80",
+                                        Editable = false,
+                                    },
                                     new ColumnProperty(nameof(NewsletterSubscriptionModel.Email))
                                     {
                                         Title = T("Admin.Promotions.NewsLetterSubscriptions.Fields.Email").Text,

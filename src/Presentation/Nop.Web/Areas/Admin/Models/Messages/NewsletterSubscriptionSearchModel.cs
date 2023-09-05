@@ -25,6 +25,12 @@ namespace Nop.Web.Areas.Admin.Models.Messages
 
         #region Properties
 
+        [NopResourceDisplayName("Admin.Promotions.NewsLetterSubscriptions.List.SearchFirstName")]
+        public string FirstName { get; set; }
+
+        [NopResourceDisplayName("Admin.Promotions.NewsLetterSubscriptions.List.SearchLastName")]
+        public string LastName { get; set; }
+
         [DataType(DataType.EmailAddress)]
         [NopResourceDisplayName("Admin.Promotions.NewsLetterSubscriptions.List.SearchEmail")]
         public string SearchEmail { get; set; }
