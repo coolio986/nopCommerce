@@ -1224,7 +1224,7 @@ namespace Nop.Web.Controllers
             }
 
 
-            var shippingMethodModel = checkoutShippingMethodModel == null ? 
+            var shippingMethodModel = checkoutShippingMethodModel == null ?
                 await _checkoutModelFactory.PrepareShippingMethodModelAsync(cart, await _customerService.GetCustomerShippingAddressAsync(customer))
                 :
                 checkoutShippingMethodModel;
@@ -1407,16 +1407,68 @@ namespace Nop.Web.Controllers
                         {
                             //apply discount coupon codes to customer
                             await _customerService.ApplyDiscountCouponCodeAsync(customer, draftOrder.OrderGuid.ToString());
-                            
+
                         }
 
                         cart = await _shoppingCartService.GetShoppingCartAsync(customer, ShoppingCartType.ShoppingCart, store.Id);
                         isDraftOrder = true;
                         _workContext.SetDraftOrderCookie(draftOrder.OrderGuid);
                     }
+                    else
+                    { //guest user
+
+                        var customerRoleIds = await _customerService.GetCustomerRoleIdsAsync(customer);
+                        var guestRole = await _customerService.GetCustomerRoleBySystemNameAsync(NopCustomerDefaults.GuestsRoleName);
+                        var registeredRole = await _customerService.GetCustomerRoleBySystemNameAsync(NopCustomerDefaults.RegisteredRoleName);
+
+                        var address = await _customerService.GetCustomerAddressAsync(customer.Id, customer.BillingAddressId ?? 0)
+                        ?? throw new Exception(await _localizationService.GetResourceAsync("Checkout.Address.NotFound"));
+
+                        var draftOrderAddress = await _customerService.GetAddressesByCustomerIdAsync(draftOrder.CustomerId);
+                        if(draftOrderAddress.Any(x => x.Email == address.Email))
+                        {
+
+                            if (customerRoleIds.Contains(guestRole.Id) && !customerRoleIds.Contains(registeredRole.Id))
+                            {
+                                //need to remove any cart items so we can add our own draft items
+                                if (cart.Any())
+                                {
+                                    foreach (var item in cart)
+                                    {
+                                        await _shoppingCartService.DeleteShoppingCartItemAsync(item);
+                                    }
+
+                                }
+                                //move shopping cart items (if possible)
+                                foreach (var draftOrderItem in await _draftOrderService.GetOrderItemsAsync(draftOrder.Id))
+                                {
+                                    var product = await _productService.GetProductByIdAsync(draftOrderItem.ProductId);
+
+                                    await _shoppingCartService.AddToCartAsync(customer, product,
+                                        ShoppingCartType.ShoppingCart, draftOrder.StoreId,
+                                        draftOrderItem.AttributesXml, draftOrderItem.UnitPriceExclTax,
+                                        draftOrderItem.RentalStartDateUtc, draftOrderItem.RentalEndDateUtc,
+                                        draftOrderItem.Quantity, false, ignoreDeletedProductWarnings: true);
+                                }
+
+                                if (draftOrder.CustomDiscountValue != decimal.Zero)
+                                {
+                                    //apply discount coupon codes to customer
+                                    await _customerService.ApplyDiscountCouponCodeAsync(customer, draftOrder.OrderGuid.ToString());
+
+                                }
+
+                                cart = await _shoppingCartService.GetShoppingCartAsync(customer, ShoppingCartType.ShoppingCart, store.Id);
+                                isDraftOrder = true;
+                                _workContext.SetDraftOrderCookie(draftOrder.OrderGuid);
+
+                            }
+                        }
+                    }
 
                 }
             }
+            
 
 
             //if (await _customerService.IsGuestAsync(customer) && draftOrderGuid != Guid.Empty)
