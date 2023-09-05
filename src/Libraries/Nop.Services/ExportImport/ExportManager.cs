@@ -1905,6 +1905,10 @@ namespace Nop.Services.ExportImport
             const char separator = ',';
             var sb = new StringBuilder();
 
+            sb.Append(await _localizationService.GetResourceAsync("Admin.Promotions.NewsLetterSubscriptions.Fields.FirstName"));
+            sb.Append(separator);
+            sb.Append(await _localizationService.GetResourceAsync("Admin.Promotions.NewsLetterSubscriptions.Fields.LastName"));
+            sb.Append(separator);
             sb.Append(await _localizationService.GetResourceAsync("Admin.Promotions.NewsLetterSubscriptions.Fields.Email"));
             sb.Append(separator);
             sb.Append(await _localizationService.GetResourceAsync("Admin.Promotions.NewsLetterSubscriptions.Fields.Active"));
@@ -1914,6 +1918,18 @@ namespace Nop.Services.ExportImport
 
             foreach (var subscription in subscriptions)
             {
+                var customer = await _customerService.GetCustomerByEmailAsync(subscription.Email);
+                string firstName = string.Empty;
+                string lastName = string.Empty;
+                if(customer != null)
+                {
+                    firstName = await _genericAttributeService.GetAttributeAsync<string>(customer, NopCustomerDefaults.FirstNameAttribute);
+                    lastName = await _genericAttributeService.GetAttributeAsync<string>(customer, NopCustomerDefaults.LastNameAttribute);
+                }
+                sb.Append(firstName);
+                sb.Append(separator);
+                sb.Append(lastName);
+                sb.Append(separator);
                 sb.Append(subscription.Email);
                 sb.Append(separator);
                 sb.Append(subscription.Active);
