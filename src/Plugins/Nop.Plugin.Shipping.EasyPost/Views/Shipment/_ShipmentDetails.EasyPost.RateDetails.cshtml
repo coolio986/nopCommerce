@@ -1,6 +1,5 @@
 ﻿@model ShippingModel
 
-
 <script>
     function postWeightDimensions(){
         var parcel = { 
@@ -22,6 +21,7 @@
                     cache: false,
                     type: "POST",
                     data: postData,
+                    dataType: "json",
                     url: "@Html.Raw(Url.Action("AdminGetShippingRates", "EasyPost"))",
                     success: function (data) {
                         console.log(data);
@@ -31,6 +31,70 @@
                     }
                 });
     }
+    $(document).ready(function () {
+        $("#selectAndBuy").on('click', function (e) {
+            e.preventDefault();
+            $(this).text("Please wait...");
+            $(this).prop('disabled', true);
+            $("#selectRate").prop('disabled', true);
+            var action = $("#selectAndBuy").attr('formaction');
+
+            window.scrollTo(0, 0);
+
+            $("#loadMe").modal({
+                backdrop: "static", //remove ability to close modal with click
+                keyboard: false, //remove option to close with keyboard
+                show: true //Display loader!
+            });
+
+            
+
+            var selectedShippingRate = "";
+            var selectedShippingDescription = "";
+            var notifyOfShipment = "false";
+        
+            $("input[type=radio][id=" + '@Html.IdFor(model => model.SelectedShippingOptionId)' + "]:checked").each(function () {
+                    selectedShippingRate = this.value;
+                    selectedShippingDescription = $(this).attr("description");
+                    return false;
+            });
+
+            $("input[type=checkbox][id=" + '@Html.IdFor(model => model.NotifyCustomerOfShipment)' + "]:checked").each(function () {
+                notifyOfShipment = this.value;
+                return false;
+            });
+
+            var postData = {
+               
+               OrderId: $("#@Html.IdFor(model => model.OrderId)").val(),
+               Id: $("#@Html.IdFor(model => model.Id)").val(),
+               SelectedShippingOptionId: selectedShippingRate,
+               SelectedShippingOptionDescription: selectedShippingDescription,
+               NotifyCustomerOfShipment: notifyOfShipment
+            };
+
+
+            addAntiForgeryToken(postData);
+            $.ajax({
+                cache: false,
+                type: "POST",
+                url: "@Html.Raw(Url.Action("AdminSelectShippingRateAndBuy", "EasyPost"))",
+                data: postData,
+                traditional: true,
+                async: true,
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                },
+                success: function (data) {
+                    location.reload(true);
+                    
+                }
+            });
+        });
+    })
+    
+
+
 </script>
 
 @if (string.IsNullOrEmpty(Model.Error))
@@ -71,8 +135,8 @@
                             <li>
                                 <div class="form-group row">
                                     <div class="col-md-12">
-                                         
-                                        <input  asp-for="@Model.SelectedShippingOptionId" type="radio"  value="@(Model.ShippingOptions[i].Id)"  />
+
+                                        <input asp-for="@Model.SelectedShippingOptionId" type="radio" value="@(Model.ShippingOptions[i].Id)" description="@Model.ShippingOptions[i].Description" />
                                         
                                         @*<input  type="radio" name="shippingoption" value="@(Model.ShippingOptions[i].Id)"  @(Model.ShippingOptions[i].Selected ? Html.Raw(" checked=\"checked\"") : null) />*@
 
@@ -108,11 +172,11 @@
                             <span asp-validation-for="Insurance"></span>
                         </div>
                     </div>
-                    <button style="margin-bottom:20px" type="submit" asp-route="@EasyPostDefaults.SelectShippingRateAndBuy">
+                    <button style="margin-bottom:20px" id="selectAndBuy"  asp-route="@EasyPostDefaults.SelectShippingRateAndBuy">
                         Select and Buy
                     </button>
                 </div>
-                <button type="submit" asp-route="@EasyPostDefaults.SelectShippingRate"  >
+                <button type="submit" id="selectRate" asp-route="@EasyPostDefaults.SelectShippingRate"  >
                     Select Rate
                 </button>
                 
@@ -167,6 +231,18 @@
             }
         </div>
     </div>
+    <div class="modal fade" id="loadMe" tabindex="-1" role="dialog" aria-labelledby="loadMeLabel">
+      <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+          <div class="modal-body text-center">
+            <div class="loader"></div>
+            <div clas="loader-txt">
+              <p>Loading, Please wait...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     
 }
 else
@@ -178,3 +254,82 @@ else
         });
     </script>
 }
+
+    <style>
+    /** SPINNER CREATION **/
+
+.loader {
+  position: relative;
+  text-align: center;
+  margin: 15px auto 35px auto;
+  z-index: 9999;
+  display: block;
+  width: 80px;
+  height: 80px;
+  border: 10px solid rgba(0, 0, 0, .3);
+  border-radius: 50%;
+  border-top-color: #000;
+  animation: spin 1s ease-in-out infinite;
+  -webkit-animation: spin 1s ease-in-out infinite;
+}
+
+@@keyframes spin {
+  to {
+    -webkit-transform: rotate(360deg);
+  }
+}
+
+@@-webkit-keyframes spin {
+  to {
+    -webkit-transform: rotate(360deg);
+  }
+}
+/** MODAL STYLING **/
+
+.modal-content {
+  border-radius: 0px;
+  box-shadow: 0 0 20px 8px rgba(0, 0, 0, 0.7);
+}
+
+.modal-backdrop.show {
+  opacity: 0.75;
+}
+
+.loader-txt {
+  p {
+    font-size: 13px;
+    color: #666;
+    small {
+      font-size: 11.5px;
+      color: #999;
+    }
+  }
+}
+
+#output {
+  padding: 25px 15px;
+  background: #222;
+  border: 1px solid #222;
+  max-width: 350px;
+  margin: 35px auto;
+  font-family: 'Roboto', sans-serif !important;
+  p.subtle {
+    color: #555;
+    font-style: italic;
+    font-family: 'Roboto', sans-serif !important;
+  }
+  h4 {
+    font-weight: 300 !important;
+    font-size: 1.1em;
+    font-family: 'Roboto', sans-serif !important;
+  }
+  p {
+    font-family: 'Roboto', sans-serif !important;
+    font-size: 0.9em;
+    b {
+      text-transform: uppercase;
+      text-decoration: underline;
+    }
+  }
+}
+    </style>

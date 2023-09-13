@@ -23,6 +23,8 @@ namespace Nop.Plugin.Shipping.EasyPost.Models.Shipment
 
         public string SelectedShippingOptionId { get; set; }
 
+        public string SelectedShippingOptionDescription { get; set; }
+
         public int OrderId { get; set; }
 
         [NopResourceDisplayName("Plugins.Shipping.EasyPost.Shipment.Insurance")]

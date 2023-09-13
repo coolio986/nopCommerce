@@ -866,10 +866,10 @@ namespace Nop.Plugin.Shipping.EasyPost.Controllers
                 isError = true;
             }
 
-            var shippingOption = model.ShippingOptions.FirstOrDefault(x => x.Id == model.SelectedShippingOptionId);
+            //var shippingOption = model.ShippingOptions.FirstOrDefault(x => x.Id == model.SelectedShippingOptionId);
 
             order.ShippingRateComputationMethodSystemName = EasyPostDefaults.SystemName;
-            order.ShippingMethod = shippingOption.Description;
+            order.ShippingMethod = model.SelectedShippingOptionDescription;
 
             var shipmentEntry = await _shipmentService.GetShipmentByIdAsync(model.Id);
             if (shipmentEntry is null)
@@ -913,10 +913,10 @@ namespace Nop.Plugin.Shipping.EasyPost.Controllers
                 isError = true;
             }
 
-            var shippingOption = model.ShippingOptions.FirstOrDefault(x => x.Id == model.SelectedShippingOptionId);
+            //var shippingOption = model.ShippingOptions.FirstOrDefault(x => x.Id == model.SelectedShippingOptionId);
 
             order.ShippingRateComputationMethodSystemName = EasyPostDefaults.SystemName;
-            order.ShippingMethod = shippingOption.Description;
+            order.ShippingMethod = model.SelectedShippingOptionDescription;
 
             var shipmentEntry = await _shipmentService.GetShipmentByIdAsync(model.Id);
             if (shipmentEntry is null)

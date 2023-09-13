@@ -1421,13 +1421,20 @@ namespace Nop.Web.Controllers
                         var guestRole = await _customerService.GetCustomerRoleBySystemNameAsync(NopCustomerDefaults.GuestsRoleName);
                         var registeredRole = await _customerService.GetCustomerRoleBySystemNameAsync(NopCustomerDefaults.RegisteredRoleName);
 
-                        var address = await _customerService.GetCustomerAddressAsync(customer.Id, customer.BillingAddressId ?? 0)
-                        ?? throw new Exception(await _localizationService.GetResourceAsync("Checkout.Address.NotFound"));
+                        var address = await _customerService.GetCustomerAddressAsync(customer.Id, customer.BillingAddressId ?? 0);
+
 
                         var draftOrderAddress = await _customerService.GetAddressesByCustomerIdAsync(draftOrder.CustomerId);
-                        if(draftOrderAddress.Any(x => x.Email == address.Email))
-                        {
 
+                        if (address == null && draftOrderAddress.Any())
+                        {
+                            draftOrderAddress = new List<Address>( draftOrderAddress.ToList().OrderBy(x => x.CreatedOnUtc));
+                            address = draftOrderAddress.FirstOrDefault();
+
+                        }
+
+                        if (draftOrderAddress.Any(x => x.Email == address.Email))
+                        {
                             if (customerRoleIds.Contains(guestRole.Id) && !customerRoleIds.Contains(registeredRole.Id))
                             {
                                 //need to remove any cart items so we can add our own draft items
@@ -1464,11 +1471,12 @@ namespace Nop.Web.Controllers
 
                             }
                         }
+
                     }
 
                 }
             }
-            
+
 
 
             //if (await _customerService.IsGuestAsync(customer) && draftOrderGuid != Guid.Empty)
