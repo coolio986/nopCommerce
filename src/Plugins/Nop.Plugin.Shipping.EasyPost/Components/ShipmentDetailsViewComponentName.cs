@@ -165,7 +165,9 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
             }
             else
             {
-                (shipment, shipmentError) = await _easyPostService.GetShipmentAsync(shipmentId);
+                //not shipped with easypost
+                if(shipmentId != null)
+                    (shipment, shipmentError) = await _easyPostService.GetShipmentAsync(shipmentId);
             }
 
             //this needs to be changed to just "shippingstatus = shipped", remove the computation method

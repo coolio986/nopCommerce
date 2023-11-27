@@ -280,12 +280,12 @@ namespace Nop.Services.Common
             var column1Lines = string.IsNullOrEmpty(pdfSettingsByStore.InvoiceFooterTextColumn1)
                 ? new List<string>()
                 : pdfSettingsByStore.InvoiceFooterTextColumn1
-                    .Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries)
+                    .Split(new[] { Environment.NewLine }, StringSplitOptions.None)
                     .ToList();
             var column2Lines = string.IsNullOrEmpty(pdfSettingsByStore.InvoiceFooterTextColumn2)
                 ? new List<string>()
                 : pdfSettingsByStore.InvoiceFooterTextColumn2
-                    .Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries)
+                    .Split(new[] { Environment.NewLine }, StringSplitOptions.None)
                     .ToList();
 
             if (!column1Lines.Any() && !column2Lines.Any())
@@ -293,12 +293,13 @@ namespace Nop.Services.Common
 
             var totalLines = Math.Max(column1Lines.Count, column2Lines.Count);
             const float margin = 43;
+            const float marginBottom = 7;
 
             //if you have really a lot of lines in the footer, then replace 9 with 10 or 11
             var footerHeight = totalLines * font.Size + 20;
             var directContent = pdfWriter.DirectContent;
-            directContent.MoveTo(pageSize.GetLeft(margin), pageSize.GetBottom(margin) + footerHeight);
-            directContent.LineTo(pageSize.GetRight(margin), pageSize.GetBottom(margin) + footerHeight);
+            directContent.MoveTo(pageSize.GetLeft(margin), pageSize.GetBottom(marginBottom) + footerHeight);
+            directContent.LineTo(pageSize.GetRight(margin), pageSize.GetBottom(marginBottom) + footerHeight);
             directContent.Stroke();
 
             var footerTable = new PdfPTable(2)
@@ -360,7 +361,7 @@ namespace Nop.Services.Common
                 footerTable.AddCell(column);
             }
 
-            footerTable.WriteSelectedRows(0, totalLines, pageSize.GetLeft(margin), pageSize.GetBottom(margin) + footerHeight, directContent);
+            footerTable.WriteSelectedRows(0, totalLines, pageSize.GetLeft(margin), pageSize.GetBottom(marginBottom) + footerHeight, directContent);
         }
 
         /// <summary>
@@ -1047,23 +1048,39 @@ namespace Nop.Services.Common
                 {
                     shippingAddressPdf.AddCell(await GetParagraphAsync("PDFInvoice.Pickup", lang, titleFont));
 
+                    if (_addressSettings.CompanyEnabled)
+                    {
+                        var addressLine = $"{indent}{pickupAddress.Company}";
+                        shippingAddressPdf.AddCell(new Paragraph(addressLine, font));
+                    }
+
                     if (!string.IsNullOrEmpty(pickupAddress.Address1))
                         shippingAddressPdf.AddCell(new Paragraph(
                             $"{indent}{string.Format(await _localizationService.GetResourceAsync("PDFInvoice.Address", lang.Id), pickupAddress.Address1)}",
                             font));
 
-                    if (!string.IsNullOrEmpty(pickupAddress.City))
-                        shippingAddressPdf.AddCell(new Paragraph($"{indent}{pickupAddress.City}", font));
+                    if (_addressSettings.CityEnabled || _addressSettings.StateProvinceEnabled ||
+                        _addressSettings.CountyEnabled || _addressSettings.ZipPostalCodeEnabled)
+                    {
+                        var addressLine = $"{indent}{pickupAddress.City}, " +
+                            //$"{(!string.IsNullOrEmpty(shippingAddress.County) ? $"{shippingAddress.County}, " : string.Empty)}" +
+                            $"{(await _stateProvinceService.GetStateProvinceByAddressAsync(pickupAddress) is StateProvince stateProvince ? await _localizationService.GetLocalizedAsync(stateProvince, x => x.Abbreviation, lang.Id) : string.Empty)} " +
+                            $"{pickupAddress.ZipPostalCode}";
+                        shippingAddressPdf.AddCell(new Paragraph(addressLine, font));
+                    }
 
-                    if (!string.IsNullOrEmpty(pickupAddress.County))
-                        shippingAddressPdf.AddCell(new Paragraph($"{indent}{pickupAddress.County}", font));
+                    //if (!string.IsNullOrEmpty(pickupAddress.City))
+                    //    shippingAddressPdf.AddCell(new Paragraph($"{indent}{pickupAddress.City}", font));
 
-                    if (await _countryService.GetCountryByAddressAsync(pickupAddress) is Country country)
-                        shippingAddressPdf.AddCell(
-                            new Paragraph($"{indent}{await _localizationService.GetLocalizedAsync(country, x => x.Name, lang.Id)}", font));
+                    //if (!string.IsNullOrEmpty(pickupAddress.County))
+                    //    shippingAddressPdf.AddCell(new Paragraph($"{indent}{pickupAddress.County}", font));
 
-                    if (!string.IsNullOrEmpty(pickupAddress.ZipPostalCode))
-                        shippingAddressPdf.AddCell(new Paragraph($"{indent}{pickupAddress.ZipPostalCode}", font));
+                    //if (await _countryService.GetCountryByAddressAsync(pickupAddress) is Country country)
+                    //    shippingAddressPdf.AddCell(
+                    //        new Paragraph($"{indent}{await _localizationService.GetLocalizedAsync(country, x => x.Name, lang.Id)}", font));
+
+                    //if (!string.IsNullOrEmpty(pickupAddress.ZipPostalCode))
+                    //    shippingAddressPdf.AddCell(new Paragraph($"{indent}{pickupAddress.ZipPostalCode}", font));
 
                     shippingAddressPdf.AddCell(new Paragraph(" "));
                 }
@@ -1308,7 +1325,7 @@ namespace Nop.Services.Common
             if (_pdfSettings.LetterPageSizeEnabled)
                 pageSize = PageSize.Letter;
 
-            var doc = new Document(pageSize);
+            var doc = new Document(pageSize, 36, 36, 36, 70);
             var pdfWriter = PdfWriter.GetInstance(doc, stream);
             doc.Open();
 
