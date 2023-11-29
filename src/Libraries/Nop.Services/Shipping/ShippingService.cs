@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 using Nop.Core;
+using Nop.Core.Configuration;
 using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Common;
 using Nop.Core.Domain.Customers;
@@ -46,6 +48,7 @@ namespace Nop.Services.Shipping
         private readonly IStoreContext _storeContext;
         private readonly ShippingSettings _shippingSettings;
         private readonly ShoppingCartSettings _shoppingCartSettings;
+        private readonly AppSettings _appSettings;
 
         #endregion
 
@@ -69,7 +72,8 @@ namespace Nop.Services.Shipping
             IStateProvinceService stateProvinceService,
             IStoreContext storeContext,
             ShippingSettings shippingSettings,
-            ShoppingCartSettings shoppingCartSettings)
+            ShoppingCartSettings shoppingCartSettings,
+            AppSettings appSettings)
         {
             _addressService = addressService;
             _checkoutAttributeParser = checkoutAttributeParser;
@@ -90,6 +94,7 @@ namespace Nop.Services.Shipping
             _storeContext = storeContext;
             _shippingSettings = shippingSettings;
             _shoppingCartSettings = shoppingCartSettings;
+            _appSettings = appSettings;
         }
 
         #endregion
@@ -220,20 +225,20 @@ namespace Nop.Services.Shipping
         public virtual async Task<IList<ShippingMethod>> GetAllShippingMethodsAsync(int? filterByCountryId = null)
         {
             if (filterByCountryId.HasValue && filterByCountryId.Value > 0)
-            { 
+            {
                 return await _shippingMethodRepository.GetAllAsync(query =>
                 {
                     var query1 = from sm in query
-                        join smcm in _shippingMethodCountryMappingRepository.Table on sm.Id equals smcm.ShippingMethodId
-                        where smcm.CountryId == filterByCountryId.Value
-                        select sm.Id;
+                                 join smcm in _shippingMethodCountryMappingRepository.Table on sm.Id equals smcm.ShippingMethodId
+                                 where smcm.CountryId == filterByCountryId.Value
+                                 select sm.Id;
 
                     query1 = query1.Distinct();
 
                     var query2 = from sm in query
-                        where !query1.Contains(sm.Id)
-                        orderby sm.DisplayOrder, sm.Id
-                        select sm;
+                                 where !query1.Contains(sm.Id)
+                                 orderby sm.DisplayOrder, sm.Id
+                                 select sm;
 
                     return query2;
                 }, cache => cache.PrepareKeyForDefaultCache(NopShippingDefaults.ShippingMethodsAllCacheKey, filterByCountryId));
@@ -242,8 +247,8 @@ namespace Nop.Services.Shipping
             return await _shippingMethodRepository.GetAllAsync(query=>
             {
                 return from sm in query
-                    orderby sm.DisplayOrder, sm.Id
-                    select sm;
+                       orderby sm.DisplayOrder, sm.Id
+                       select sm;
             }, cache => default);
         }
 
@@ -283,7 +288,7 @@ namespace Nop.Services.Shipping
 
             var result = await _shippingMethodCountryMappingRepository.Table
                 .AnyAsync(smcm => smcm.ShippingMethodId == shippingMethod.Id && smcm.CountryId == countryId);
-            
+
             return result;
         }
 
@@ -365,11 +370,11 @@ namespace Nop.Services.Shipping
             var warehouses = await _warehouseRepository.GetAllAsync(query=>
             {
                 return from wh in query
-                    orderby wh.Name
-                    select wh;
+                       orderby wh.Name
+                       select wh;
             }, cache => default);
 
-            if (!string.IsNullOrEmpty(name)) 
+            if (!string.IsNullOrEmpty(name))
                 warehouses = warehouses.Where(wh => wh.Name.Contains(name)).ToList();
 
             return warehouses;
@@ -553,7 +558,7 @@ namespace Nop.Services.Shipping
 
             return totalWeight;
         }
-        
+
         /// <summary>
         /// Get total dimensions
         /// </summary>
@@ -881,6 +886,45 @@ namespace Nop.Services.Shipping
                         //clear the shipping options in this case
                         srcmShippingOptions = new List<ShippingOption>();
                         break;
+                    }
+                }
+
+                //remove / ignore shipping options returned by a shipper
+                KeyValuePair<string, JToken>[] kvps = _appSettings.Configuration.ToArray();
+                if (kvps.Any(x => x.Key == "IgnoreShippingRates"))
+                {
+                    KeyValuePair<string, JToken> keyValuePair = kvps.FirstOrDefault(x => x.Key == "IgnoreShippingRates");
+
+                    var children = keyValuePair.Value[srcm.PluginDescriptor.FriendlyName] ?? JToken.FromObject(new object());
+                    if (children.Any())
+                    {
+                        foreach (string child in children)
+                        {
+                            var selectedOption = srcmShippingOptions.FirstOrDefault(x => x.Name == child);
+
+                            if (selectedOption != null)
+                                srcmShippingOptions.Remove(selectedOption);
+
+                        }
+                    }
+                }
+
+                //add transit time adder to base transit time
+                if (kvps.Any(x => x.Key == "ShippingRateTransitTimesBusinessDaysAdder"))
+                {
+                    KeyValuePair<string, JToken> keyValuePair = kvps.FirstOrDefault(x => x.Key == "ShippingRateTransitTimesBusinessDaysAdder");
+
+                    var children = keyValuePair.Value[srcm.PluginDescriptor.FriendlyName] ?? JToken.FromObject(new object());
+                    if (children.Any())
+                    {
+                        foreach (ShippingOption shippingOption in srcmShippingOptions)
+                        {
+                            var child = children[shippingOption.Name];
+                            if (child != null)
+                                shippingOption.TransitDaysAdder = child.Value<int>();
+                            else
+                                shippingOption.TransitDaysAdder = 1;
+                        }
                     }
                 }
 

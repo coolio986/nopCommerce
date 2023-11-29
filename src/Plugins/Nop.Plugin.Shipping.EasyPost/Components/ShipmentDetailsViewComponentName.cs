@@ -165,6 +165,49 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
             }
             else
             {
+                //shipped with easypost, but id is invalid (not sure why) we need to get a new rate
+                if(order.ShippingRateComputationMethodSystemName == EasyPostDefaults.SystemName && shipmentId == null)
+                {
+                    ShippingModel shippingModel = new ShippingModel()
+                    {
+                        OrderId = shipmentEntry.OrderId,
+                        Id = shipmentEntry.Id,
+                        NotifyCustomerOfShipment = true
+                    };
+
+                    await _easyPostService.AdminGetShippingRates(shippingModel);
+
+                    var customer = await _easyPostService.GetCustomerByIdAsync(order.CustomerId);
+                    var fixedShipmentId = await _genericAttributeService.GetAttributeAsync<string>(customer, EasyPostDefaults.ShipmentIdAttribute, order.StoreId);
+                    var (fixedShipment, fixedShipmentError) = await _easyPostService.GetShipmentAsync(fixedShipmentId);
+
+                    if (string.IsNullOrEmpty(fixedShipmentError) && fixedShipment != null)
+                    {
+                        var storeCurrency = await _easyPostService.GetCurrencyByIdAsync(_easyPostService.GetCurrencySettings().PrimaryStoreCurrencyId)
+                        ?? throw new NopException("Primary store currency is not set");
+
+
+                        var easyPostRates = await fixedShipment.rates.SelectAwait(async rate => new ShippingOption
+                        {
+                            Id = rate.id,
+                            Description = string.Format("{0} {1}", rate.carrier, rate.service),
+                            Rate = await _easyPostService.ConvertRateAsync(rate.rate, rate.currency, storeCurrency),
+                            Currency = rate.currency
+                        }).ToListAsync();
+
+                        shippingModel.ShippingOptions = easyPostRates;
+                        shippingModel = _easyPostService.SortShippingOptions(shippingModel);
+                        shippingModel.SelectedShippingOptionId = shippingModel.ShippingOptions.FirstOrDefault()?.Id;
+                    }
+
+                    await _easyPostService.SaveShipmentAsync(order);
+
+                    await _easyPostService.SaveShipmentAsync(shipmentEntry, true);
+
+                    shipmentId = await _genericAttributeService.GetAttributeAsyncWithoutCache<string>(shipmentEntry, EasyPostDefaults.ShipmentIdAttribute);
+
+                }
+                
                 //not shipped with easypost
                 if(shipmentId != null)
                     (shipment, shipmentError) = await _easyPostService.GetShipmentAsync(shipmentId);
@@ -182,105 +225,108 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
                 return View("~/Plugins/Shipping.EasyPost/Views/Shipment/ShipmentDetails.cshtml", model);
             }
 
-            model.ShipmentId = shipment.id;
-
-            //whether the shipment has already been created and purchased
-            if (shipment.selected_rate is not null)
+            if (shipmentId != null)
             {
-                model.Status = shipment.status;
-                model.RefundStatus = shipment.refund_status;
-                model.InvoiceExists = shipment.forms
-                    ?.FirstOrDefault(form => string.Equals(form.form_type, "commercial_invoice", StringComparison.InvariantCultureIgnoreCase))
-                    is not null;
+                model.ShipmentId = shipment.id;
 
-                var rateValue = await _easyPostService.ConvertRateAsync(shipment.selected_rate.rate, shipment.selected_rate.currency);
-                model.RateValue = await _priceFormatter.FormatShippingPriceAsync(rateValue, true);
-                model.RateName = $"{shipment.selected_rate.carrier} {shipment.selected_rate.service}".TrimEnd(' ');
-
-                if (!string.IsNullOrEmpty(shipment.insurance))
+                //whether the shipment has already been created and purchased
+                if (shipment.selected_rate is not null)
                 {
-                    var insurance = await _easyPostService.ConvertRateAsync(shipment.insurance, null);
-                    model.InsuranceValue = await _priceFormatter.FormatShippingPriceAsync(insurance, true);
+                    model.Status = shipment.status;
+                    model.RefundStatus = shipment.refund_status;
+                    model.InvoiceExists = shipment.forms
+                        ?.FirstOrDefault(form => string.Equals(form.form_type, "commercial_invoice", StringComparison.InvariantCultureIgnoreCase))
+                        is not null;
+
+                    var rateValue = await _easyPostService.ConvertRateAsync(shipment.selected_rate.rate, shipment.selected_rate.currency);
+                    model.RateValue = await _priceFormatter.FormatShippingPriceAsync(rateValue, true);
+                    model.RateName = $"{shipment.selected_rate.carrier} {shipment.selected_rate.service}".TrimEnd(' ');
+
+                    if (!string.IsNullOrEmpty(shipment.insurance))
+                    {
+                        var insurance = await _easyPostService.ConvertRateAsync(shipment.insurance, null);
+                        model.InsuranceValue = await _priceFormatter.FormatShippingPriceAsync(insurance, true);
+                    }
+
+                    model.PickupModel = await _easyPostModelFactory
+                        .PreparePickupModelAsync(model.PickupModel, shipmentEntry, null, order.ShippingAddressId);
+                    model.PickupStatus = model.PickupModel.Status;
+
+                    return View("~/Plugins/Shipping.EasyPost/Views/Shipment/ShipmentDetails.cshtml", model);
                 }
 
-                model.PickupModel = await _easyPostModelFactory
-                    .PreparePickupModelAsync(model.PickupModel, shipmentEntry, null, order.ShippingAddressId);
-                model.PickupStatus = model.PickupModel.Status;
+                //prepare shipment rates to select
+                await _easyPostService.ProcessSelectableShippingRates(model, shipment, order.Id);
 
-                return View("~/Plugins/Shipping.EasyPost/Views/Shipment/ShipmentDetails.cshtml", model);
-            }
+                //var (rates, _) = await _easyPostService.GetShippingRatesAsync(shipment, true);
+                //if (rates?.Any() ?? false)
+                //{
+                //    foreach (var rate in rates.OrderBy(rate => rate.Rate))
+                //    {
+                //        var rateName = $"{rate.Carrier} {rate.Service}".TrimEnd(' ');
 
-            //prepare shipment rates to select
-            await _easyPostService.ProcessSelectableShippingRates(model, shipment, order.Id);
+                //        if (rateName.Contains("UPSDAP"))
+                //            rateName = rateName.Replace("DAP", "");
 
-            //var (rates, _) = await _easyPostService.GetShippingRatesAsync(shipment, true);
-            //if (rates?.Any() ?? false)
-            //{
-            //    foreach (var rate in rates.OrderBy(rate => rate.Rate))
-            //    {
-            //        var rateName = $"{rate.Carrier} {rate.Service}".TrimEnd(' ');
+                //        var text = $"{await _priceFormatter.FormatShippingPriceAsync(rate.Rate, true)} {rateName}";
+                //        var selected = string.Equals(rateName, order.ShippingMethod, StringComparison.InvariantCultureIgnoreCase);
+                //        if (selected)
+                //        {
+                //            model.RateId = rate.Id;
+                //            text = $"{text} {await _localizationService.GetResourceAsync("Plugins.Shipping.EasyPost.Shipment.Rate.Selected")}";
+                //        }
+                //        model.AvailableRates.Add(new SelectListItem(text, rate.Id, selected));
 
-            //        if (rateName.Contains("UPSDAP"))
-            //            rateName = rateName.Replace("DAP", "");
+                //        if (rate.TimeInTransit?.Any(pair => pair.DeliveryDays.HasValue) ?? false)
+                //        {
+                //            var timeInTransit = rate.TimeInTransit.ToDictionary(pair => pair.Percentile, pair => pair.DeliveryDays);
+                //            model.SmartRates.Add((rateName, rate.DeliveryDays, timeInTransit));
+                //        }
+                //    }
+                //}
+                //else
+                //{
+                //    var locale = await _localizationService.GetResourceAsync("Plugins.Shipping.EasyPost.Shipment.Rate.None");
+                //    model.AvailableRates.Add(new SelectListItem(locale, string.Empty));
+                //}
 
-            //        var text = $"{await _priceFormatter.FormatShippingPriceAsync(rate.Rate, true)} {rateName}";
-            //        var selected = string.Equals(rateName, order.ShippingMethod, StringComparison.InvariantCultureIgnoreCase);
-            //        if (selected)
-            //        {
-            //            model.RateId = rate.Id;
-            //            text = $"{text} {await _localizationService.GetResourceAsync("Plugins.Shipping.EasyPost.Shipment.Rate.Selected")}";
-            //        }
-            //        model.AvailableRates.Add(new SelectListItem(text, rate.Id, selected));
+                if (shipment.options is not null)
+                {
+                    model.AdditionalHandling = shipment.options.additional_handling ?? false;
+                    model.Alcohol = shipment.options.alcohol ?? false;
+                    model.ByDrone = shipment.options.by_drone ?? false;
+                    model.CarbonNeutral = shipment.options.carbon_neutral ?? false;
+                    model.DeliveryConfirmation = (int)getEnumValue<DeliveryConfirmation>(shipment.options.delivery_confirmation);
+                    model.Endorsement = (int)getEnumValue<Endorsement>(shipment.options.endorsement);
+                    model.HandlingInstructions = shipment.options.handling_instructions;
+                    model.Hazmat = (int)getEnumValue<HazmatType>(shipment.options.hazmat);
+                    model.InvoiceNumber = shipment.options.invoice_number;
+                    model.Machinable = bool.TryParse(shipment.options.machinable, out var machinable) && machinable;
+                    model.PrintCustom1 = shipment.options.print_custom_1;
+                    model.PrintCustomCode1 = (int)getEnumValue<CustomCode>(shipment.options.print_custom_1_code);
+                    model.PrintCustom2 = shipment.options.print_custom_2;
+                    model.PrintCustomCode2 = (int)getEnumValue<CustomCode>(shipment.options.print_custom_2_code);
+                    model.PrintCustom3 = shipment.options.print_custom_3;
+                    model.PrintCustomCode3 = (int)getEnumValue<CustomCode>(shipment.options.print_custom_3_code);
+                    model.SpecialRatesEligibility = (int)getEnumValue<SpecialRate>(shipment.options.special_rates_eligibility);
+                    model.CertifiedMail = shipment.options.certified_mail ?? false;
+                    model.RegisteredMail = shipment.options.registered_mail ?? false;
+                    model.RegisteredMailAmount = Convert.ToDecimal(shipment.options.registered_mail_amount);
+                    model.ReturnReceipt = shipment.options.return_receipt ?? false;
+                }
 
-            //        if (rate.TimeInTransit?.Any(pair => pair.DeliveryDays.HasValue) ?? false)
-            //        {
-            //            var timeInTransit = rate.TimeInTransit.ToDictionary(pair => pair.Percentile, pair => pair.DeliveryDays);
-            //            model.SmartRates.Add((rateName, rate.DeliveryDays, timeInTransit));
-            //        }
-            //    }
-            //}
-            //else
-            //{
-            //    var locale = await _localizationService.GetResourceAsync("Plugins.Shipping.EasyPost.Shipment.Rate.None");
-            //    model.AvailableRates.Add(new SelectListItem(locale, string.Empty));
-            //}
-
-            if (shipment.options is not null)
-            {
-                model.AdditionalHandling = shipment.options.additional_handling ?? false;
-                model.Alcohol = shipment.options.alcohol ?? false;
-                model.ByDrone = shipment.options.by_drone ?? false;
-                model.CarbonNeutral = shipment.options.carbon_neutral ?? false;
-                model.DeliveryConfirmation = (int)getEnumValue<DeliveryConfirmation>(shipment.options.delivery_confirmation);
-                model.Endorsement = (int)getEnumValue<Endorsement>(shipment.options.endorsement);
-                model.HandlingInstructions = shipment.options.handling_instructions;
-                model.Hazmat = (int)getEnumValue<HazmatType>(shipment.options.hazmat);
-                model.InvoiceNumber = shipment.options.invoice_number;
-                model.Machinable = bool.TryParse(shipment.options.machinable, out var machinable) && machinable;
-                model.PrintCustom1 = shipment.options.print_custom_1;
-                model.PrintCustomCode1 = (int)getEnumValue<CustomCode>(shipment.options.print_custom_1_code);
-                model.PrintCustom2 = shipment.options.print_custom_2;
-                model.PrintCustomCode2 = (int)getEnumValue<CustomCode>(shipment.options.print_custom_2_code);
-                model.PrintCustom3 = shipment.options.print_custom_3;
-                model.PrintCustomCode3 = (int)getEnumValue<CustomCode>(shipment.options.print_custom_3_code);
-                model.SpecialRatesEligibility = (int)getEnumValue<SpecialRate>(shipment.options.special_rates_eligibility);
-                model.CertifiedMail = shipment.options.certified_mail ?? false;
-                model.RegisteredMail = shipment.options.registered_mail ?? false;
-                model.RegisteredMailAmount = Convert.ToDecimal(shipment.options.registered_mail_amount);
-                model.ReturnReceipt = shipment.options.return_receipt ?? false;
-            }
-
-            if (shipment.customs_info is not null)
-            {
-                model.UseCustomsInfo = true;
-                model.ContentsType = (int)getEnumValue<ContentsType>(shipment.customs_info.contents_type);
-                model.RestrictionType = (int)getEnumValue<RestrictionType>(shipment.customs_info.restriction_type);
-                model.NonDeliveryOption = (int)getEnumValue<NonDeliveryOption>(shipment.customs_info.non_delivery_option);
-                model.ContentsExplanation = shipment.customs_info.contents_explanation;
-                model.RestrictionComments = shipment.customs_info.restriction_comments;
-                model.CustomsCertify = bool.TryParse(shipment.customs_info.customs_certify, out var customsCertify) && customsCertify;
-                model.CustomsSigner = shipment.customs_info.customs_signer;
-                model.EelPfc = shipment.customs_info.eel_pfc;
+                if (shipment.customs_info is not null)
+                {
+                    model.UseCustomsInfo = true;
+                    model.ContentsType = (int)getEnumValue<ContentsType>(shipment.customs_info.contents_type);
+                    model.RestrictionType = (int)getEnumValue<RestrictionType>(shipment.customs_info.restriction_type);
+                    model.NonDeliveryOption = (int)getEnumValue<NonDeliveryOption>(shipment.customs_info.non_delivery_option);
+                    model.ContentsExplanation = shipment.customs_info.contents_explanation;
+                    model.RestrictionComments = shipment.customs_info.restriction_comments;
+                    model.CustomsCertify = bool.TryParse(shipment.customs_info.customs_certify, out var customsCertify) && customsCertify;
+                    model.CustomsSigner = shipment.customs_info.customs_signer;
+                    model.EelPfc = shipment.customs_info.eel_pfc;
+                }
             }
 
             model.AvailableDeliveryConfirmations = await prepareSelectList(DeliveryConfirmation.None);

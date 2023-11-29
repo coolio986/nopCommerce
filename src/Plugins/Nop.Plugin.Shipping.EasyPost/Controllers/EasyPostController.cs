@@ -802,44 +802,8 @@ namespace Nop.Plugin.Shipping.EasyPost.Controllers
 
             ShippingModel shippingModel = model;
 
-            var address = await _easyPostService.GetAddressByIdAsync(order.ShippingAddressId, order.Id);
+            await _easyPostService.AdminGetShippingRates(shippingModel);
 
-            var cart = await _easyPostService.RebuildShoppingCart(order);
-
-            var (shippingOptionRequests, shippingFromMultipleLocations) = await _easyPostService.CreateShippingOptionRequestsAsync(cart, address, order.StoreId);
-
-            var result = new GetShippingOptionResponse();
-            result.ShippingFromMultipleLocations = shippingFromMultipleLocations;
-
-            var (shippingOptions, response) = await _easyPostService.GetShippingOptionsAsync(shippingOptionRequests, result, shippingModel.Parcel);
-
-            if (response.Success)
-            {
-                var rawShippingOptions = new List<EasyPost.Models.Shipment.ShippingOption>();
-
-                if (response.ShippingOptions.Any())
-                {
-                    foreach (var shippingOption in response.ShippingOptions)
-                    {
-                        rawShippingOptions.Add(new EasyPost.Models.Shipment.ShippingOption
-                        {
-                            Name = shippingOption.Name,
-                            Description = shippingOption.Description,
-                            Rate = shippingOption.Rate,
-                            TransitDays = shippingOption.TransitDays
-                        });
-                    }
-                }
-                else
-                {
-                    foreach (var error in response.Errors)
-                        shippingModel.Errors.Add(error);
-                }
-
-                shippingModel.ShippingOptions = rawShippingOptions;
-
-                shippingModel = _easyPostService.SortShippingOptions(shippingModel);
-            }
             return RedirectToAction("ShipmentDetails", "Order", new { id = shippingModel.Id });
         }
 

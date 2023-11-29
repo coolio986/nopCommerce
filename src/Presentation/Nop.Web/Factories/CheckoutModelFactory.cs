@@ -397,6 +397,8 @@ namespace Nop.Web.Factories
                         DisplayOrder = shippingOption.DisplayOrder ?? 0,
                         ShippingRateComputationMethodSystemName = shippingOption.ShippingRateComputationMethodSystemName,
                         ShippingOption = shippingOption,
+                        TransitDays = shippingOption.TransitDays ?? -1,
+                        TransitDayAdder = shippingOption.TransitDaysAdder ?? 1,
                     };
 
                     //adjust rate

@@ -1487,6 +1487,7 @@ namespace Nop.Web.Factories
                                 Description = shippingOption.Description,
                                 Rate = shippingOption.Rate,
                                 TransitDays = shippingOption.TransitDays,
+                                TransitDaysAdder = shippingOption.TransitDaysAdder,
                                 ShippingRateComputationMethodSystemName = shippingOption.ShippingRateComputationMethodSystemName
                             });
                         }

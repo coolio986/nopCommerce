@@ -2259,9 +2259,55 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
             }
         }
 
-        #endregion
+        public virtual async Task AdminGetShippingRates(ShippingModel model)
+        {
+            var order = await GetOrderByIdAsync(model.OrderId);
 
-        #endregion
-    }
+            ShippingModel shippingModel = model;
+
+            var address = await GetAddressByIdAsync(order.ShippingAddressId, order.Id);
+
+            var cart = await RebuildShoppingCart(order);
+
+            var (shippingOptionRequests, shippingFromMultipleLocations) = await CreateShippingOptionRequestsAsync(cart, address, order.StoreId);
+
+            var result = new GetShippingOptionResponse();
+            result.ShippingFromMultipleLocations = shippingFromMultipleLocations;
+
+            var (shippingOptions, response) = await GetShippingOptionsAsync(shippingOptionRequests, result, shippingModel.Parcel);
+
+            if (response.Success)
+            {
+                var rawShippingOptions = new List<EasyPost.Models.Shipment.ShippingOption>();
+
+                if (response.ShippingOptions.Any())
+                {
+                    foreach (var shippingOption in response.ShippingOptions)
+                    {
+                        rawShippingOptions.Add(new EasyPost.Models.Shipment.ShippingOption
+                        {
+                            Name = shippingOption.Name,
+                            Description = shippingOption.Description,
+                            Rate = shippingOption.Rate,
+                            TransitDays = shippingOption.TransitDays
+                        });
+                    }
+                }
+                else
+                {
+                    foreach (var error in response.Errors)
+                        shippingModel.Errors.Add(error);
+                }
+
+                shippingModel.ShippingOptions = rawShippingOptions;
+
+                shippingModel = SortShippingOptions(shippingModel);
+            }
+        }
+
+            #endregion
+
+            #endregion
+        }
 
 }

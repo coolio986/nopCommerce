@@ -42,13 +42,21 @@
                             </li>*@
                             <li class="list-group-item">
                                 <div class="form-check">
-                                    <input  class="form-check-input" id="shippingoption_@(i)" type="radio" name="shippingoption" value="@(shippingMethod.Name)___@(shippingMethod.ShippingRateComputationMethodSystemName)" checked="@shippingMethod.Selected">
+                                    <input  class="form-check-input" style="margin-top:2px;" id="shippingoption_@(i)" type="radio" name="shippingoption" value="@(shippingMethod.Name)___@(shippingMethod.ShippingRateComputationMethodSystemName)" checked="@shippingMethod.Selected">
                                     <label class="form-check-label-name" for="shippingoption_@(i)">
                                         @shippingMethod.Name
+                                        
                                     </label>
                                     <label class="form-check-label-fee" for="shippingoption_@(i)">
                                         @shippingMethod.Fee
                                     </label>
+                                    @if (shippingMethod.TransitDays != -1)
+                                    {
+                                        <br />
+                                        <span style="float:left;margin-left:18px;font-size:12px">
+                                            @shippingMethod.TransitDays to @(shippingMethod.TransitDays + shippingMethod.TransitDayAdder) business days
+                                        </span>
+                                    }
                                 </div>
                             </li>
                         }
