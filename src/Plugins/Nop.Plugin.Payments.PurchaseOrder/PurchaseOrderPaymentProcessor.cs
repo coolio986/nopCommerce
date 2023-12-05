@@ -102,7 +102,15 @@ namespace Nop.Plugin.Payments.PurchaseOrder
 
             var activeCustomer = await _workContext.GetCurrentCustomerAsync();
             var customerRole = await _customerService.GetCustomerRolesAsync(activeCustomer);
-            if(customerRole != null && customerRole.Any(x => x.Name == NopCustomerDefaults.AdministratorsRoleName))
+            if(_workContext.OriginalCustomerIfImpersonated != null)
+            {
+                var adminRole = await _customerService.GetCustomerRolesAsync(_workContext.OriginalCustomerIfImpersonated);
+                if(adminRole != null && adminRole.Any(x => x.Name == NopCustomerDefaults.AdministratorsRoleName))
+                {
+                    return false;
+                }
+            }
+            if (customerRole != null && customerRole.Any(x => x.Name == NopCustomerDefaults.AdministratorsRoleName))
                 return false;
 
             return true;
