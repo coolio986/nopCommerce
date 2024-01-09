@@ -106,7 +106,7 @@ namespace Nop.Services.Orders
         /// <param name="shipment">Shipment</param>
         /// <param name="notifyCustomer">True to notify customer</param>
         /// <returns>A task that represents the asynchronous operation</returns>
-        Task DeliverAsync(Shipment shipment, bool notifyCustomer);
+        Task DeliverAsync(Shipment shipment, bool notifyCustomer, DateTime? overrideDateTime = null);
 
         /// <summary>
         /// Gets a value indicating whether cancel is allowed

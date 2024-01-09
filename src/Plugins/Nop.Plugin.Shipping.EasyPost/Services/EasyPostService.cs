@@ -453,7 +453,7 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
                 parcel = parcel,
                 customs_info = customsInfo,
                 options = options,
-                
+
             };
 
             if (!_easyPostSettings.UseSandbox && !_easyPostSettings.UseAllAvailableCarriers)
@@ -709,6 +709,27 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
                                     CreatedOnUtc = DateTime.UtcNow
                                 });
 
+
+                                //update DeliveryDateUtc in shipment table
+                                //string shipmentId = await _genericAttributeService.GetAttributeAsyncWithoutCache<string>(shipmentEntry, EasyPostDefaults.ShipmentIdAttribute);
+
+                                //if (string.IsNullOrEmpty(shipmentId))
+                                //{
+                                //Shipment shipment = null;
+                                //string shipmentError = null;
+                                //(shipment, shipmentError) = await GetShipmentAsync(shipmentId);
+                                //if (string.IsNullOrEmpty(shipmentError) && shipment != null && shipment.status.Contains("delivered"))
+                                //{
+                                if (tracker?.tracking_details?.Any() ?? false)
+                                {
+                                    TrackingDetail trackingDetail = tracker.tracking_details.FirstOrDefault(x => x.status.Contains("delivered"));
+                                    //shipmentEntry.DeliveryDateUtc = trackingDetail.datetime;
+                                    //await _shipmentService.UpdateShipmentAsync(shipmentEntry);
+                                    await _orderProcessingService.DeliverAsync(shipmentEntry, true, trackingDetail.datetime);
+                                }
+                                //}
+                                //}
+
                                 break;
                             }
 
@@ -862,15 +883,15 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
                 orderShipment.options.label_format = "PDF";
 
                 Parcel myParcel = null;
-            if (orderShipment.parcel != null && 
-                orderShipment.parcel.length != null && 
-                orderShipment.parcel.width != null && 
-                orderShipment.parcel.height != null && 
-                useParcelFromShipment)
+                if (orderShipment.parcel != null &&
+                    orderShipment.parcel.length != null &&
+                    orderShipment.parcel.width != null &&
+                    orderShipment.parcel.height != null &&
+                    useParcelFromShipment)
                     myParcel = orderShipment.parcel;
                 else
                     myParcel = await PrepareParcelAsync(request, true);
-                
+
                 if (!myParcel.Matches(orderShipment.parcel) || !addressFrom.Matches(orderShipment.from_address))
                 {
                     //if details are not matched, create a specific shipment from the common order shipment
@@ -1296,7 +1317,7 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
                     throw new ArgumentNullException(nameof(shipmentEntry));
 
                 var order = await _orderService.GetOrderByIdAsync(shipmentEntry.OrderId);
-                
+
 
                 //clear attributes of the deleted entry
                 await _genericAttributeService.SaveAttributeAsync<string>(shipmentEntry, EasyPostDefaults.ShipmentIdAttribute, null);
@@ -2305,9 +2326,9 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
             }
         }
 
-            #endregion
+        #endregion
 
-            #endregion
-        }
+        #endregion
+    }
 
 }
