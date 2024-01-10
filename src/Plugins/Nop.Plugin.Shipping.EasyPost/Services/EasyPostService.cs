@@ -36,6 +36,7 @@ using Nop.Core.Domain.Shipping;
 using Shipment = EasyPost.Shipment;
 using Nop.Plugin.Shipping.EasyPost.Models.Shipment;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Nop.Services.Helpers;
 
 namespace Nop.Plugin.Shipping.EasyPost.Services
 {
@@ -725,7 +726,7 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
                                     TrackingDetail trackingDetail = tracker.tracking_details.FirstOrDefault(x => x.status.Contains("delivered"));
                                     //shipmentEntry.DeliveryDateUtc = trackingDetail.datetime;
                                     //await _shipmentService.UpdateShipmentAsync(shipmentEntry);
-                                    await _orderProcessingService.DeliverAsync(shipmentEntry, true, trackingDetail.datetime);
+                                    await _orderProcessingService.DeliverAsync(shipmentEntry, true,  trackingDetail.datetime.Value.ToUniversalTime());
                                 }
                                 //}
                                 //}
