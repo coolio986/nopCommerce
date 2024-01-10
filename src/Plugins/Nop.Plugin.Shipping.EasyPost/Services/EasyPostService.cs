@@ -77,6 +77,7 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
         private readonly IOrderProcessingService _orderProcessingService;
         private readonly ICustomerActivityService _customerActivityService;
         private readonly IPriceFormatter _priceFormatter;
+        private readonly IDateTimeHelper _dateTimeHelper;
 
         private static bool? _isConfigured;
 
@@ -113,7 +114,8 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
             IPriceCalculationService priceCalculationService,
             IOrderProcessingService orderProcessingService,
             ICustomerActivityService customerActivityService,
-            IPriceFormatter priceFormatter)
+            IPriceFormatter priceFormatter, 
+            IDateTimeHelper dateTimeHelper)
         {
             _currencySettings = currencySettings;
             _easyPostSettings = easyPostSettings;
@@ -145,6 +147,7 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
             _orderProcessingService = orderProcessingService;
             _customerActivityService = customerActivityService;
             _priceFormatter = priceFormatter;
+            _dateTimeHelper = dateTimeHelper;
         }
 
         #endregion
@@ -710,26 +713,27 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
                                     CreatedOnUtc = DateTime.UtcNow
                                 });
 
-
-                                //update DeliveryDateUtc in shipment table
-                                //string shipmentId = await _genericAttributeService.GetAttributeAsyncWithoutCache<string>(shipmentEntry, EasyPostDefaults.ShipmentIdAttribute);
-
-                                //if (string.IsNullOrEmpty(shipmentId))
-                                //{
-                                //Shipment shipment = null;
-                                //string shipmentError = null;
-                                //(shipment, shipmentError) = await GetShipmentAsync(shipmentId);
-                                //if (string.IsNullOrEmpty(shipmentError) && shipment != null && shipment.status.Contains("delivered"))
-                                //{
-                                if (tracker?.tracking_details?.Any() ?? false)
+                                try
                                 {
-                                    TrackingDetail trackingDetail = tracker.tracking_details.FirstOrDefault(x => x.status.Contains("delivered"));
-                                    //shipmentEntry.DeliveryDateUtc = trackingDetail.datetime;
-                                    //await _shipmentService.UpdateShipmentAsync(shipmentEntry);
-                                    await _orderProcessingService.DeliverAsync(shipmentEntry, true,  trackingDetail.datetime.Value.ToUniversalTime());
+                                    if (tracker?.tracking_details?.Any() ?? false)
+                                    {
+                                        TrackingDetail trackingDetail = tracker.tracking_details.FirstOrDefault(x => x.status.Contains("delivered"));
+                                        if (trackingDetail != null)
+                                        {
+                                            TimeZoneInfo timeZone = _dateTimeHelper.DefaultStoreTimeZone;
+                                            TimeSpan baseUtcOffset = timeZone.BaseUtcOffset;
+                                            int hoursAdder = -1 * baseUtcOffset.Hours;
+                                            var hours = trackingDetail.datetime.Value.AddHours(hoursAdder);
+                                            await _orderProcessingService.DeliverAsync(shipmentEntry, true, hours);
+                                        }
+                                    }
                                 }
-                                //}
-                                //}
+                                catch (Exception ex)
+                                {
+                                    throw new NopException($"Failed to deserialize tracker from the webhook request {Environment.NewLine}Stack Trace: {ex.InnerException} {Environment.NewLine}Raw request: {rawRequestString}", ex  );
+                                }
+
+
 
                                 break;
                             }
@@ -800,7 +804,7 @@ namespace Nop.Plugin.Shipping.EasyPost.Services
                 }
                 catch (Exception exception)
                 {
-                    throw new NopException("Failed to deserialize data from the webhook request", exception);
+                    throw new NopException($"Failed to deserialize data from the webhook request {Environment.NewLine}Exception: {exception.InnerException} {Environment.NewLine}Raw request: {rawRequestString}", exception);
                 }
 
                 return true;
