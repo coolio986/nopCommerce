@@ -1,0 +1,15 @@
+﻿@model ProductDetailsModel
+
+<nop-card asp-name="product-HTMLSnippets" asp-icon="fas fa-code" asp-title="HTMLSnippets" asp-hide-block-attribute-name="HTMLSnippets.HideProductBlock" asp-hide="false" asp-advanced="false">
+    
+    <div class="form-group row">
+        <div class="col-md-3">
+            <nop-label asp-for="SelectedSnippet" />
+        </div>
+        <div class="col-md-9">
+            <nop-select asp-for="SelectedSnippet" asp-items="Model.AvailableSnippets" />
+            <span asp-validation-for="SelectedSnippet"></span>
+        </div>
+    </div>
+    
+</nop-card>
