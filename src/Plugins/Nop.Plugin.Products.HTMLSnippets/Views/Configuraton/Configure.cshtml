@@ -1,0 +1,149 @@
+﻿@model ConfigurationModel
+
+@{
+    Layout = "_ConfigurePlugin";
+}
+
+<script>
+    jQuery(document).ready(function ($) {
+        var index = @Model.Snippets.Count();
+            $('#AddHTMLSnippet').on('click', function ()  {
+                jQuery.get('/Admin/HTMLSnippets/AddSnippet', {index: index}).done(function (html) {
+                    $('#snippetContainer').append(html);
+                });
+            });
+        
+        });
+
+        function deleteMySnippet(rowName){
+                //jQuery.get('/Admin/HTMLSnippets/RemoveSnippet', {index: indexId});
+                jQuery('#' + rowName).remove();
+                var allNameSnippetRows = jQuery('input[id^="Snippets_"][id$="__Name"]');
+                var allNameHTMLRows = jQuery('textarea[id^="Snippets_"][id$="__HTML"]');
+                console.log(allNameSnippetRows);
+                console.log(allNameHTMLRows);
+
+                allNameSnippetRows.each(function( index ){
+                    console.log(allNameSnippetRows[index].id);
+                    allNameSnippetRows[index].id = 'Snippets_' + index + '__Name';
+                    allNameSnippetRows[index].name = 'Snippets[' + index + '].Name';
+                });
+
+                allNameHTMLRows.each(function( index ){
+                    console.log(allNameHTMLRows[index].id);
+                    allNameHTMLRows[index].id = 'Snippets_' + index + '__HTML';
+                    allNameHTMLRows[index].name = 'Snippets[' + index + '].HTML';
+                });
+
+            };
+        
+    
+    
+
+    //$(document).ready(function () {
+    //    $('#AddHTMLSnippet').click(function () { 
+    //        var postdata={
+    //            data: '@Model.SerializedSettings'
+    //        };
+    //        $.ajax({
+    //            cache: false,
+    //            type: "get",
+    //            url: "@Url.Action("AddSnippet", "HTMLSnippets")",
+    //            data: postdata,
+    //            dataType: 'json',
+    //            success: function (data) {
+    //              $('#snippetContainer').append(data);
+    //            },
+    //            error: function (jqXHR, textStatus, errorThrown) {
+    //                $("#statesAlert").click();
+    //            }
+    //        });
+    //        });
+    //});
+
+    
+</script>
+
+<form asp-controller="HTMLSnippets" asp-action="Configure" method="post" id='snippetForm'>
+    <div class="cards-group">
+
+
+        <div class="card card-default no-margin">
+            <div class="card-header">
+                @T("Plugins.Product.HTMLSnippets.Configuration.Header")
+            </div>
+            <div class="card-body">
+                <div class="form-group row">
+                    <div class="col-md-3">
+                        <nop-label asp-for="PluginEnabled" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-editor asp-for="PluginEnabled" />
+                        <span asp-validation-for="PluginEnabled"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card card-default no-margin">
+            <div class="card-body">
+                <div id="snippetContainer">
+               
+                    @for (int i = 0; i < Model.Snippets.Count(); i++) {
+                        string myRowName = string.Format("{0}{1}", "SnippetRow_", i); 
+                        <div id="@myRowName">
+                            <div class="form-group row">
+                                @* @Html.EditorFor(modelItem => modelItem.Snippets[i].Name)
+                                @Html.EditorFor(modelItem => modelItem.Snippets[i].HTML)*@
+                                <div class="col-md-3">
+                                    <nop-label asp-for="Snippets[i].Name" />
+                                </div>
+                                <div class="col-md-6">
+                                    <input class="form-control text-box single-line" asp-for="Snippets[i].Name" type="text">
+                                    <span asp-validation-for="Snippets[i].Name"></span>
+                                </div>
+                                <div class="col-md-1">
+                                        <button type="button" name="delete" onclick='deleteMySnippet("@myRowName")' class="btn bg-red">
+                                        <i class="far fa-trash-alt"></i>
+                                    </button>    
+                                </div>
+                                
+                            </div>
+                            <div class="form-group row">
+                                <div class="col-md-3">
+                                        <nop-label asp-for="Snippets[i].HTML" />
+                                </div>
+                                <div class="col-md-6">
+                                    <textarea rows="4" cols="50" class="form-control text-box single-line" asp-for="Snippets[i].HTML" type="text"></textarea>
+                                    <span asp-validation-for="Snippets[i].HTML"></span>
+                                </div>
+                            </div>
+                        </div>
+                       
+                   }
+               </div>
+           </div>
+       </div>
+
+        <div class="form-group row">
+            <div class="col-md-1">
+                <button id="AddHTMLSnippet" type="button" name="add" class="btn btn-primary">Add Snippet</button>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" name="save" class="btn btn-primary">@T("Admin.Common.Save")</button>
+            </div>
+        </div>
+
+        @*<form asp-action="Configure" method="post">
+            <div class="form-group row">
+                <button asp-action="AddSnippet" asp-route-Model="@Model.SerializedSettings" class="btn btn-primary">Add Snippet</button>
+            </div>
+        </form>*@
+                
+
+        
+
+    </div>
+    
+</form>
+
+           

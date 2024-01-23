@@ -1,0 +1,29 @@
+﻿@model Snippet
+@{
+    Layout = null;
+}
+
+<div class="form-group row">
+    <div class="col-md-3">
+        <nop-label asp-for="Name" />
+    </div>
+    <div class="col-md-6">
+        <input class="form-control text-box single-line" id="@String.Format("{0}{1}{2}", "Snippets_", @Model.Index, "__Name")" name="@String.Format("{0}{1}{2}", "Snippets[", @Model.Index, "].Name")"  type="text">
+        <span asp-validation-for="Name"></span>
+    </div>
+</div>
+<div class="form-group row">
+     <div class="col-md-3">
+        <nop-label asp-for="HTML" />
+    </div>
+    <div class="col-md-6">
+        <textarea rows="4" cols="50" class="form-control text-box single-line" id="@String.Format("{0}{1}{2}", "Snippets_", @Model.Index, "__HTML")" name="@String.Format("{0}{1}{2}", "Snippets[", @Model.Index, "].HTML")"  type="text"></textarea>
+        <span asp-validation-for="HTML"></span>
+    </div>
+</div>
+
+
+@*<div class="form-group row">
+    @Html.EditorFor(x => x.Name)
+    @Html.EditorFor(x => x.HTML)
+</div>*@
