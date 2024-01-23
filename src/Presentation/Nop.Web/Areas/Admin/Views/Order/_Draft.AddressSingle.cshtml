@@ -1,0 +1,62 @@
+﻿@model AddressModel
+
+@inject IStateProvinceService stateProvinceService
+@inject ICountryService countryService
+@inject IAddressService addressService
+
+@using Nop.Services.Directory;
+
+@{
+    var orderStatusId = ViewBag.OrderStatusId;
+
+}
+
+
+
+
+<input type="hidden" id="shippingAddress.Id" name="shippingAddress.Id" value="@Model.Id">
+
+<div class="d-flex justify-content-between">
+    <div class="col-md-8">
+        <span>@Model.FirstName @Model.LastName</span>
+    </div>
+    <div class="col-md-4">
+        @if (orderStatusId == 0)
+        {
+            <button type="button" class="btn btn-primary" onclick="changeAddress()" style="background:unset;border:0;padding-top:inherit;padding-bottom:4px">
+                <span style="color:#2c6ecb"> Change</span>
+
+            </button>
+        }
+        else
+        {
+            <span style="color:black;background:unset;border:0;padding-top:inherit;padding-bottom:4px;display:flex"> (Unsaved)</span>
+        }
+    </div>
+</div>
+<div class="col-md-12">
+    <span>@Model.Address1</span>
+</div>
+<div class="col-md-12">
+    <span>@Model.Address2</span>
+</div>
+<div class="col-md-12">
+    @{
+        var stateprovincebilling = await stateProvinceService.GetStateProvinceByIdAsync((int)Model.StateProvinceId);
+    }
+    <span>@Model.City @stateprovincebilling?.Abbreviation, @Model.ZipPostalCode</span>
+</div>
+<div class="col-md-12">
+    @{
+        var countrybilling = await countryService.GetCountryByIdAsync((int)Model.CountryId);
+    }
+    <span>@countrybilling?.ThreeLetterIsoCode</span>
+</div>
+
+<script>
+    function changeAddress() {
+
+        var searchSnippet = $('#searchSnippet').html();
+        $('#customerSearchResults').html(searchSnippet);
+    };
+</script>

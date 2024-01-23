@@ -137,6 +137,14 @@ public partial interface IOrderService
     SortedDictionary<decimal, decimal> ParseTaxRates(Order order, string taxRatesStr);
 
     /// <summary>
+    /// Parse tax rates
+    /// </summary>
+    /// <param name="order">Draft Order</param>
+    /// <param name="taxRatesStr"></param>
+    /// <returns>Rates</returns>
+    SortedDictionary<decimal, decimal> ParseTaxRates(DraftOrder order, string taxRatesStr);
+
+    /// <summary>
     /// Gets a value indicating whether an order has items to be added to a shipment
     /// </summary>
     /// <param name="order">Order</param>

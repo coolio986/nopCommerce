@@ -41,11 +41,11 @@
                     }
                     <option value="" selected="@Model.NewAddressPreselected">@T("Checkout.NewAddress")</option>
                 </select>
+                <div>
+                    <button id="edit-billing-address-button" type="button" class="button-1" style="display: none" onclick="Billing.editAddress('@(storeLocation)checkout/GetAddressById/'); return false;">@T("Common.Edit")</button>
 
-                <button id="edit-billing-address-button" type="button" class="button-1" style="display: none" onclick="Billing.editAddress('@(storeLocation)checkout/GetAddressById/'); return false;">@T("Common.Edit")</button>
-
-                <button id="delete-billing-address-button" type="button" class="button-1" style="display: none" onclick="Billing.deleteAddress('@(storeLocation)checkout/DeleteEditBillingAddress/'); return false;">@T("Common.Delete")</button>
-        
+                    <button id="delete-billing-address-button" type="button" class="button-1" style="display: none" onclick="Billing.deleteAddress('@(storeLocation)checkout/DeleteEditBillingAddress/'); return false;">@T("Common.Delete")</button>
+                </div>
             </div>
         </div>
     }

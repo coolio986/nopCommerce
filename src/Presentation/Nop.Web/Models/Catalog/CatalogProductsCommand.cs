@@ -37,5 +37,7 @@ public partial record CatalogProductsCommand : BasePageableModel
     /// </summary>
     public string ViewMode { get; set; }
 
+    public bool ShowInStockOnly { get; set; }
+
     #endregion
 }

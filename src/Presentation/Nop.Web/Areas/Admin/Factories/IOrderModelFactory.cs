@@ -23,6 +23,16 @@ public partial interface IOrderModelFactory
     Task<OrderSearchModel> PrepareOrderSearchModelAsync(OrderSearchModel searchModel);
 
     /// <summary>
+    /// Prepare draft order search model
+    /// </summary>
+    /// <param name="searchModel">Draft order search model</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation
+    /// The task result contains the order search model
+    /// </returns>
+    Task<DraftOrderSearchModel> PrepareDraftOrderSearchModelAsync(DraftOrderSearchModel searchModel);
+
+    /// <summary>
     /// Prepare paged order list model
     /// </summary>
     /// <param name="searchModel">Order search model</param>
@@ -31,6 +41,16 @@ public partial interface IOrderModelFactory
     /// The task result contains the order list model
     /// </returns>
     Task<OrderListModel> PrepareOrderListModelAsync(OrderSearchModel searchModel);
+
+    /// <summary>
+    /// Prepare paged draft order list model
+    /// </summary>
+    /// <param name="searchModel">Draft order search model</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation
+    /// The task result contains the order list model
+    /// </returns>
+    Task<DraftOrderListModel> PrepareDraftOrderListModelAsync(DraftOrderSearchModel searchModel);
 
     /// <summary>
     /// Prepare order aggregator model
@@ -53,6 +73,18 @@ public partial interface IOrderModelFactory
     /// The task result contains the order model
     /// </returns>
     Task<OrderModel> PrepareOrderModelAsync(OrderModel model, Order order, bool excludeProperties = false);
+
+    /// <summary>
+    /// Prepare draft order model
+    /// </summary>
+    /// <param name="model">Draft order model</param>
+    /// <param name="order">Draft order</param>
+    /// <param name="excludeProperties">Whether to exclude populating of some properties of model</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation
+    /// The task result contains the draft order model
+    /// </returns>
+    Task<DraftOrderModel> PrepareDraftOrderModelAsync(DraftOrderModel model, DraftOrder order, bool excludeProperties = false);
 
     /// <summary>
     /// Prepare upload license model
@@ -78,6 +110,17 @@ public partial interface IOrderModelFactory
     Task<AddProductToOrderSearchModel> PrepareAddProductToOrderSearchModelAsync(AddProductToOrderSearchModel searchModel, Order order);
 
     /// <summary>
+    /// Prepare product search model to add to the draft order
+    /// </summary>
+    /// <param name="searchModel">Product search model to add to the draft order</param>
+    /// <param name="order">Draft order</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation
+    /// The task result contains the product search model to add to the draft order
+    /// </returns>
+    Task<AddProductToDraftOrderSearchModel> PrepareAddProductToDraftOrderSearchModelAsync(AddProductToDraftOrderSearchModel searchModel, DraftOrder order);
+
+    /// <summary>
     /// Prepare paged product list model to add to the order
     /// </summary>
     /// <param name="searchModel">Product search model to add to the order</param>
@@ -87,6 +130,25 @@ public partial interface IOrderModelFactory
     /// The task result contains the product search model to add to the order
     /// </returns>
     Task<AddProductToOrderListModel> PrepareAddProductToOrderListModelAsync(AddProductToOrderSearchModel searchModel, Order order);
+
+    /// <summary>
+    /// Prepare paged product list model to add to the draft order
+    /// </summary>
+    /// <param name="searchModel">Product search model to add to the draft order</param>
+    /// <param name="order">Draft order</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation
+    /// The task result contains the product search model to add to the draft order
+    /// </returns>
+    Task<AddProductToOrderListModel> PrepareAddProductToDraftOrderListModelAsync(AddProductToDraftOrderSearchModel searchModel, DraftOrder order);
+
+    /// <summary>
+    /// Update order totals
+    /// </summary>
+    /// <param name="model">Draft Order model</param>
+    /// <param name="order">Draft Order</param>
+    /// <returns>A task that represents the asynchronous operation</returns>
+    Task UpdateOrderModelTotalsAsync(DraftOrder order, DraftOrderModel orderModel);
 
     /// <summary>
     /// Prepare product model to add to the order

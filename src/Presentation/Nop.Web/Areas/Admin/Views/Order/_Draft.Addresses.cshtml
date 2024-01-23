@@ -1,0 +1,42 @@
+﻿@model List<CustomerModel>
+
+<div class="row">
+    <div class="col-12">
+        <div class="list-group" id="list-tab" role="tablist" style="height:440px;overflow-y:auto;float:left;position:relative;margin-left:-5px;">
+            @{
+                int counter = 0;
+            }
+            @foreach (CustomerModel customerModel in Model)
+            {
+                <a class="list-group-item list-group-item-action" id="list-@counter" data-toggle="list" role="tab" aria-controls="home" style="cursor:pointer" onclick="addressSelected(@customerModel.Id)">
+                    <div class="col-md-12">
+                        @*<span>@customerModel.FirstName @customerModel.LastName</span>*@
+                        <span>@customerModel.FullName</span>
+                    </div>
+                    <div class="col-md-12">
+                        <span>@customerModel.Email</span>
+                    </div>
+                    @*<div class="col-md-12">
+                        <span>@addressModel.Address1</span>
+                    </div>
+                    <div class="col-md-12">
+                        <span>@addressModel.Address2</span>
+                    </div>
+                    <div class="col-md-12">
+                        @{
+                            var stateprovincebilling = await stateProvinceService.GetStateProvinceByIdAsync((int)addressModel.StateProvinceId);
+                        }
+                        <span>@addressModel.City @stateprovincebilling.Abbreviation, @addressModel.ZipPostalCode</span>
+                    </div>
+                    <div class="col-md-12">
+                        @{
+                            var countrybilling = await countryService.GetCountryByIdAsync((int)addressModel.CountryId);
+                        }
+                        <span>@countrybilling.ThreeLetterIsoCode</span>
+                    </div>*@
+                </a>
+                counter++;
+            }
+        </div>
+    </div>
+</div>

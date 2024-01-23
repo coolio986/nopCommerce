@@ -118,6 +118,11 @@ textarea {
   min-height: 150px;
 }
 
+dd > textarea {
+  min-height: 50px;
+  min-width: 400px;
+}
+
 select {
   min-width: 50px;
   height: 32px; /*safari padding fix*/

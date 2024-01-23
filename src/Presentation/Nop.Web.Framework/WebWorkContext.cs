@@ -503,6 +503,61 @@ public partial class WebWorkContext : IWorkContext
     }
 
     /// <summary>
+    /// Get nop draft order cookie
+    /// </summary>
+    /// <returns>String value of cookie</returns>
+    public virtual string GetDraftOrderCookie()
+    {
+        var cookieName = $"{NopCookieDefaults.Prefix}{NopCookieDefaults.DraftOrderCookie}";
+        return _httpContextAccessor.HttpContext?.Request?.Cookies[cookieName];
+    }
+
+    /// <summary>
+    /// Set draft order cookie
+    /// </summary>
+    /// <param name="draftOrderGuid">draftOrderGuid</param>
+    public virtual void SetDraftOrderCookie(Guid draftOrderGuid)
+    {
+        if (_httpContextAccessor.HttpContext?.Response?.HasStarted ?? true)
+            return;
+
+        //delete current cookie value
+        var cookieName = $"{NopCookieDefaults.Prefix}{NopCookieDefaults.DraftOrderCookie}";
+        _httpContextAccessor.HttpContext.Response.Cookies.Delete(cookieName);
+
+        //get date of cookie expiration
+        var cookieExpires = _cookieSettings.CustomerCookieExpires;
+        var cookieExpiresDate = DateTime.Now.AddHours(cookieExpires);
+
+        //if passed guid is empty set cookie as expired
+        if (draftOrderGuid == Guid.Empty)
+            cookieExpiresDate = DateTime.Now.AddMonths(-1);
+
+        //set new cookie value
+        var options = new CookieOptions
+        {
+            HttpOnly = true,
+            Expires = cookieExpiresDate,
+            Secure = _webHelper.IsCurrentConnectionSecured()
+        };
+        _httpContextAccessor.HttpContext.Response.Cookies.Append(cookieName, draftOrderGuid.ToString(), options);
+    }
+
+    /// <summary>
+    /// Delete draft order cookie
+    /// </summary>
+    public virtual void DeleteDraftOrderCookie()
+    {
+        if (_httpContextAccessor.HttpContext?.Response?.HasStarted ?? true)
+            return;
+
+        //delete current cookie value
+        var cookieName = $"{NopCookieDefaults.Prefix}{NopCookieDefaults.DraftOrderCookie}";
+        _httpContextAccessor.HttpContext.Response.Cookies.Delete(cookieName);
+
+    }
+
+    /// <summary>
     /// Gets or sets value indicating whether we're in admin area
     /// </summary>
     public virtual bool IsAdmin { get; set; }

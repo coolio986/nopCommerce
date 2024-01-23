@@ -12,8 +12,14 @@ public partial record MiniShoppingCartModel : BaseNopModel
 
     public IList<ShoppingCartItemModel> Items { get; set; }
     public int TotalProducts { get; set; }
+    public string ShippingTotal { get; set; }
+    public decimal ShippingTotalValue { get; set; }
+    public string Tax { get; set; }
+    public decimal TaxValue { get; set; }
     public string SubTotal { get; set; }
     public decimal SubTotalValue { get; set; }
+    public string RewardPointsTotal { get; set; }
+    public int RewardPoints { get; set; }
     public bool DisplayShoppingCartButton { get; set; }
     public bool DisplayCheckoutButton { get; set; }
     public bool CurrentCustomerIsGuest { get; set; }

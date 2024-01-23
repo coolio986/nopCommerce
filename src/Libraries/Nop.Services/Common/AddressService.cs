@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Collections;
+using System.Net;
 using System.Text.RegularExpressions;
 using Nop.Core.Domain.Common;
 using Nop.Data;
@@ -76,6 +77,43 @@ public partial class AddressService : IAddressService
             select a;
 
         return await query.CountAsync();
+    }
+
+    /// <summary>
+    /// Gets address by first name
+    /// </summary>
+    /// <param name="firstName">Customer first name</param>
+    /// <param name="lirstName">Customer last name (optional)</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation
+    /// The task result contains an address
+    /// </returns>
+    public virtual async Task<IEnumerable<Address>> GetAddressesByName(string firstName = null, string lastName = null)
+    {
+        IQueryable<Address> query = _addressRepository.Table;
+
+        if (!string.IsNullOrEmpty(firstName))
+            query = query.Where(a => a.FirstName == firstName);
+
+        if (!string.IsNullOrEmpty(lastName))
+            query = query.Where(a => a.LastName == lastName);
+
+        return await query.ToListAsync();
+    }
+
+    /// <summary>
+    /// Gets address by email address
+    /// </summary>
+    /// <param name="email">Customer email address</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation
+    /// The task result contains an address
+    /// </returns>
+    public virtual async Task<IEnumerable<Address>> GetAddressesByEmail(string email)
+    {
+        var query = _addressRepository.Table.Where(a => a.Email == email);
+
+        return await query.ToListAsync();
     }
 
     /// <summary>
@@ -311,6 +349,37 @@ public partial class AddressService : IAddressService
         };
 
         return addr;
+    }
+
+    public virtual bool IsEqualTo(object address1, object address2, params string[] ignore)
+    {
+        if (address1 != null && address2 != null)
+        {
+            List<string> ignoreList = new List<string>(ignore);
+
+            Type type = address1.GetType();
+            foreach (System.Reflection.PropertyInfo pi in type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+            {
+
+                object selfValue = type.GetProperty(pi.Name).GetValue(address1, null);
+                Type selfType = selfValue?.GetType();
+                object toValue = type.GetProperty(pi.Name).GetValue(address2, null);
+                if (!typeof(ICollection).IsAssignableFrom(selfType))
+                {
+                    if (!ignoreList.Contains(pi.Name))
+                    {
+                        if (selfValue != toValue && (selfValue == null || !selfValue.Equals(toValue)))
+                        {
+                            return false;
+                        }
+                    }
+                }
+
+            }
+            return true;
+        }
+
+        return address1 == address2;
     }
 
     /// <summary>

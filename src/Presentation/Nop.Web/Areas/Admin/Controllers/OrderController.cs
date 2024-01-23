@@ -1,9 +1,12 @@
 ﻿using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Nop.Core;
 using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Common;
+using Nop.Core.Domain.Customers;
+using Nop.Core.Domain.Discounts;
 using Nop.Core.Domain.Orders;
 using Nop.Core.Domain.Shipping;
 using Nop.Core.Events;
@@ -11,6 +14,7 @@ using Nop.Services.Attributes;
 using Nop.Services.Catalog;
 using Nop.Services.Common;
 using Nop.Services.Customers;
+using Nop.Services.Discounts;
 using Nop.Services.ExportImport;
 using Nop.Services.Helpers;
 using Nop.Services.Localization;
@@ -22,6 +26,9 @@ using Nop.Services.Security;
 using Nop.Services.Shipping;
 using Nop.Web.Areas.Admin.Factories;
 using Nop.Web.Areas.Admin.Infrastructure.Mapper.Extensions;
+using Nop.Web.Areas.Admin.Models.Catalog;
+using Nop.Web.Areas.Admin.Models.Common;
+using Nop.Web.Areas.Admin.Models.Customers;
 using Nop.Web.Areas.Admin.Models.Orders;
 using Nop.Web.Areas.Admin.Models.Reports;
 using Nop.Web.Framework.Controllers;
@@ -49,6 +56,7 @@ public partial class OrderController : BaseAdminController
     protected readonly IOrderModelFactory _orderModelFactory;
     protected readonly IOrderProcessingService _orderProcessingService;
     protected readonly IOrderService _orderService;
+    protected readonly IDraftOrderService _draftOrderService;
     protected readonly IPaymentService _paymentService;
     protected readonly IPdfService _pdfService;
     protected readonly IPermissionService _permissionService;
@@ -64,6 +72,8 @@ public partial class OrderController : BaseAdminController
     protected readonly IWorkContext _workContext;
     protected readonly IWorkflowMessageService _workflowMessageService;
     protected readonly OrderSettings _orderSettings;
+    protected readonly IProductTemplateService _productTemplateService;
+    protected readonly IDiscountService _discountService;
     private static readonly char[] _separator = [','];
 
     #endregion
@@ -85,6 +95,7 @@ public partial class OrderController : BaseAdminController
         IOrderModelFactory orderModelFactory,
         IOrderProcessingService orderProcessingService,
         IOrderService orderService,
+        IDraftOrderService draftOrderService,
         IPaymentService paymentService,
         IPdfService pdfService,
         IPermissionService permissionService,
@@ -99,7 +110,9 @@ public partial class OrderController : BaseAdminController
         IStoreContext storeContext,
         IWorkContext workContext,
         IWorkflowMessageService workflowMessageService,
-        OrderSettings orderSettings)
+        OrderSettings orderSettings,
+        IProductTemplateService productTemplateService,
+        IDiscountService discountService)
     {
         _addressService = addressService;
         _addressAttributeParser = addressAttributeParser;
@@ -116,6 +129,7 @@ public partial class OrderController : BaseAdminController
         _orderModelFactory = orderModelFactory;
         _orderProcessingService = orderProcessingService;
         _orderService = orderService;
+        _draftOrderService = draftOrderService;
         _paymentService = paymentService;
         _pdfService = pdfService;
         _permissionService = permissionService;
@@ -131,6 +145,8 @@ public partial class OrderController : BaseAdminController
         _workContext = workContext;
         _workflowMessageService = workflowMessageService;
         _orderSettings = orderSettings;
+        _productTemplateService = productTemplateService;
+        _discountService = discountService;
     }
 
     #endregion
@@ -1858,6 +1874,617 @@ public partial class OrderController : BaseAdminController
 
         //if we got this far, something failed, redisplay form
         return View(model);
+    }
+
+    #endregion
+
+    #region Drafts
+
+    public virtual async Task<IActionResult> Draft()
+    {
+        if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
+            return AccessDeniedView();
+
+        //prepare model
+        var model = await _orderModelFactory.PrepareDraftOrderSearchModelAsync(new DraftOrderSearchModel());
+
+        return View(model);
+    }
+
+    public virtual async Task<IActionResult> DraftList(DraftOrderSearchModel searchModel)
+    {
+        if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
+            return await AccessDeniedDataTablesJson();
+
+        //prepare model
+        var model = await _orderModelFactory.PrepareDraftOrderListModelAsync(searchModel);
+
+        return Json(model);
+    }
+
+    [HttpPost, ActionName("CreateNewDraft")]
+    [FormValueRequired("createdraft")]
+    public virtual IActionResult CreateNewDraft(DraftOrderSearchModel model)
+    {
+        return RedirectToAction("EditDraft", "Order");
+    }
+
+    [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
+    [FormValueRequired("save", "save-continue")]
+    public virtual async Task<IActionResult> EditDraft(DraftOrderModel model, bool continueEditing)
+    {
+        var store = await _storeContext.GetCurrentStoreAsync();
+
+        DraftOrder draftOrder = await _draftOrderService.GetOrderByIdAsync(model.Id);
+        if (draftOrder != null)
+        {
+            if (model.ShippingAddress.Id != 0)
+            {
+                var address = await _addressService.GetAddressByIdAsync(model.ShippingAddress.Id);
+                if (address != null)
+                {
+                    var customer = await _customerService.GetCustomerByIdAsync(model.CustomerId);
+
+                    draftOrder.CustomerId = customer.Id;
+                    draftOrder.CustomOrderNumber = draftOrder.CustomOrderNumber;
+                    draftOrder.PickupAddressId = address.Id;
+                    draftOrder.ShippingAddressId = address.Id;
+                    draftOrder.BillingAddressId = address.Id;
+                    draftOrder.StoreId = store.Id;
+
+                    await _draftOrderService.UpdateOrderAsync(draftOrder);
+                }
+            }
+            else
+            {
+                draftOrder.CustomerId = model.CustomerId;
+                draftOrder.CustomOrderNumber = draftOrder.CustomOrderNumber;
+                draftOrder.PickupAddressId = 0;
+                draftOrder.ShippingAddressId = 0;
+                draftOrder.BillingAddressId = 0;
+                draftOrder.StoreId = store.Id;
+
+                await _draftOrderService.UpdateOrderAsync(draftOrder);
+            }
+        }
+        return RedirectToAction("EditDraft", "Order", new { id = model.Id });
+    }
+    public virtual async Task<IActionResult> EditDraft(int id)
+    {
+        if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
+            return AccessDeniedView();
+
+        //Create new order, enter draft into DB
+        if (id == 0)
+        {
+            DraftOrder draftOrder = new DraftOrder();
+            draftOrder.OrderGuid = Guid.NewGuid();
+            draftOrder.CreatedOnUtc = DateTime.UtcNow;
+            draftOrder.BillingAddressId = 0;
+            draftOrder.ShippingAddressId = 0;
+            draftOrder.PickupAddressId = 0;
+            draftOrder.CustomDiscountId = 0;
+            await _draftOrderService.InsertOrderAsync(draftOrder);
+            draftOrder.CustomOrderNumber = string.Format("D{0}", draftOrder.Id);
+            await _draftOrderService.UpdateOrderAsync(draftOrder);
+            return RedirectToAction("EditDraft", "Order", new { id = draftOrder.Id });
+
+        }
+
+        var order = await _draftOrderService.GetOrderByIdAsync(id);
+
+        var model = await _orderModelFactory.PrepareDraftOrderModelAsync(null, order);
+
+        await _orderModelFactory.UpdateOrderModelTotalsAsync(order, model);
+
+        return View(model);
+    }
+    public virtual async Task<IActionResult> ProductAddPopup(int draftOrderId)
+    {
+        if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageCategories))
+            return AccessDeniedView();
+
+        //prepare model
+        var model = await _orderModelFactory.PrepareAddProductToDraftOrderSearchModelAsync(new AddProductToDraftOrderSearchModel(), new DraftOrder() { Id = draftOrderId });
+
+        return View(model);
+
+    }
+
+    [HttpPost]
+    public virtual async Task<IActionResult> ProductAddPopupList(AddProductToDraftOrderSearchModel searchModel)
+    {
+        if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageCategories))
+            return await AccessDeniedDataTablesJson();
+
+        //prepare model
+        var model = await _orderModelFactory.PrepareAddProductToDraftOrderListModelAsync(searchModel, new DraftOrder() { Id = searchModel.DraftOrderId });
+
+        return Json(model);
+    }
+
+    [HttpPost]
+    [FormValueRequired("save")]
+    public virtual async Task<IActionResult> ProductAddPopup(AddProductToDraftOrderModel model)
+    {
+        if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageCategories))
+            return AccessDeniedView();
+
+        //get selected products
+        var selectedProducts = await _productService.GetProductsByIdsAsync(model.SelectedProductIds.ToArray());
+        if (selectedProducts.Any())
+        {
+            var items = await _draftOrderService.GetOrderItemsAsync(model.DraftOrderId);
+
+            //    var existingProductCategories = await _categoryService.GetProductCategoriesByCategoryIdAsync(model.CategoryId, showHidden: true);
+            foreach (var product in selectedProducts)
+            {
+                var item = items.FirstOrDefault(x => x.ProductId == product.Id);
+
+                if (item != null)
+                {
+                    item.Quantity++;
+                    await _draftOrderService.UpdateOrderItemAsync(item);
+                }
+                else
+                {
+                    await _draftOrderService.InsertOrderItemAsync(new DraftOrderItem()
+                    {
+                        ProductId = product.Id,
+                        OrderId = model.DraftOrderId,
+                        Quantity = 1,
+                        UnitPriceInclTax = product.Price,
+                        UnitPriceExclTax = product.Price,
+                        PriceInclTax = product.Price,
+                        PriceExclTax = product.Price,
+                        DiscountAmountExclTax = 0,
+                        DiscountAmountInclTax = 0,
+                        OriginalProductCost = 0,
+                        DownloadCount = 0,
+                        IsDownloadActivated = false,
+                        OrderItemGuid = Guid.NewGuid(),
+                        IsCustomItem = false
+
+                    });
+                }
+            }
+        }
+
+        ViewBag.RefreshPage = true;
+
+        return View(new AddProductToDraftOrderSearchModel());
+    }
+
+    [HttpPost]
+    public virtual async Task<IActionResult> RefreshProducts(int id)
+    {
+        var order = await _draftOrderService.GetOrderByIdAsync(id);
+
+        var model = await _orderModelFactory.PrepareDraftOrderModelAsync(null, order);
+
+        await _orderModelFactory.UpdateOrderModelTotalsAsync(order, model);
+
+        return PartialView("_ProductPanel", model);
+    }
+
+    [HttpPost]
+    public virtual async Task<IActionResult> SearchCustomer(string customerName)
+    {
+        List<Address> addresses = new List<Address>();
+        List<Customer> sortedCustomers = new List<Customer>();
+        IPagedList<Customer> customers = null;
+
+        string emailAddress = string.Empty;
+        //check for email address
+        Regex regex = new Regex("^(?(\")(\".+?(?<!\\\\)\"@)|(([0-9a-z]((\\.(?!\\.))|[-!#\\$%&'\\*\\+/=\\?\\^`\\{\\}\\|~\\w])*)(?<=[0-9a-z])@))(?(\\[)(\\[(\\d{1,3}\\.){3}\\d{1,3}\\])|(([0-9a-z][-\\w]*[0-9a-z]*\\.)+[a-z0-9][\\-a-z0-9]{0,22}[a-z0-9]))$");
+        if (regex.Match(customerName).Success)
+        {
+            emailAddress = customerName;
+            customers = await _customerService.GetAllCustomersAsync(customerRoleIds: new[] { (await _customerService.GetCustomerRoleBySystemNameAsync(NopCustomerDefaults.RegisteredRoleName)).Id }, email: emailAddress, pageSize: 15);
+
+            addresses = (await _addressService.GetAddressesByEmail(emailAddress)).ToList();
+        }
+        else
+        {
+            string[] nameTokens = customerName.Split(' ');
+            string firstName = nameTokens[0] ?? string.Empty;
+
+            string lastName = string.Empty;
+            if (nameTokens.Length > 1)
+                lastName = nameTokens[nameTokens.Length - 1] ?? string.Empty;
+
+            customers = await _customerService.GetAllCustomersAsync(customerRoleIds: new[] { (await _customerService.GetCustomerRoleBySystemNameAsync(NopCustomerDefaults.RegisteredRoleName)).Id }, firstName: firstName, lastName: lastName, pageSize: 15);
+
+            //try looking up last name only
+            if (!customers.Any())
+                customers = await _customerService.GetAllCustomersAsync(customerRoleIds: new[] { (await _customerService.GetCustomerRoleBySystemNameAsync(NopCustomerDefaults.RegisteredRoleName)).Id }, lastName: firstName, pageSize: 15);
+
+            addresses = (await _addressService.GetAddressesByName(firstName: firstName, lastName: lastName)).ToList();
+
+            if (!addresses.Any())
+                addresses = (await _addressService.GetAddressesByName(lastName: firstName)).ToList();
+        }
+
+        foreach (var address in addresses.ToList())
+        {
+            var customer = await _customerService.GetCustomerByShippinngAddressIdAsync(address.Id);
+            if (customer != null && customers != null)
+                customers.Add(customer);
+            else
+                addresses.Remove(address);
+        }
+
+
+        sortedCustomers = await customers?.OrderByDescending(x => x.LastActivityDateUtc).ToListAsync();
+
+
+        List<CustomerModel> customersModel = await sortedCustomers.SelectAwait(async customer =>
+        {
+            var customerModel = customer.ToModel<CustomerModel>();
+            customerModel.FullName = await _customerService.GetCustomerFullNameAsync(customer);
+            if (string.IsNullOrEmpty(customerModel.FullName))
+            {
+                var customerAddress = addresses.FirstOrDefault(x => x.Id == customer.ShippingAddressId);
+                if (customerAddress != null)
+                {
+                    customerModel.FirstName = customerAddress.FirstName;
+                    customerModel.LastName = customerAddress.LastName;
+                    customerModel.FullName = $"{customerAddress.FirstName} {customerAddress.LastName}";
+                }
+            }
+            customerModel.Email = customer.Email;
+
+            if (string.IsNullOrEmpty(customerModel.Email))
+            {
+                var customerAddress = addresses.FirstOrDefault(x => x.Id == customer.ShippingAddressId);
+                if (customerAddress != null)
+                    customerModel.Email = customerAddress.Email;
+            }
+            return customerModel;
+        }).ToListAsync();
+
+        return PartialView("_Draft.Addresses", customersModel);
+    }
+
+    [HttpPost]
+    public virtual async Task<IActionResult> CustomerById(int customerId)
+    {
+
+        //get customer addresses
+        var addresses = (await _customerService.GetAddressesByCustomerIdAsync(customerId))
+            .OrderByDescending(address => address.CreatedOnUtc).ThenByDescending(address => address.Id).ToList();
+
+
+        var addressModel = await addresses.SelectAwait(async address =>
+        {
+            //fill in model values from the entity        
+            var addressModel = address.ToModel<AddressModel>();
+
+            //addressModel.CountryName = (await _countryService.GetCountryByAddressAsync(address))?.Name;
+            //addressModel.StateProvinceName = (await _stateProvinceService.GetStateProvinceByAddressAsync(address))?.Name;
+
+            //fill in additional values (not existing in the entity)
+
+
+            return addressModel;
+        }).ToListAsync();
+
+        return PartialView("_Draft.AddressSingle", addressModel.FirstOrDefault());
+    }
+
+    [HttpPost]
+    public virtual async Task<IActionResult> ProductCountChange(int productId, int draftOrderId, int quantityTotal)
+    {
+        if (productId != 0 && draftOrderId != 0 && quantityTotal != -1)
+        {
+            var order = await _draftOrderService.GetOrderByIdAsync(draftOrderId);
+            if (order != null)
+            {
+                var vendor = await _workContext.GetCurrentVendorAsync();
+                var orderItems = await _draftOrderService.GetOrderItemsAsync(order.Id, vendorId: vendor?.Id ?? 0);
+                var orderItem = orderItems.FirstOrDefault(x => x.Id == productId);
+
+                if (orderItem != null && orderItem.Quantity != quantityTotal)
+                {
+                    var product = await _productService.GetProductByIdAsync(orderItem.ProductId);
+
+                    orderItem.Quantity = quantityTotal;
+                    orderItem.PriceExclTax = product.Price * quantityTotal;
+                    orderItem.PriceInclTax = product.Price * quantityTotal;
+                    await _draftOrderService.UpdateOrderItemAsync(orderItem);
+
+                    var model = await _orderModelFactory.PrepareDraftOrderModelAsync(null, order);
+
+                    await _orderModelFactory.UpdateOrderModelTotalsAsync(order, model);
+                    return PartialView("_ProductPanel", model);
+                }
+
+            }
+        }
+
+        return default;
+    }
+    [HttpPost]
+    public virtual async Task<IActionResult> DraftPricing(int id)
+    {
+        var order = await _draftOrderService.GetOrderByIdAsync(id);
+
+        var model = await _orderModelFactory.PrepareDraftOrderModelAsync(null, order);
+
+        return PartialView("_DraftPricing", model);
+    }
+
+    [HttpPost]
+    public virtual async Task<IActionResult> RemoveProduct(int productId, int draftOrderId, bool isCustomItem = false)
+    {
+        var order = await _draftOrderService.GetOrderByIdAsync(draftOrderId);
+
+        if (order != null)
+        {
+            var vendor = await _workContext.GetCurrentVendorAsync();
+            var orderItems = await _draftOrderService.GetOrderItemsAsync(order.Id, vendorId: vendor?.Id ?? 0);
+            var orderItem = orderItems.FirstOrDefault(x => x.Id == productId);
+
+            if (orderItem != null)
+            {
+                if (isCustomItem)
+                {
+                    var product = await _productService.GetProductByIdAsync(orderItem.ProductId);
+                    await _productService.DeleteProductAsync(product);
+
+                }
+                await _draftOrderService.DeleteOrderItemAsync(orderItem);
+
+                var model = await _orderModelFactory.PrepareDraftOrderModelAsync(null, order);
+
+                await _orderModelFactory.UpdateOrderModelTotalsAsync(order, model);
+
+                return PartialView("_ProductPanel", model);
+            }
+
+        }
+
+        return default;
+    }
+    [HttpPost]
+    public virtual async Task<IActionResult> AddCustomProduct(int draftOrderId,
+        string itemName,
+        string itemPrice,
+        int itemQuantity,
+        string itemLength,
+        string itemWidth,
+        string itemHeight,
+        string itemWeight)
+    {
+        //the above arguments need a class and [FromQuery]
+
+
+        var order = await _draftOrderService.GetOrderByIdAsync(draftOrderId);
+
+        if (order != null)
+        {
+            decimal.TryParse(itemWeight, out decimal productItemWeight);
+            decimal.TryParse(itemLength, out decimal productItemLength);
+            decimal.TryParse(itemWidth, out decimal productItemWidth);
+            decimal.TryParse(itemHeight, out decimal productItemHeight);
+
+
+            if (decimal.TryParse(itemPrice, out var unitPriceExclTax))
+            {
+
+                //product
+                ProductModel productModel = new ProductModel()
+                {
+                    Name = itemName,
+                    ProductTypeId = (int)ProductType.SimpleProduct,
+                    VisibleIndividually = true,
+                    ProductTemplateId = (await _productTemplateService.GetAllProductTemplatesAsync())?.FirstOrDefault()?.Id ?? 1,
+                    AllowCustomerReviews = false,
+                    UnlimitedDownloads = false,
+                    MaxNumberOfDownloads = 0,
+                    RecurringCycleLength = 100,
+                    RecurringTotalCycles = 10,
+                    RentalPriceLength = 1,
+                    IsShipEnabled = true,
+                    ManageInventoryMethodId = (int)ManageInventoryMethod.DontManageStock,
+                    StockQuantity = itemQuantity,
+                    LowStockActivityId = (int)LowStockActivity.Nothing,
+                    NotifyAdminForQuantityBelow = 0,
+                    AllowBackInStockSubscriptions = false,
+                    OrderMaximumQuantity = 10000,
+                    OrderMinimumQuantity = 0,
+                    Price = unitPriceExclTax,
+                    MaximumCustomerEnteredPrice = 1000,
+                    BasepriceBaseUnitId = 1,
+                    BasepriceUnitId = 1,
+                    Published = true,
+                    Weight = productItemWeight,
+                    Length = productItemLength,
+                    Width = productItemWidth,
+                    Height = productItemHeight,
+
+                };
+
+                var product = productModel.ToEntity<Product>();
+                product.CreatedOnUtc = DateTime.UtcNow;
+                product.UpdatedOnUtc = DateTime.UtcNow;
+                product.Deleted = true;
+                await _productService.InsertProductAsync(product);
+
+
+                var draftOrderItem = new DraftOrderItem()
+                {
+                    ProductId = product.Id,
+                    OrderId = draftOrderId,
+                    Quantity = itemQuantity,
+                    UnitPriceInclTax = unitPriceExclTax,
+                    UnitPriceExclTax = unitPriceExclTax,
+                    PriceInclTax = unitPriceExclTax * itemQuantity,
+                    PriceExclTax = unitPriceExclTax * itemQuantity,
+                    DiscountAmountExclTax = 0,
+                    DiscountAmountInclTax = 0,
+                    OriginalProductCost = 0,
+                    DownloadCount = 0,
+                    IsDownloadActivated = false,
+                    OrderItemGuid = Guid.NewGuid(),
+                    IsCustomItem = true,
+
+                };
+                await _draftOrderService.InsertOrderItemAsync(draftOrderItem);
+            }
+            var model = await _orderModelFactory.PrepareDraftOrderModelAsync(null, order);
+
+            await _orderModelFactory.UpdateOrderModelTotalsAsync(order, model);
+            return PartialView("_ProductPanel", model);
+        }
+
+
+        //}
+        return Json("{}");
+    }
+
+    [HttpPost]
+    public virtual async Task<IActionResult> UpdateDraftOrderDiscount(int draftOrderId, string discountType, string discountValue)
+    {
+
+        var order = await _draftOrderService.GetOrderByIdAsync(draftOrderId);
+
+        if (order != null)
+        {
+            int.TryParse(discountType, out int customDiscountId);
+            decimal.TryParse(discountValue, out decimal customDiscountValue);
+
+            order.CustomDiscountId = customDiscountId;
+            order.CustomDiscountValue = customDiscountValue;
+
+            await _draftOrderService.UpdateOrderAsync(order);
+
+            var model = await _orderModelFactory.PrepareDraftOrderModelAsync(null, order);
+
+            await _orderModelFactory.UpdateOrderModelTotalsAsync(order, model);
+
+
+            return PartialView("_ProductPanel", model);
+        }
+
+
+        //}
+        return Json("{}");
+    }
+
+    [HttpPost]
+    public virtual async Task<IActionResult> UpdateDraftOrderShipping(int draftOrderId, string rateName, string rateValue)
+    {
+
+        var order = await _draftOrderService.GetOrderByIdAsync(draftOrderId);
+
+        if (order != null)
+        {
+            decimal.TryParse(rateValue, out decimal shippingRateValue);
+            order.ShippingMethod = rateName;
+            order.ShippingRateComputationMethodSystemName = "Shipping.FixedByWeightByTotal";
+
+
+            order.OrderShippingExclTax = shippingRateValue;
+            order.OrderShippingInclTax = shippingRateValue;
+
+
+
+            await _draftOrderService.UpdateOrderAsync(order);
+
+            var model = await _orderModelFactory.PrepareDraftOrderModelAsync(null, order);
+
+            await _orderModelFactory.UpdateOrderModelTotalsAsync(order, model);
+            return PartialView("_ProductPanel", model);
+        }
+
+
+        //}
+        return Json("{}");
+    }
+
+    [HttpPost, ActionName("CreateOrder")]
+    [FormValueRequired("createOrder")]
+    public virtual async Task<IActionResult> CreateOrder(DraftOrderModel model)
+    {
+        if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
+            return AccessDeniedView();
+
+        var draftOrder = await _draftOrderService.GetOrderByIdAsync(model.Id);
+        draftOrder.OrderStatusId = (int)OrderStatus.Processing;
+        await _draftOrderService.UpdateOrderAsync(draftOrder);
+
+        var existingDiscounts = await _discountService.GetAllDiscountsAsync(DiscountType.AssignedToOrderSubTotal, couponCode: draftOrder.OrderGuid.ToString(), discountName: "CustomDiscount");
+        if (existingDiscounts.Count > 0)
+        {
+            foreach (var discount in existingDiscounts)
+            {
+                await _discountService.DeleteDiscountAsync(discount);
+            }
+            existingDiscounts = null;
+        }
+
+
+        if (existingDiscounts == null || existingDiscounts.Count == 0)
+        {
+            await _discountService.InsertDiscountAsync(new Discount()
+            {
+                Name = "CustomDiscount",
+                CouponCode = draftOrder.OrderGuid.ToString(),
+                DiscountTypeId = (int)DiscountType.AssignedToOrderSubTotal,
+                UsePercentage = draftOrder.CustomDiscountId == 2,
+                DiscountPercentage = draftOrder.CustomDiscountValue,
+                DiscountAmount = draftOrder.CustomDiscountValue,
+                StartDateUtc = DateTime.UtcNow,
+                RequiresCouponCode = true,
+                DiscountLimitationId = (int)DiscountLimitationType.NTimesOnly,
+                LimitationTimes = 1,
+
+            });
+        }
+        else
+        {
+            var existingDiscount = existingDiscounts.FirstOrDefault();
+            existingDiscount.UsePercentage = draftOrder.CustomDiscountId == 2;
+            existingDiscount.DiscountPercentage = draftOrder.CustomDiscountValue;
+            existingDiscount.DiscountAmount = draftOrder.CustomDiscountValue;
+            existingDiscount.StartDateUtc = DateTime.UtcNow;
+
+            await _discountService.UpdateDiscountAsync(existingDiscount);
+        }
+
+        return RedirectToAction("Draft");
+    }
+
+    [HttpPost]
+    public virtual async Task<IActionResult> DraftOrderDelete(int id)
+    {
+        if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
+            return AccessDeniedView();
+
+        //try to get an order with the specified id
+        var order = await _draftOrderService.GetOrderByIdAsync(id);
+        if (order == null)
+            return RedirectToAction("Draft");
+
+        //a vendor does not have access to this functionality
+        if (await _workContext.GetCurrentVendorAsync() != null)
+            return RedirectToAction("EditDraft", "Order", new { id });
+
+        var draftItems = await _draftOrderService.GetOrderItemsAsync(id);
+
+        foreach (var item in draftItems)
+        {
+            await _draftOrderService.DeleteOrderItemAsync(item);
+        }
+
+        await _draftOrderService.DeleteOrderAsync(order);
+
+        //activity log
+        await _customerActivityService.InsertActivityAsync("DeleteDraftOrder",
+            string.Format(await _localizationService.GetResourceAsync("ActivityLog.DeleteOrder"), order.Id), order);
+
+        return RedirectToAction("Draft");
     }
 
     #endregion

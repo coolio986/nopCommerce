@@ -60,6 +60,17 @@ public partial interface ICheckoutModelFactory
     Task<CheckoutPaymentMethodModel> PreparePaymentMethodModelAsync(IList<ShoppingCartItem> cart, int filterByCountryId);
 
     /// <summary>
+    /// Prepare shipping method model
+    /// </summary>
+    /// <param name="cart">Cart</param>
+    /// <param name="shippingAddress">Shipping address</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation
+    /// The task result contains the shipping method model
+    /// </returns>
+    Task<CheckoutShippingMethodModel> PrepareShippingMethodModelDraftOrderAsync(Address shippingAddress, DraftOrder draftOrder, IList<ShoppingCartItem> cart);
+
+    /// <summary>
     /// Prepare payment info model
     /// </summary>
     /// <param name="paymentMethod">Payment method</param>
