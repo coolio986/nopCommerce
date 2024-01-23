@@ -2174,7 +2174,7 @@ public partial class OrderProcessingService : IOrderProcessingService
     /// <param name="shipment">Shipment</param>
     /// <param name="notifyCustomer">True to notify customer</param>
     /// <returns>A task that represents the asynchronous operation</returns>
-    public virtual async Task DeliverAsync(Shipment shipment, bool notifyCustomer)
+        public virtual async Task DeliverAsync(Shipment shipment, bool notifyCustomer, DateTime? overrideDateTime = null)
     {
         ArgumentNullException.ThrowIfNull(shipment);
 
@@ -2189,7 +2189,11 @@ public partial class OrderProcessingService : IOrderProcessingService
         if (shipment.DeliveryDateUtc.HasValue)
             throw new Exception("This shipment is already delivered");
 
+            if (overrideDateTime == null)
         shipment.DeliveryDateUtc = DateTime.UtcNow;
+            else
+                shipment.DeliveryDateUtc = overrideDateTime;
+
         await _shipmentService.UpdateShipmentAsync(shipment);
 
         if (!await _orderService.HasItemsToAddToShipmentAsync(order) &&

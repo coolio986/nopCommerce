@@ -18,6 +18,18 @@ public partial interface IStaticCacheManager : IDisposable, ICacheKeyService
     Task<T> GetAsync<T>(CacheKey key, Func<Task<T>> acquire);
 
     /// <summary>
+    /// Get an item without cache.
+    /// </summary>
+    /// <typeparam name="T">Type of cached item</typeparam>
+    /// <param name="key">Cache key</param>
+    /// <param name="acquire">Function to load item if it's not in the cache yet</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation
+    /// The task result contains the cached value associated with the specified key
+    /// </returns>
+    Task<T> GetAsyncWithoutCache<T>(CacheKey key, Func<Task<T>> acquire);
+
+    /// <summary>
     /// Get a cached item. If it's not in the cache yet, then load and cache it
     /// </summary>
     /// <typeparam name="T">Type of cached item</typeparam>

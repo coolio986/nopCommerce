@@ -101,6 +101,28 @@ public partial class GenericAttributeService : IGenericAttributeService
         return attributes;
     }
 
+/// <summary>
+        /// Get attributes without cache
+        /// </summary>
+        /// <param name="entityId">Entity identifier</param>
+        /// <param name="keyGroup">Key group</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the get attributes
+        /// </returns>
+        public virtual async Task<IList<GenericAttribute>> GetAttributesForEntityAsyncWithoutCache(int entityId, string keyGroup)
+        {
+            var key = _staticCacheManager.PrepareKeyForDefaultCache(NopCommonDefaults.GenericAttributeCacheKey, entityId, keyGroup);
+
+            var query = from ga in _genericAttributeRepository.Table
+                        where ga.EntityId == entityId &&
+                              ga.KeyGroup == keyGroup
+                        select ga;
+            var attributes = await _staticCacheManager.GetAsyncWithoutCache(key, async () => await query.ToListAsync());
+
+            return attributes;
+        }
+
     /// <summary>
     /// Save attribute value
     /// </summary>
@@ -195,6 +217,44 @@ public partial class GenericAttributeService : IGenericAttributeService
     }
 
     /// <summary>
+        /// Get an attribute of an entity without cache
+        /// </summary>
+        /// <typeparam name="TPropType">Property type</typeparam>
+        /// <param name="entity">Entity</param>
+        /// <param name="key">Key</param>
+        /// <param name="storeId">Load a value specific for a certain store; pass 0 to load a value shared for all stores</param>
+        /// <param name="defaultValue">Default value</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the attribute
+        /// </returns>
+        public virtual async Task<TPropType> GetAttributeAsyncWithoutCache<TPropType>(BaseEntity entity, string key, int storeId = 0, TPropType defaultValue = default)
+        {
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity));
+
+            var keyGroup = entity.GetType().Name;
+
+            var props = await GetAttributesForEntityAsyncWithoutCache(entity.Id, keyGroup);
+
+            //little hack here (only for unit testing). we should write expect-return rules in unit tests for such cases
+            if (props == null)
+                return defaultValue;
+
+            props = props.Where(x => x.StoreId == storeId).ToList();
+            if (!props.Any())
+                return defaultValue;
+
+            var prop = props.FirstOrDefault(ga =>
+                ga.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase)); //should be culture invariant
+
+            if (prop == null || string.IsNullOrEmpty(prop.Value))
+                return defaultValue;
+
+            return CommonHelper.To<TPropType>(prop.Value);
+        }
+
+        /// <summary>
     /// Get an attribute of an entity
     /// </summary>
     /// <typeparam name="TPropType">Property type</typeparam>

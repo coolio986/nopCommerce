@@ -196,6 +196,53 @@ public abstract class DistributedCacheManager : CacheKeyService, IStaticCacheMan
     }
 
     /// <summary>
+    /// Get an item without cache
+    /// </summary>
+    /// <typeparam name="T">Type of cached item</typeparam>
+    /// <param name="key">Cache key</param>
+    /// <param name="acquire">Function to load item if it's not in the cache yet</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation
+    /// The task result contains the cached value associated with the specified key
+    /// </returns>
+    public async Task<T> GetAsyncWithoutCache<T>(CacheKey key, Func<Task<T>> acquire)
+    {
+        //little performance workaround here:
+        //we use "PerRequestCache" to cache a loaded object in memory for the current HTTP request.
+        //this way we won't connect to Redis server many times per HTTP request (e.g. each time to load a locale or setting)
+        if (_concurrentCollection.TryGetValue(key.Key, out var data))
+            return (T)data;
+
+        var lazy = _ongoing.GetOrAdd(key.Key, _ => new(async () => await acquire(), true));
+        var setTask = Task.CompletedTask;
+
+        try
+        {
+            var (isSet, item) = await TryGetItemAsync<T>(key.Key);
+            if (!isSet)
+            {
+                item = (T)await lazy.Value;
+
+                if (key.CacheTime == 0 || item == null)
+                    return item;
+
+                setTask = _distributedCache.SetStringAsync(
+                    key.Key,
+                    JsonConvert.SerializeObject(item),
+                    PrepareEntryOptions(key));
+            }
+
+            SetLocal(key.Key, item);
+
+            return item;
+        }
+        finally
+        {
+            _ = setTask.ContinueWith(_ => _ongoing.TryRemove(new KeyValuePair<string, Lazy<Task<object>>>(key.Key, lazy)));
+        }
+    }
+
+    /// <summary>
     /// Get a cached item. If it's not in the cache yet, then load and cache it
     /// </summary>
     /// <typeparam name="T">Type of cached item</typeparam>
