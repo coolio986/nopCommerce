@@ -1,0 +1,335 @@
+﻿@model ShippingModel
+
+<script>
+    function postWeightDimensions(){
+        var parcel = { 
+            length: $("#@Html.IdFor(model => model.Parcel.length)").val(),
+            width: $("#@Html.IdFor(model => model.Parcel.width)").val(),
+            height: $("#@Html.IdFor(model => model.Parcel.height)").val(),
+            weight: $("#@Html.IdFor(model => model.Parcel.weight)").val(),
+            
+        }
+        var postData = {
+               Parcel: parcel,
+               OrderId: $("#@Html.IdFor(model => model.OrderId)").val(),
+               Id: $("#@Html.IdFor(model => model.Id)").val(),
+               
+        };
+        addAntiForgeryToken(postData);
+
+        $.ajax({
+                    cache: false,
+                    type: "POST",
+                    data: postData,
+                    dataType: "json",
+                    url: "@Html.Raw(Url.Action("AdminGetShippingRates", "EasyPost"))",
+                    success: function (data) {
+                        console.log(data);
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        console.log(errorThrown);
+                    }
+                });
+    }
+    $(document).ready(function () {
+        $("#selectAndBuy").on('click', function (e) {
+            e.preventDefault();
+            $(this).text("Please wait...");
+            $(this).prop('disabled', true);
+            $("#selectRate").prop('disabled', true);
+            var action = $("#selectAndBuy").attr('formaction');
+
+            window.scrollTo(0, 0);
+
+            $("#loadMe").modal({
+                backdrop: "static", //remove ability to close modal with click
+                keyboard: false, //remove option to close with keyboard
+                show: true //Display loader!
+            });
+
+            
+
+            var selectedShippingRate = "";
+            var selectedShippingDescription = "";
+            var notifyOfShipment = "false";
+        
+            $("input[type=radio][id=" + '@Html.IdFor(model => model.SelectedShippingOptionId)' + "]:checked").each(function () {
+                    selectedShippingRate = this.value;
+                    selectedShippingDescription = $(this).attr("description");
+                    return false;
+            });
+
+            $("input[type=checkbox][id=" + '@Html.IdFor(model => model.NotifyCustomerOfShipment)' + "]:checked").each(function () {
+                notifyOfShipment = this.value;
+                return false;
+            });
+
+            var postData = {
+               
+               OrderId: $("#@Html.IdFor(model => model.OrderId)").val(),
+               Id: $("#@Html.IdFor(model => model.Id)").val(),
+               SelectedShippingOptionId: selectedShippingRate,
+               SelectedShippingOptionDescription: selectedShippingDescription,
+               NotifyCustomerOfShipment: notifyOfShipment
+            };
+
+
+            addAntiForgeryToken(postData);
+            $.ajax({
+                cache: false,
+                type: "POST",
+                url: "@Html.Raw(Url.Action("AdminSelectShippingRateAndBuy", "EasyPost"))",
+                data: postData,
+                traditional: true,
+                async: true,
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                },
+                success: function (data) {
+                    location.reload(true);
+                    
+                }
+            });
+        });
+    })
+    
+
+
+</script>
+
+@if (string.IsNullOrEmpty(Model.Error))
+{
+    
+    <input asp-for="@Model.Id" type="hidden" />
+    <input asp-for="@Model.OrderId" type="hidden" />
+    
+
+    <div class="card card-secondary card-outline">
+        <div> <!-- to avoid binding click trigger: .card.card-secondary > .card-header  --> 
+            <div class="card-header with-border clearfix">
+                <div class="card-title">
+                    <i class="fas fa-truck"></i>
+                    @T("Plugins.Shipping.EasyPost.Shipment")
+                </div>
+            </div>
+        </div>
+    
+        <div class="card-body">
+
+            @if (Model.ShippingOptions.Any())
+            {
+                <input asp-for="@Model.Parcel.length" type="hidden" />
+                <input asp-for="@Model.Parcel.width" type="hidden" />
+                <input asp-for="@Model.Parcel.height" type="hidden" />
+                <input asp-for="@Model.Parcel.weight" type="hidden" />
+
+                <div class="form-group row advanced-setting">
+                    <ul class="method-list">
+                        @for (var i = 0; i < Model.ShippingOptions.Count; i++)
+                        {
+                            
+                            <input asp-for="@Model.ShippingOptions[i].Id" type="hidden" />
+                            <input asp-for="@Model.ShippingOptions[i].Description" type="hidden" />
+
+                            var shippingMethod = Model.ShippingOptions[i];
+                            <li>
+                                <div class="form-group row">
+                                    <div class="col-md-12">
+
+                                        <input asp-for="@Model.SelectedShippingOptionId" type="radio" value="@(Model.ShippingOptions[i].Id)" description="@Model.ShippingOptions[i].Description" />
+                                        
+                                        @*<input  type="radio" name="shippingoption" value="@(Model.ShippingOptions[i].Id)"  @(Model.ShippingOptions[i].Selected ? Html.Raw(" checked=\"checked\"") : null) />*@
+
+                                        
+                                        <label >@T("Checkout.SelectShippingMethod.MethodAndFee", shippingMethod.Name, shippingMethod.Rate)</label>
+                                        @if (!string.IsNullOrEmpty(shippingMethod.Description))
+                                        {
+                                            <span>@Html.Raw(shippingMethod.Description)</span>
+                                        }
+                                     </div>
+                                </div>
+                            </li>
+                        }
+                                 
+                    </ul>
+                </div>
+                <div class="col-md-4" style="padding-left:40px;border-color:black;border-width:1px;border-style:solid;margin:20px">
+                    <div class="form-group row">
+                        <div>
+                            <nop-label asp-for="NotifyCustomerOfShipment" />
+                        </div>
+                        <div class="col-md-1">
+                            <nop-editor asp-for="NotifyCustomerOfShipment" />
+                            <span asp-validation-for="NotifyCustomerOfShipment"></span>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div>
+                            <nop-label asp-for="Insurance" />
+                        </div>
+                        <div class="col-md-8">
+                            <nop-editor asp-for="Insurance" />
+                            <span asp-validation-for="Insurance"></span>
+                        </div>
+                    </div>
+                    <button style="margin-bottom:20px" id="selectAndBuy"  asp-route="@EasyPostDefaults.SelectShippingRateAndBuy">
+                        Select and Buy
+                    </button>
+                </div>
+                <button type="submit" id="selectRate" asp-route="@EasyPostDefaults.SelectShippingRate"  >
+                    Select Rate
+                </button>
+                
+                
+            }
+            else
+            {
+            <div class="form-group row advanced-setting">
+                
+                <div class="col-md-3">
+                    <div class="label-wrapper"><label class="col-form-label">&nbsp;&nbsp;(inch)</label></div>
+                    <nop-label asp-for="@Model.Parcel.length" />
+                        
+                </div>
+                <div class="col-md-9">
+                        <nop-editor asp-for="@Model.Parcel.length"  />
+                        <span asp-validation-for="@Model.Parcel.length"></span>
+                </div>
+                <div class="col-md-3">
+                    <div class="label-wrapper"><label class="col-form-label">&nbsp;&nbsp;(inch)</label></div>
+                    <nop-label asp-for="@Model.Parcel.width" />
+                </div>
+                <div class="col-md-9">
+                    <nop-editor asp-for="@Model.Parcel.width"  />
+                    <span asp-validation-for="@Model.Parcel.width"></span>
+                </div>
+                <div class="col-md-3">
+                    <div class="label-wrapper"><label class="col-form-label">&nbsp;&nbsp;(inch)</label></div>
+                    <nop-label asp-for="@Model.Parcel.height" />
+                </div>
+                <div class="col-md-9">
+                    <nop-editor asp-for="@Model.Parcel.height"  />
+                    <span asp-validation-for="@Model.Parcel.height"></span>
+                </div>
+                <div class="col-md-3">
+                    <div class="label-wrapper"><label class="col-form-label">&nbsp;&nbsp;(lbs)</label></div>
+                    <nop-label asp-for="@Model.Parcel.weight" />
+                </div>
+                <div class="col-md-9">
+                    <nop-editor asp-for="@Model.Parcel.weight"  />
+                    <span asp-validation-for="@Model.Parcel.weight"></span>
+                </div>
+
+            </div>
+
+            <div class="col-md-3">
+                    @*<button type="button" onclick="postWeightDimensions()" >*@
+                    <button type="submit" asp-route="@EasyPostDefaults.GetShippingRates" >
+                    Get Rates
+                </button>
+            </div>
+            }
+        </div>
+    </div>
+    <div class="modal fade" id="loadMe" tabindex="-1" role="dialog" aria-labelledby="loadMeLabel">
+      <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+          <div class="modal-body text-center">
+            <div class="loader"></div>
+            <div clas="loader-txt">
+              <p>Loading, Please wait...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+}
+else
+{
+    <nop-alert asp-alert-id="easypost-alert" asp-alert-message="@Model.Error" />
+    <script>
+        $(document).ready(function () {
+            $("#easypost-alert").click();
+        });
+    </script>
+}
+
+    <style>
+    /** SPINNER CREATION **/
+
+.loader {
+  position: relative;
+  text-align: center;
+  margin: 15px auto 35px auto;
+  z-index: 9999;
+  display: block;
+  width: 80px;
+  height: 80px;
+  border: 10px solid rgba(0, 0, 0, .3);
+  border-radius: 50%;
+  border-top-color: #000;
+  animation: spin 1s ease-in-out infinite;
+  -webkit-animation: spin 1s ease-in-out infinite;
+}
+
+@@keyframes spin {
+  to {
+    -webkit-transform: rotate(360deg);
+  }
+}
+
+@@-webkit-keyframes spin {
+  to {
+    -webkit-transform: rotate(360deg);
+  }
+}
+/** MODAL STYLING **/
+
+.modal-content {
+  border-radius: 0px;
+  box-shadow: 0 0 20px 8px rgba(0, 0, 0, 0.7);
+}
+
+.modal-backdrop.show {
+  opacity: 0.75;
+}
+
+.loader-txt {
+  p {
+    font-size: 13px;
+    color: #666;
+    small {
+      font-size: 11.5px;
+      color: #999;
+    }
+  }
+}
+
+#output {
+  padding: 25px 15px;
+  background: #222;
+  border: 1px solid #222;
+  max-width: 350px;
+  margin: 35px auto;
+  font-family: 'Roboto', sans-serif !important;
+  p.subtle {
+    color: #555;
+    font-style: italic;
+    font-family: 'Roboto', sans-serif !important;
+  }
+  h4 {
+    font-weight: 300 !important;
+    font-size: 1.1em;
+    font-family: 'Roboto', sans-serif !important;
+  }
+  p {
+    font-family: 'Roboto', sans-serif !important;
+    font-size: 0.9em;
+    b {
+      text-transform: uppercase;
+      text-decoration: underline;
+    }
+  }
+}
+    </style>

@@ -268,6 +268,16 @@ public partial class Order : BaseEntity, ISoftDeletedEntity
     public string ShippingRateComputationMethodSystemName { get; set; }
 
     /// <summary>
+        /// Gets or sets the original shipping method
+        /// </summary>
+        public string OriginalShippingMethod { get; set; }
+
+        /// <summary>
+        /// Gets or sets the original shipping rate computation method identifier or the pickup point provider identifier (if PickupInStore is true)
+        /// </summary>
+        public string OriginalShippingRateComputationMethodSystemName { get; set; }
+
+        /// <summary>
     /// Gets or sets the serialized CustomValues (values from ProcessPaymentRequest)
     /// </summary>
     public string CustomValuesXml { get; set; }
