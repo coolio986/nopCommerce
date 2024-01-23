@@ -1114,6 +1114,160 @@ public partial class ShoppingCartModelFactory : IShoppingCartModelFactory
     }
 
     /// <summary>
+    /// Prepare the mini shopping cart model and subtotal
+    /// </summary>
+    /// <returns>
+    /// A task that represents the asynchronous operation
+    /// The task result contains the mini shopping cart model
+    /// </returns>
+    public virtual async Task<MiniShoppingCartModel> PrepareMiniShoppingCartModelSubtotalAsync()
+    {
+        var customer = await _workContext.GetCurrentCustomerAsync();
+        var model = new MiniShoppingCartModel
+        {
+            ShowProductImages = _shoppingCartSettings.ShowProductImagesInMiniShoppingCart,
+            //let's always display it
+            DisplayShoppingCartButton = true,
+            CurrentCustomerIsGuest = await _customerService.IsGuestAsync(customer),
+            AnonymousCheckoutAllowed = _orderSettings.AnonymousCheckoutAllowed,
+        };
+
+        //performance optimization (use "HasShoppingCartItems" property)
+        if (customer.HasShoppingCartItems)
+        {
+            var store = await _storeContext.GetCurrentStoreAsync();
+            var cart = await _shoppingCartService.GetShoppingCartAsync(customer, ShoppingCartType.ShoppingCart, store.Id);
+
+            if (cart.Any())
+            {
+                var shippingOption = await _genericAttributeService.GetAttributeAsync<ShippingOption>(customer, NopCustomerDefaults.SelectedShippingOptionAttribute, store.Id);
+
+
+                model.TotalProducts = cart.Sum(item => item.Quantity);
+
+                //subtotal
+                var subTotalIncludingTax = await _workContext.GetTaxDisplayTypeAsync() == TaxDisplayType.IncludingTax && !_taxSettings.ForceTaxExclusionFromOrderSubtotal;
+                var (_, _, _, subTotalWithoutDiscountBase, _) = await _orderTotalCalculationService.GetShoppingCartSubTotalAsync(cart, subTotalIncludingTax);
+                var subtotalBase = subTotalWithoutDiscountBase;
+                var currentCurrency = await _workContext.GetWorkingCurrencyAsync();
+                var subtotal = await _currencyService.ConvertFromPrimaryStoreCurrencyAsync(subtotalBase, currentCurrency);
+
+                var (shoppingCartTotalBase, _, _, appliedGiftCards, redeemedRewardPoints, redeemedRewardPointsAmount) = await _orderTotalCalculationService.GetShoppingCartTotalAsync(cart);
+
+                //tax
+                var shoppingCartTax = (await _orderTotalCalculationService.GetTaxTotalAsync(cart)).taxTotal;
+
+                if (shoppingCartTotalBase.HasValue)
+                {
+
+                    var shoppingCartTotal = await _currencyService.ConvertFromPrimaryStoreCurrencyAsync(shoppingCartTotalBase.Value, currentCurrency);
+                    //model.OrderTotal = await _priceFormatter.FormatPriceAsync(shoppingCartTotal, true, false);
+
+                    model.SubTotal = await _priceFormatter.FormatPriceAsync(shoppingCartTotal, false, currentCurrency, (await _workContext.GetWorkingLanguageAsync()).Id, subTotalIncludingTax);
+                    model.SubTotalValue = shoppingCartTotal;
+
+                    if (shoppingCartTax != decimal.Zero)
+                    {
+                        model.Tax = await _priceFormatter.FormatPriceAsync(shoppingCartTax, false, currentCurrency, (await _workContext.GetWorkingLanguageAsync()).Id, subTotalIncludingTax);
+                        model.TaxValue = shoppingCartTax;
+                    }
+                }
+                else
+                {
+                    model.SubTotal = await _priceFormatter.FormatPriceAsync(subtotal, false, currentCurrency, (await _workContext.GetWorkingLanguageAsync()).Id, subTotalIncludingTax);
+                    model.SubTotalValue = subtotal;
+                }
+
+
+
+                //reward points to be spent (redeemed)
+                if (redeemedRewardPointsAmount > decimal.Zero)
+                {
+                    var redeemedRewardPointsAmountInCustomerCurrency = await _currencyService.ConvertFromPrimaryStoreCurrencyAsync(redeemedRewardPointsAmount, currentCurrency);
+                    model.RewardPoints = redeemedRewardPoints;
+                    model.RewardPointsTotal = await _priceFormatter.FormatPriceAsync(-redeemedRewardPointsAmountInCustomerCurrency, true, false);
+                }
+                if (shippingOption != null)
+                {
+                    model.ShippingTotalValue = await _currencyService.ConvertFromPrimaryStoreCurrencyAsync(shippingOption.Rate, currentCurrency);
+                    model.ShippingTotal = await _priceFormatter.FormatPriceAsync(model.ShippingTotalValue, false, currentCurrency, (await _workContext.GetWorkingLanguageAsync()).Id, subTotalIncludingTax);
+                    subtotal += model.ShippingTotalValue;
+                }
+
+
+
+                var requiresShipping = await _shoppingCartService.ShoppingCartRequiresShippingAsync(cart);
+                //a customer should visit the shopping cart page (hide checkout button) before going to checkout if:
+                //1. "terms of service" are enabled
+                //2. min order sub-total is OK
+                //3. we have at least one checkout attribute
+                var checkoutAttributesExist = (await _checkoutAttributeService
+                        .GetAllAttributesAsync(_staticCacheManager, _storeMappingService, store.Id, !requiresShipping))
+                    .Any();
+
+                var minOrderSubtotalAmountOk = await _orderProcessingService.ValidateMinOrderSubtotalAmountAsync(cart);
+
+                var cartProductIds = cart.Select(ci => ci.ProductId).ToArray();
+
+                var downloadableProductsRequireRegistration =
+                    _customerSettings.RequireRegistrationForDownloadableProducts && await _productService.HasAnyDownloadableProductAsync(cartProductIds);
+
+                model.DisplayCheckoutButton = !_orderSettings.TermsOfServiceOnShoppingCartPage &&
+                    minOrderSubtotalAmountOk &&
+                    !checkoutAttributesExist &&
+                    !(downloadableProductsRequireRegistration
+                        && await _customerService.IsGuestAsync(customer));
+
+                //products. sort descending (recently added products)
+                foreach (var sci in cart
+                    .OrderBy(x => x.Id)
+                    //.Take(_shoppingCartSettings.MiniShoppingCartProductNumber)
+                    .ToList())
+                {
+                    var product = await _productService.GetProductByIdAsync(sci.ProductId);
+
+                    var cartItemModel = new MiniShoppingCartModel.ShoppingCartItemModel
+                    {
+                        Id = sci.Id,
+                        ProductId = sci.ProductId,
+                        ProductName = await _localizationService.GetLocalizedAsync(product, x => x.Name),
+                        ProductSeName = await _urlRecordService.GetSeNameAsync(product),
+                        Quantity = sci.Quantity,
+                        AttributeInfo = await _productAttributeFormatter.FormatAttributesAsync(product, sci.AttributesXml)
+                    };
+
+                    //unit prices
+                    if (product.CallForPrice &&
+                        //also check whether the current user is impersonated
+                        (!_orderSettings.AllowAdminsToBuyCallForPriceProducts || _workContext.OriginalCustomerIfImpersonated == null))
+                    {
+                        cartItemModel.UnitPrice = await _localizationService.GetResourceAsync("Products.CallForPrice");
+                        cartItemModel.UnitPriceValue = 0;
+                    }
+                    else
+                    {
+                        var (shoppingCartUnitPriceWithDiscountBase, _) = await _taxService.GetProductPriceAsync(product, (await _shoppingCartService.GetUnitPriceAsync(sci, true)).unitPrice);
+                        var shoppingCartUnitPriceWithDiscount = await _currencyService.ConvertFromPrimaryStoreCurrencyAsync(shoppingCartUnitPriceWithDiscountBase, currentCurrency);
+                        cartItemModel.UnitPrice = await _priceFormatter.FormatPriceAsync(shoppingCartUnitPriceWithDiscount);
+                        cartItemModel.UnitPriceValue = shoppingCartUnitPriceWithDiscount;
+                    }
+
+                    //picture
+                    if (_shoppingCartSettings.ShowProductImagesInMiniShoppingCart)
+                    {
+                        cartItemModel.Picture = await PrepareCartItemPictureModelAsync(sci,
+                            _mediaSettings.MiniCartThumbPictureSize, true, cartItemModel.ProductName);
+                    }
+
+                    model.Items.Add(cartItemModel);
+                }
+            }
+        }
+
+        return model;
+    }
+
+    /// <summary>
     /// Prepare selected checkout attributes
     /// </summary>
     /// <returns>

@@ -26,6 +26,15 @@ public partial interface IBaseAdminModelFactory
     Task PrepareOrderStatusesAsync(IList<SelectListItem> items, bool withSpecialDefaultItem = true, string defaultItemText = null);
 
     /// <summary>
+    /// Prepare available draft order statuses
+    /// </summary>
+    /// <param name="items">Draft order status items</param>
+    /// <param name="withSpecialDefaultItem">Whether to insert the first special item for the default value</param>
+    /// <param name="defaultItemText">Default item text; pass null to use default value of the default item text</param>
+    /// <returns>A task that represents the asynchronous operation</returns>
+    Task PrepareDraftOrderStatusesAsync(IList<SelectListItem> items, bool withSpecialDefaultItem = true, string defaultItemText = null);
+
+    /// <summary>
     /// Prepare available payment statuses
     /// </summary>
     /// <param name="items">Payment status items</param>

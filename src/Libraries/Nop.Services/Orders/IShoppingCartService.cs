@@ -266,7 +266,7 @@ public partial interface IShoppingCartService
         ShoppingCartType shoppingCartType, int storeId, string attributesXml = null,
         decimal customerEnteredPrice = decimal.Zero,
         DateTime? rentalStartDate = null, DateTime? rentalEndDate = null,
-        int quantity = 1, bool addRequiredProducts = true);
+        int quantity = 1, bool addRequiredProducts = true, bool ignoreDeletedProductWarnings = false);
 
     /// <summary>
     /// Updates the shopping cart item

@@ -286,6 +286,29 @@ public partial class BaseAdminModelFactory : IBaseAdminModelFactory
     }
 
     /// <summary>
+    /// Prepare available draft order statuses
+    /// </summary>
+    /// <param name="items">Draft order status items</param>
+    /// <param name="withSpecialDefaultItem">Whether to insert the first special item for the default value</param>
+    /// <param name="defaultItemText">Default item text; pass null to use default value of the default item text</param>
+    /// <returns>A task that represents the asynchronous operation</returns>
+    public virtual async Task PrepareDraftOrderStatusesAsync(IList<SelectListItem> items, bool withSpecialDefaultItem = true, string defaultItemText = null)
+    {
+        if (items == null)
+            throw new ArgumentNullException(nameof(items));
+
+        //prepare available order statuses
+        var availableStatusItems = await DraftOrderStatus.Open.ToSelectListAsync(false);
+        foreach (var statusItem in availableStatusItems)
+        {
+            items.Add(statusItem);
+        }
+
+        //insert special item for the default value
+        await PrepareDefaultItemAsync(items, withSpecialDefaultItem, defaultItemText);
+    }
+
+    /// <summary>
     /// Prepare available payment statuses
     /// </summary>
     /// <param name="items">Payment status items</param>

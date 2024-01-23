@@ -1,0 +1,169 @@
+﻿@model DraftOrderModel
+
+<div id="productPanel">
+    @await Html.PartialAsync("_CustomProductPopUp", Model)
+    <div style="display:grid; grid-template-columns: auto 5fr; justify-content: space-between;">
+        <div style="grid-row: 1/span 2;">
+            <span><strong>Product</strong></span>
+        </div>
+        <div style="display:grid; grid-template-areas: 'row-1' 'row-2';">
+            <div style="display:grid; grid-template-areas: 'col-2 col-3 col-4 col-5'; grid-template-columns: 6fr minmax(6.5rem,auto) minmax(5rem,auto);">
+                <div style="grid-area: col-3">
+                    <span><strong>Quantity</strong></span>
+                </div>
+                <div style="grid-area: col-4;">
+                    <span><strong>Total</strong></span>
+                </div>
+                <div style="grid-area: col-5; justify-self:end">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @foreach (var item in Model.Items)
+    {
+        <hr>
+        <input type="hidden" name="ProductId" value="@item.ProductId" />
+
+        <li>
+            <div style="display:grid; grid-template-columns: auto 5fr; justify-content: space-between;">
+                <div style="grid-row: 1/span 2;">
+                    <img style="height:40px;" src="@item.PictureThumbnailUrl" alt="" title="" />
+                </div>
+                <div style="display:grid; grid-template-areas: 'row-1' 'row-2';">
+                    <div style="display:grid; grid-template-areas: 'col-2 col-3 col-4 col-5'; grid-template-columns: 6fr minmax(6.5rem,auto) minmax(5.0rem,auto);">
+                        <div style="grid-area: col-2">
+                            @if (!item.IsCustomItem)
+                            {
+                                <a style="margin-left:10px" asp-controller="Product" asp-action="Edit" asp-route-id="@item.ProductId">@item.ProductName</a>
+                            }
+                            else
+                            {
+                                <div style="margin-left:10px">@item.ProductName</div>
+                            }
+                            @if (!string.IsNullOrEmpty(item.Sku))
+                            {
+                                <div style="margin-left:10px">
+                                    <p style="margin-bottom:0">
+                                        @if (!item.IsCustomItem)
+                                        {
+                                            @T("Admin.Orders.Products.SKU")
+
+                                            <text>:</text>
+                                            @item.Sku
+                                        }
+                                        else
+                                        {
+                                            <span style="display:block;height:24px;"></span>
+                                        }
+                                    </p>
+                                </div>
+                            }
+                            <div style="margin-left:10px">
+                                <p>
+                                    @(item.UnitPriceInclTaxValue.ToString("C", CultureInfo.CurrentCulture))
+                                </p>
+                            </div>
+                        </div>
+                        <div style="grid-area: col-3;">
+                            <div style="align-items:center; display:flex;">
+                                <div>
+
+                                    @if (item.DiscountExclTaxValue != 0)
+                                    {
+                                        <span style="margin-right:0.5vw"><s>@((item.UnitPriceExclTaxValue + item.DiscountExclTaxValue).ToString("C", CultureInfo.CurrentCulture))</s></span>
+                                    }
+                                    <input type="number" @(Model.OrderStatusId != 0 ? "disabled=disabled" : "") value="@item.Quantity" style="max-width: 4.5rem;padding-left:0.5rem" onchange="incrementProductQty(@item.Id, this.value)">
+                                    @*<span style="margin-right:2vw">@(string.Format("{0} x {1}", item.UnitPriceExclTaxValue.ToString("C", CultureInfo.CurrentCulture), @item.Quantity))</span>*@
+
+                                </div>
+                            </div>
+                        </div>
+                        <div style="grid-area: col-4;">
+                            <span>@(item.SubTotalExclTaxValue.ToString("C", CultureInfo.CurrentCulture))</span>
+                        </div>
+                        <div style="grid-area: col-4; justify-self:end">
+                            @if (Model.OrderStatusId == 0)
+                            {
+                                <button type="button" style="padding:unset;border:none;position:unset;background-color:unset" onclick="removeProduct(@item.Id, '@item.IsCustomItem')">
+                                    <svg height="22" width="22" fill="#5c5f62" focusable="false" aria-hidden="true">
+                                        <path d="M6.707 5.293a1 1 0 0 0-1.414 1.414l3.293 3.293-3.293 3.293a1 1 0 1 0 1.414 1.414l3.293-3.293 3.293 3.293a1 1 0 0 0 1.414-1.414l-3.293-3.293 3.293-3.293a1 1 0 0 0-1.414-1.414l-3.293 3.293-3.293-3.293Z"></path>
+                                    </svg>
+                                </button>
+                            }
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </li>
+    }
+</div>
+
+<script>
+    var draftOrderId = @Model.Id;
+
+
+    function incrementProductQty(id, qty) {
+        var postData = {
+            productId: id,
+            draftOrderId: draftOrderId,
+            quantityTotal: qty,
+
+        };
+        addAntiForgeryToken(postData);
+        $.ajax({
+            cache: false,
+            type: "POST",
+            url: "@(Url.Action("ProductCountChange", "Order"))",
+            data: postData,
+            traditional: true,
+
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            },
+            success: function (data) {
+                console.log(data);
+                $("#productPanel").html(data);
+                if (typeof updateDraftPricing === "function") {
+                    updateDraftPricing(draftOrderId)
+                }
+
+            }
+        });
+
+        return false;
+    }
+
+    function removeProduct(id, isCustomItem) {
+        var draftOrderId = '@Model.Id';
+        var postData = {
+            productId: id,
+            draftOrderId: draftOrderId,
+            isCustomItem: isCustomItem
+
+        };
+        addAntiForgeryToken(postData);
+        $.ajax({
+            cache: false,
+            type: "POST",
+            url: "@(Url.Action("RemoveProduct", "Order"))",
+            data: postData,
+            traditional: true,
+
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            },
+            success: function (data) {
+                //console.log(data);
+                $("#productPanel").html(data);
+                if (typeof updateDraftPricing === "function") {
+                    updateDraftPricing(draftOrderId)
+                }
+
+            }
+        });
+
+        return false;
+    }
+</script>

@@ -9,6 +9,7 @@ public partial record OnePageCheckoutModel : BaseNopModel
     public bool DisplayCaptcha { get; set; }
     public bool IsReCaptchaV3 { get; set; }
     public string ReCaptchaPublicKey { get; set; }
-
+    public bool IsDraftOrder { get; set; }
+    public Guid DraftOrderGuid { get; set; }
     public CheckoutBillingAddressModel BillingAddress { get; set; }
 }

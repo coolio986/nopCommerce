@@ -1,4 +1,6 @@
-﻿using Nop.Core;
+﻿using Newtonsoft.Json.Linq;
+using Nop.Core;
+using Nop.Core.Configuration;
 using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Common;
 using Nop.Core.Domain.Customers;
@@ -42,6 +44,7 @@ public partial class ShippingService : IShippingService
     protected readonly IStoreContext _storeContext;
     protected readonly ShippingSettings _shippingSettings;
     protected readonly ShoppingCartSettings _shoppingCartSettings;
+    private readonly AppSettings _appSettings;
 
     #endregion
 
@@ -65,7 +68,8 @@ public partial class ShippingService : IShippingService
         IStateProvinceService stateProvinceService,
         IStoreContext storeContext,
         ShippingSettings shippingSettings,
-        ShoppingCartSettings shoppingCartSettings)
+        ShoppingCartSettings shoppingCartSettings,
+        AppSettings appSettings)
     {
         _addressService = addressService;
         _checkoutAttributeParser = checkoutAttributeParser;
@@ -86,6 +90,7 @@ public partial class ShippingService : IShippingService
         _storeContext = storeContext;
         _shippingSettings = shippingSettings;
         _shoppingCartSettings = shoppingCartSettings;
+        _appSettings = appSettings;
     }
 
     #endregion
@@ -868,6 +873,45 @@ public partial class ShippingService : IShippingService
                     //clear the shipping options in this case
                     srcmShippingOptions = new List<ShippingOption>();
                     break;
+                }
+            }
+
+            //remove / ignore shipping options returned by a shipper
+            KeyValuePair<string, JToken>[] kvps = _appSettings.Configuration.ToArray();
+            if (kvps.Any(x => x.Key == "IgnoreShippingRates"))
+            {
+                KeyValuePair<string, JToken> keyValuePair = kvps.FirstOrDefault(x => x.Key == "IgnoreShippingRates");
+
+                var children = keyValuePair.Value[srcm.PluginDescriptor.FriendlyName] ?? JToken.FromObject(new object());
+                if (children.Any())
+                {
+                    foreach (string child in children)
+                    {
+                        var selectedOption = srcmShippingOptions.FirstOrDefault(x => x.Name == child);
+
+                        if (selectedOption != null)
+                            srcmShippingOptions.Remove(selectedOption);
+
+                    }
+                }
+            }
+
+            //add transit time adder to base transit time
+            if (kvps.Any(x => x.Key == "ShippingRateTransitTimesBusinessDaysAdder"))
+            {
+                KeyValuePair<string, JToken> keyValuePair = kvps.FirstOrDefault(x => x.Key == "ShippingRateTransitTimesBusinessDaysAdder");
+
+                var children = keyValuePair.Value[srcm.PluginDescriptor.FriendlyName] ?? JToken.FromObject(new object());
+                if (children.Any())
+                {
+                    foreach (ShippingOption shippingOption in srcmShippingOptions)
+                    {
+                        var child = children[shippingOption.Name];
+                        if (child != null)
+                            shippingOption.TransitDaysAdder = child.Value<int>();
+                        else
+                            shippingOption.TransitDaysAdder = 1;
+                    }
                 }
             }
 

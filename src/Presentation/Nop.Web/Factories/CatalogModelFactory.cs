@@ -781,7 +781,8 @@ public partial class CatalogModelFactory : ICatalogModelFactory
             priceMax: selectedPriceRange?.To,
             manufacturerIds: command.ManufacturerIds,
             filteredSpecOptions: filteredSpecs,
-            orderBy: (ProductSortingEnum)command.OrderBy);
+            orderBy: (ProductSortingEnum)command.OrderBy,
+            inStockOnly: command.ShowInStockOnly);
 
         var isFiltering = filterableOptions.Any() || selectedPriceRange?.From is not null;
         await PrepareCatalogProductsAsync(model, products, isFiltering);

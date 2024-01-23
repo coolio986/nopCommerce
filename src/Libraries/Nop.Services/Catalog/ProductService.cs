@@ -846,7 +846,8 @@ public partial class ProductService : IProductService
         IList<SpecificationAttributeOption> filteredSpecOptions = null,
         ProductSortingEnum orderBy = ProductSortingEnum.Position,
         bool showHidden = false,
-        bool? overridePublished = null)
+        bool? overridePublished = null,
+        bool inStockOnly = false)
     {
         //some databases don't support int.MaxValue
         if (pageSize == int.MaxValue)
@@ -860,6 +861,9 @@ public partial class ProductService : IProductService
             productsQuery = productsQuery.Where(p => p.Published == overridePublished.Value);
 
         var customer = await _workContext.GetCurrentCustomerAsync();
+
+        if (inStockOnly)
+            productsQuery = productsQuery.Where(p => p.DisableBuyButton == !inStockOnly);
 
         if (!showHidden || storeId > 0)
         {

@@ -72,4 +72,21 @@ public partial interface IWorkContext
     /// </summary>
     /// <returns>A task that represents the asynchronous operation</returns>
     Task SetTaxDisplayTypeAsync(TaxDisplayType taxDisplayType);
+
+    /// <summary>
+    /// Get nop draft order cookie
+    /// </summary>
+    /// <returns>String value of cookie</returns>
+    string GetDraftOrderCookie();
+
+    /// <summary>
+    /// Set draft order cookie
+    /// </summary>
+    /// <param name="draftOrderGuid">draftOrderGuid</param>
+    void SetDraftOrderCookie(Guid draftOrderGuid);
+
+    /// <summary>
+    /// Delete draft order cookie
+    /// </summary>
+    void DeleteDraftOrderCookie();
 }

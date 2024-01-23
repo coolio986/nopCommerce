@@ -76,6 +76,8 @@ public partial record OrderItemModel : BaseNopEntityModel
 
     public Guid LicenseDownloadGuid { get; set; }
 
+    public bool IsCustomItem { get; set; }
+
     #endregion
 
     #region Nested Classes

@@ -41,11 +41,136 @@
 <script src="~/js/public.accordion.js" asp-location="Footer"></script>
 <script src="~/js/public.onepagecheckout.js" asp-location="Footer"></script>
 
+<style>
+    .column-left {
+        float: left;
+        width: 70%;
+    }
+
+    @@media all and (max-width: 405px) {
+        .column-left {
+            width: 100%;
+        }
+
+        .column-right {
+            width: 0;
+            display: none;
+        }
+    }
+
+    .column-right {
+        float: left;
+        width: 30%;
+    }
+    .column{
+        float: left;
+        width: 100%;
+    }
+    /* Clear floats after the columns */
+    .row:after {
+        content: "";
+        display: table;
+        clear: both;
+    }
+    .card-body {
+    -webkit-flex: 1 1 auto;
+    -ms-flex: 1 1 auto;
+    flex: 1 1 auto;
+    min-height: 1px;
+    padding: 0 1.25rem 1.25rem 1.25rem;
+    
+}
+
+    .card {
+        box-shadow: 0 0 1px rgba(0,0,0,.125),0 1px 3px rgba(0,0,0,.2);
+        margin-bottom: 1rem position: relative;
+        display: -webkit-flex;
+        display: -ms-flexbox;
+        display: flex;
+        -webkit-flex-direction: column;
+        -ms-flex-direction: column;
+        flex-direction: column;
+        min-width: 0;
+        word-wrap: break-word;
+        background-color: #fff;
+        background-clip: border-box;
+        border: 0 solid rgba(0,0,0,.125);
+        border-radius: .25rem
+    }
+    .card.fit-content{
+            width: 60vw;
+            margin-left:auto;
+            margin-right: auto;
+            
+    }
+
+    @@media all and (min-width: 700px) {
+        .card.fit-content {
+            width: 70%;
+        }
+    }
+
+    .form-check-input{
+        float: left;
+    }
+    .form-check-label-name{
+        float: left;
+        margin-left:5px;
+    }
+
+    .form-check-label-fee {
+        float: right;
+        
+    }
+
+    .list-group {
+        display: -webkit-box;
+        display: -ms-flexbox;
+        display: flex;
+        -webkit-box-orient: vertical;
+        -webkit-box-direction: normal;
+        -ms-flex-direction: column;
+        flex-direction: column;
+        padding-left: 0;
+        margin-bottom: 0;
+    }
+
+    .card > .list-group:first-child .list-group-item:first-child {
+        border-top-left-radius: 0.25rem;
+        border-top-right-radius: 0.25rem;
+    }
+
+    .list-group-flush:first-child .list-group-item:first-child {
+        border-top: 0;
+    }
+
+    .list-group-flush .list-group-item {
+        border-right: 0;
+        border-left: 0;
+        border-radius: 0;
+    }
+
+    .list-group-item:first-child {
+        border-top-left-radius: 0.25rem;
+        border-top-right-radius: 0.25rem;
+    }
+
+    .list-group-item {
+        position: relative;
+        display: block;
+        padding: 0.75rem 1.25rem;
+        margin-bottom: -1px;
+        background-color: #fff;
+        border: 1px solid rgba(0,0,0,.125);
+    }
+</style>
+
 <div class="page checkout-page">
     <div class="page-title">
         <h1>@T("Checkout")</h1>
     </div>
-    <div class="page-body checkout-data">
+    <div class="row">
+        <div class="page-body checkout-data column-left" id="checkoutAccordion">
         @await Component.InvokeAsync(typeof(WidgetViewComponent), new { widgetZone = PublicWidgetZones.OpcContentBefore, additionalData = Model })
         <ol class="opc" id="checkout-steps">
             <li id="opc-billing" class="tab-section allow">
@@ -128,7 +253,7 @@
                                     NotAvailableMethodsError: "@T("ShippingMethod.NotAvailableMethodsError")",
                                     SpecifyMethodError: "@T("ShippingMethod.SpecifyMethodError")"
                                 };
-                                ShippingMethod.init('#co-shipping-method-form', '@(storeLocation)checkout/OpcSaveShippingMethod/', localized_data);
+                                ShippingMethod.init('#co-shipping-method-form', '@(storeLocation)checkout/OpcSaveShippingMethod@(Model.IsDraftOrder ? string.Format("{0}{1}", "?order=", Model.DraftOrderGuid) : "/")', localized_data);
                             </script>
                             <div class="buttons" id="shipping-method-buttons-container">
                                 <p class="back-link">
@@ -180,7 +305,7 @@
                         </div>
                     </form>
                     <script asp-location="Footer">
-                        PaymentInfo.init('#co-payment-info-form', '@(storeLocation)checkout/OpcSavePaymentInfo/');
+                            PaymentInfo.init('#co-payment-info-form', '@(storeLocation)checkout/OpcSavePaymentInfo@(Model.IsDraftOrder ? string.Format("{0}{1}", "?order=", Model.DraftOrderGuid) : "/")');
                     </script>
                     <div class="buttons" id="payment-info-buttons-container">
                         <p class="back-link">
@@ -215,6 +340,14 @@
         </ol>
         @await Component.InvokeAsync(typeof(WidgetViewComponent), new { widgetZone = PublicWidgetZones.OpcContentAfter, additionalData = Model })
     </div>
+        <div class="column-right card-body" id="shoppingCartSummaryCardBody">
+            <div class="card card-default">
+                <div id="shoppingCartSummary">
+                </div>
+                @*@await Component.InvokeAsync("ShoppingCartSummary")*@
+            </div>
+        </div>
+    </div>
     <script asp-location="Footer">
         Accordion.init('checkout-steps', '.step-title', true);
         Accordion.openSection('#opc-billing');
@@ -223,6 +356,58 @@
         {
             Accordion.hideSection('#opc-billing');
             Billing.save();
+        }
+
+        $(document).ready(function () {
+            getCartSummary();
+        });
+
+        function getCartSummary() {
+            var postData = {
+
+
+            };
+            addAntiForgeryToken(postData);
+            $.ajax({
+                cache: false,
+                type: "GET",
+                url: "@(Url.Action("ShoppingCartSummary", "Checkout"))",
+                data: postData,
+                traditional: true,
+
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.log(errorThrown);
+                },
+                success: function (data) {
+                    //console.log(data);
+                    $("#shoppingCartSummary").html(data);
+
+                }
+            });
+
+            return false;
+        }
+        function saveShippingMethod() {
+            ShippingMethod.save(getCartSummary);
+
+        }
+
+        function savePaymentMethod() {
+            PaymentMethod.save(getCartSummary);
+
+        }
+
+        function changedAccordion(section) {
+            if (section === "opc-confirm_order") {
+                $("#shoppingCartSummaryCardBody").hide();
+                $("#checkoutAccordion").removeClass("column-left");
+                $("#checkoutAccordion").addClass("column");
+            }
+            else {
+                $("#checkoutAccordion").removeClass("column");
+                $("#checkoutAccordion").addClass("column-left");
+                $("#shoppingCartSummaryCardBody").show();
+            }
         }
     </script>
 </div>

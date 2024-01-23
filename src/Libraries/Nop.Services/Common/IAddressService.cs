@@ -25,6 +25,27 @@ public partial interface IAddressService
     Task<int> GetAddressTotalByCountryIdAsync(int countryId);
 
     /// <summary>
+    /// Gets address by name
+    /// </summary>
+    /// <param name="firstName">Customer first name</param>
+    /// <param name="lastName">Customer last name (optional)</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation
+    /// The task result contains an address
+    /// </returns>
+    Task<IEnumerable<Address>> GetAddressesByName(string firstName = null, string lastName = null);
+
+    /// <summary>
+    /// Gets address by email address
+    /// </summary>
+    /// <param name="email">Customer email address</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation
+    /// The task result contains an address
+    /// </returns>
+    Task<IEnumerable<Address>> GetAddressesByEmail(string email);
+
+    /// <summary>
     /// Gets total number of addresses by state/province identifier
     /// </summary>
     /// <param name="stateProvinceId">State/province identifier</param>
@@ -96,6 +117,12 @@ public partial interface IAddressService
     /// </summary>
     /// <returns>A deep copy of address</returns>
     Address CloneAddress(Address address);
+
+    /// <summary>
+    /// Compare addresses
+    /// </summary>
+    /// <returns>A shallow compare of addresses</returns>
+    bool IsEqualTo(object address1, object address2, params string[] ignore);
 
     /// <summary>
     /// Address format

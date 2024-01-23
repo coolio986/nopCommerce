@@ -1,0 +1,352 @@
+﻿@model DraftOrderModel
+
+@inject IStateProvinceService stateProvinceService
+@inject ICountryService countryService
+@inject IAddressService addressService
+
+@using Nop.Services.Directory;
+
+
+@{
+    //page title
+    ViewBag.PageTitle = T("Admin.Orders.EditOrderDetails").Text;
+    ViewBag.OrderStatusId = Model.OrderStatusId;
+    //active menu item (system name)
+    NopHtml.SetActiveMenuItemSystemName("Draft Orders");
+    
+    var baseUrl = Context.Request.Host.ToString();
+}
+
+<script>
+    $(document).ready(function () {
+
+
+    @if (!Model.IsShippable)
+    {
+        <text>
+                    var searchSnippet = $('#searchSnippet').html();
+            $('#customerSearchResults').html(searchSnippet);
+        </text>
+    }
+
+
+            $('#btnRefreshProducts').click(function () {
+                //refresh products
+
+                var postData = {
+                    id: '@Model.Id',
+
+                };
+                addAntiForgeryToken(postData);
+                $.ajax({
+                    cache: false,
+                    type: "POST",
+                    url: "@(Url.Action("RefreshProducts", "Order"))",
+                    data: postData,
+                    traditional: true,
+
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        console.log(errorThrown);
+                    },
+                    success: function (data) {
+                        console.log(data);
+                        $("#productPanel").html(data);
+                        if (typeof updateDraftPricing === "function") {
+                            updateDraftPricing('@Model.Id')
+                        }
+
+                    }
+                });
+
+                return false;
+            });
+
+        
+
+
+    });
+
+    function addressSelected(n) {
+        var custId = document.getElementById('CustomerId');
+        custId.value = n;
+
+        var postData = {
+            customerId: n,
+
+        };
+        addAntiForgeryToken(postData);
+        $.ajax({
+            cache: false,
+            type: "POST",
+            url: "@(Url.Action("CustomerById", "Order"))",
+            data: postData,
+            traditional: true,
+
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+                custId.value = 0;
+            },
+            success: function (data) {
+                //console.log(data);
+                $("#customerSearchResults").html(data);
+
+            }
+        });
+    }
+
+    function searchCustomer() {
+        //refresh products
+        var customerName = $("#customerSearchName").val();
+        if (!customerName) {
+            return false;
+        }
+
+        var postData = {
+            customerName: $("#customerSearchName").val(),
+
+        };
+        addAntiForgeryToken(postData);
+        $.ajax({
+            cache: false,
+            type: "POST",
+            url: "@(Url.Action("SearchCustomer", "Order"))",
+            data: postData,
+            traditional: true,
+
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            },
+            success: function (data) {
+                //console.log(data);
+                $("#customerSearchResults").html(data);
+
+            }
+        });
+
+        return false;
+    }
+
+    function updateDraftPricing(id) {
+        var postData = {
+            id: id
+
+        };
+        addAntiForgeryToken(postData);
+        $.ajax({
+            cache: false,
+            type: "POST",
+            url: "@(Url.Action("DraftPricing", "Order"))",
+            data: postData,
+            traditional: true,
+
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.log(errorThrown);
+            },
+            success: function (data) {
+                //console.log(data);
+                $("#draftPricing").html(data);
+
+            }
+        });
+
+        return false;
+    }
+    function copyDraftAddressToClipboard() {
+        let str = $('#btnAddressLink').attr('address');
+        const el = document.createElement('textarea');
+        el.value = str;
+        el.setAttribute('readonly', '');
+        el.style.position = 'absolute';
+        el.style.left = '-9999px';
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        var addressLinkText = $('#addressLink').text();
+        $('#addressLink').text("Copied!");
+
+        setTimeout(function () {
+            $('#addressLink').text(addressLinkText);
+        }, 2000);
+
+        
+    }
+
+</script>
+
+<input type="hidden" name="Id" value="@Model.Id" />
+
+
+<form asp-controller="Order" asp-action="EditDraft" method="post" id="draft-order-form">
+    <input type="hidden" id="CustomerId" name="CustomerId" value="@Model.CustomerId" />
+    <div class="content-header clearfix">
+        <h1 class="float-left">
+            @T("Admin.Orders.EditOrderDetails") - @Model.CustomOrderNumber
+            <small>
+                <i class="fas fa-arrow-circle-left"></i>
+                <a asp-action="Draft">Back to draft list</a>
+            </small>
+        </h1>
+        <div class="float-right">
+            <button type="submit" name="save" class="btn btn-primary">
+                <i class="far fa-save"></i>
+                @T("Admin.Common.Save")
+            </button>
+            <button type="submit" name="save-continue" class="btn btn-primary">
+                <i class="far fa-save"></i>
+                @T("Admin.Common.SaveContinue")
+            </button>
+            @if (Model.PaymentStatusId <= 20)
+            {
+                <span id="draftorder-delete" class="btn btn-danger">
+                    <i class="far fa-trash-alt"></i>
+                    @T("Admin.Common.Delete")
+                </span>
+            }
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="" style="box-shadow: none; background-color:#ecf0f5">
+            <div style="margin:0 auto; max-width:69.375rem;">
+                <div style="display:grid; align-items: start;grid-template-columns: 3fr 1.35fr; grid-template-rows: repeat(100,minmax(0,auto));">
+                    <div style="grid-column: 1; grid-row: 1">
+                        @if (Model.OrderStatusId > 0)
+                        {
+                            <div class="card-body" style="padding-bottom:0">
+                                <div class="card card-default">
+                                    <div class="card-body">
+                                        <span><strong>Draft Link</strong></span>
+                                        <div class="form-group row">
+                                            <div class="col-md-12" >
+                                                <button address="https://@(baseUrl)/onepagecheckout?order=@(Model.OrderGuid)#opc-billing" type="button" id="btnAddressLink" class="btn btn-primary" onclick="copyDraftAddressToClipboard()" style="background:unset;border:0;padding-top:inherit;padding-bottom:4px;padding-left:0">
+                                                    <span style="color:#2c6ecb" id="addressLink">Copy draft link</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        }
+
+                        <div class="card-body" style="padding-bottom:0">
+                            <div class="card card-default">
+                                <div class="card-body">
+                                    @*<div class="form-group row">
+                                    <div class="col-md-3" style="flex:0 0 4%">
+                                    <div class="form-text-row"><strong>Product</strong></div>
+                                    </div>
+                                    <div class="col-md-3" style="flex:0 0 4%">
+                                    <div class="form-text-row"><strong>Quantity</strong></div>
+                                    </div>
+
+
+                                    </div>*@
+
+                                    <ul style="list-style-type: none; padding-left: 0;" id="productPanel">
+                                        @await Html.PartialAsync("_ProductPanel", Model)
+                                    </ul>
+                                    <div class="col-md-9">
+                                        <div style="display:grid;">
+                                            @if (Model.OrderStatusId == 0)
+                                            {
+                                                <button type="submit" id="btnAddNewProduct"
+                                                        onclick="javascript:OpenWindow('@(Url.Action("ProductAddPopup", "Order", new { draftOrderId = Model.Id, btnId = "btnRefreshProducts", formId = "draft-order-form" }))', 800, 800, true); return false;"
+                                                        class="btn btn-primary" style="justify-self:start">
+                                                    Add existing product
+                                                </button>
+                                                <button type="submit" id="btnRefreshProducts" style="display: none"></button>
+                                            }
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="draftPricing">
+                            @await Html.PartialAsync("_DraftPricing", Model)
+                        </div>
+                    </div>
+                    <div style="grid-column: 2; grid-row:1/-1">
+                        <div class="card-body">
+                            <div class="card card-default">
+                                <div class="card-body">
+                                    <div class="form-group row">
+                                        <div class="col-md-12">
+                                            <span><strong>Shipping address</strong></span>
+                                        </div>
+                                        <div id="customerSearchResults">
+                                            @if (Model.IsShippable)
+                                            {
+                                                @await Html.PartialAsync("_Draft.AddressSingle", Model.ShippingAddress)
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body" style="padding-top:0">
+                            <div class="card card-default">
+                                <div class="card-body">
+                                    <div class="form-group row">
+
+                                        <div class="col-md-12">
+                                            <span><strong>Billing address</strong></span>
+                                        </div>
+                                        @if (!addressService.IsEqualTo(Model.ShippingAddress, Model.BillingAddress, "Id"))
+                                        {
+                                            @if (Model.IsShippable)
+                                            {
+                                                <div class="col-md-12">
+                                                    <span>@Model.BillingAddress.FirstName @Model.ShippingAddress.LastName</span>
+                                                </div>
+                                                <div class="col-md-12">
+                                                    <span>@Model.BillingAddress.Address1</span>
+                                                </div>
+                                                <div class="col-md-12">
+                                                    <span>@Model.BillingAddress.Address2</span>
+                                                </div>
+                                                <div class="col-md-12">
+                                                    @{
+                                                        var stateprovincebilling = await stateProvinceService.GetStateProvinceByIdAsync((int)Model.BillingAddress.StateProvinceId);
+                                                    }
+                                                    <span>@Model.BillingAddress.City @stateprovincebilling?.Abbreviation, @Model.BillingAddress.ZipPostalCode</span>
+                                                </div>
+                                                <div class="col-md-12">
+                                                    @{
+                                                        var countrybilling = await countryService?.GetCountryByIdAsync((int)Model.BillingAddress.CountryId);
+                                                    }
+                                                    <span>@countrybilling?.ThreeLetterIsoCode</span>
+                                                </div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <div class="col-md-12">
+                                                <span style="color:rgb(109,113,117)">Same as shipping address</span>
+                                            </div>
+                                        }
+
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="searchSnippet" style="display:none">
+        <div class="input-group">
+            <input type="text" class="form-control" placeholder="Search customer" id="customerSearchName">
+            <div class="input-group-append">
+                <button class="btn btn-secondary" type="button" onclick="searchCustomer()">
+                    <i class="fa fa-search"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+<nop-delete-confirmation asp-model-id="@Model.Id" asp-action="DraftOrderDelete" asp-button-id="draftorder-delete" />

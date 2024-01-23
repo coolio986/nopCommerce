@@ -31,6 +31,8 @@ public partial record CheckoutShippingMethodModel : BaseNopModel
         public decimal Rate { get; set; }
         public int DisplayOrder { get; set; }
         public bool Selected { get; set; }
+        public int TransitDays { get; set; }
+        public int TransitDayAdder { get; set; }
         public ShippingOption ShippingOption { get; set; }
     }
 

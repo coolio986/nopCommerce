@@ -412,6 +412,48 @@ public partial class OrderService : IOrderService
     }
 
     /// <summary>
+    /// Parse tax rates
+    /// </summary>
+    /// <param name="order">Draft Order</param>
+    /// <param name="taxRatesStr"></param>
+    /// <returns>Rates</returns>
+    public virtual SortedDictionary<decimal, decimal> ParseTaxRates(DraftOrder order, string taxRatesStr)
+    {
+        var taxRatesDictionary = new SortedDictionary<decimal, decimal>();
+
+        if (string.IsNullOrEmpty(taxRatesStr))
+            return taxRatesDictionary;
+
+        var lines = taxRatesStr.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+        foreach (var line in lines)
+        {
+            if (string.IsNullOrEmpty(line.Trim()))
+                continue;
+
+            var taxes = line.Split(':');
+            if (taxes.Length != 2)
+                continue;
+
+            try
+            {
+                var taxRate = decimal.Parse(taxes[0].Trim(), CultureInfo.InvariantCulture);
+                var taxValue = decimal.Parse(taxes[1].Trim(), CultureInfo.InvariantCulture);
+                taxRatesDictionary.Add(taxRate, taxValue);
+            }
+            catch
+            {
+                // ignored
+            }
+        }
+
+        //add at least one tax rate (0%)
+        if (!taxRatesDictionary.Any())
+            taxRatesDictionary.Add(decimal.Zero, decimal.Zero);
+
+        return taxRatesDictionary;
+    }
+
+    /// <summary>
     /// Gets a value indicating whether an order has items to be added to a shipment
     /// </summary>
     /// <param name="order">Order</param>

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using Nop.Core;
+using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Common;
 using Nop.Core.Domain.Customers;
 using Nop.Core.Domain.Orders;
@@ -60,6 +61,7 @@ public partial class CheckoutController : BasePublicController
     protected readonly PaymentSettings _paymentSettings;
     protected readonly RewardPointsSettings _rewardPointsSettings;
     protected readonly ShippingSettings _shippingSettings;
+    private readonly IDraftOrderService _draftOrderService;
     protected readonly TaxSettings _taxSettings;
     private static readonly string[] _separator = ["___"];
 
@@ -94,6 +96,7 @@ public partial class CheckoutController : BasePublicController
         PaymentSettings paymentSettings,
         RewardPointsSettings rewardPointsSettings,
         ShippingSettings shippingSettings,
+        IDraftOrderService draftOrderService,
         TaxSettings taxSettings)
     {
         _addressSettings = addressSettings;
@@ -123,6 +126,7 @@ public partial class CheckoutController : BasePublicController
         _paymentSettings = paymentSettings;
         _rewardPointsSettings = rewardPointsSettings;
         _shippingSettings = shippingSettings;
+        _draftOrderService = draftOrderService;
         _taxSettings = taxSettings;
     }
 
@@ -1343,6 +1347,18 @@ public partial class CheckoutController : BasePublicController
     protected virtual async Task<JsonResult> OpcLoadStepAfterShippingAddress(IList<ShoppingCartItem> cart)
     {
         var customer = await _workContext.GetCurrentCustomerAsync();
+
+        var draftOrderGuidCookie = _workContext.GetDraftOrderCookie();
+        CheckoutShippingMethodModel checkoutShippingMethodModel = null;
+        if (draftOrderGuidCookie != null)
+        {
+            var draftOrder = await _draftOrderService.GetOrderByGuidAsync(Guid.Parse(draftOrderGuidCookie));
+            if (draftOrder != null)
+            {
+                checkoutShippingMethodModel = await _checkoutModelFactory.PrepareShippingMethodModelDraftOrderAsync(await _customerService.GetCustomerShippingAddressAsync(customer), draftOrder, cart);
+            }
+        }
+
         var shippingMethodModel = await _checkoutModelFactory.PrepareShippingMethodModelAsync(cart, await _customerService.GetCustomerShippingAddressAsync(customer));
         if (_shippingSettings.BypassShippingMethodSelectionIfOnlyOne &&
             shippingMethodModel.ShippingMethods.Count == 1)
@@ -1480,6 +1496,116 @@ public partial class CheckoutController : BasePublicController
         var customer = await _workContext.GetCurrentCustomerAsync();
         var store = await _storeContext.GetCurrentStoreAsync();
         var cart = await _shoppingCartService.GetShoppingCartAsync(customer, ShoppingCartType.ShoppingCart, store.Id);
+
+        string orderQuery = HttpContext.Request.Query["order"];
+        orderQuery = orderQuery ?? Guid.Empty.ToString();
+
+        bool isDraftOrder = false;
+
+        var draftOrderGuid = Guid.Parse(orderQuery);
+        if (draftOrderGuid != Guid.Empty)
+        {
+
+            var draftOrder = await _draftOrderService.GetOrderByGuidAsync(draftOrderGuid);
+
+            if (draftOrder != null && draftOrder.PaymentStatusId < (int)OrderStatus.Complete)
+            {
+                if (customer.Id == draftOrder.CustomerId)
+                {
+                    //need to remove any cart items so we can add our own draft items
+                    if (cart.Any())
+                    {
+                        foreach (var item in cart)
+                        {
+                            await _shoppingCartService.DeleteShoppingCartItemAsync(item);
+                        }
+
+                    }
+
+
+                    //move shopping cart items (if possible)
+                    foreach (var draftOrderItem in await _draftOrderService.GetOrderItemsAsync(draftOrder.Id))
+                    {
+                        var product = await _productService.GetProductByIdAsync(draftOrderItem.ProductId);
+
+                        await _shoppingCartService.AddToCartAsync(customer, product,
+                            ShoppingCartType.ShoppingCart, draftOrder.StoreId,
+                            draftOrderItem.AttributesXml, draftOrderItem.UnitPriceExclTax,
+                            draftOrderItem.RentalStartDateUtc, draftOrderItem.RentalEndDateUtc,
+                            draftOrderItem.Quantity, false, ignoreDeletedProductWarnings: true);
+                    }
+
+                    if (draftOrder.CustomDiscountValue != decimal.Zero)
+                    {
+                        //apply discount coupon codes to customer
+                        await _customerService.ApplyDiscountCouponCodeAsync(customer, draftOrder.OrderGuid.ToString());
+
+                    }
+
+                    cart = await _shoppingCartService.GetShoppingCartAsync(customer, ShoppingCartType.ShoppingCart, store.Id);
+                    isDraftOrder = true;
+                    _workContext.SetDraftOrderCookie(draftOrder.OrderGuid);
+                }
+                else
+                { //guest user
+
+                    var customerRoleIds = await _customerService.GetCustomerRoleIdsAsync(customer);
+                    var guestRole = await _customerService.GetCustomerRoleBySystemNameAsync(NopCustomerDefaults.GuestsRoleName);
+                    var registeredRole = await _customerService.GetCustomerRoleBySystemNameAsync(NopCustomerDefaults.RegisteredRoleName);
+
+                    var address = await _customerService.GetCustomerAddressAsync(customer.Id, customer.BillingAddressId ?? 0);
+
+
+                    var draftOrderAddress = await _customerService.GetAddressesByCustomerIdAsync(draftOrder.CustomerId);
+
+                    if (address == null && draftOrderAddress.Any())
+                    {
+                        draftOrderAddress = new List<Address>(draftOrderAddress.ToList().OrderBy(x => x.CreatedOnUtc));
+                        address = draftOrderAddress.FirstOrDefault();
+
+                    }
+
+                    if (draftOrderAddress.Any(x => x.Email == address.Email))
+                    {
+                        if (customerRoleIds.Contains(guestRole.Id) && !customerRoleIds.Contains(registeredRole.Id))
+                        {
+                            //need to remove any cart items so we can add our own draft items
+                            if (cart.Any())
+                            {
+                                foreach (var item in cart)
+                                {
+                                    await _shoppingCartService.DeleteShoppingCartItemAsync(item);
+                                }
+
+                            }
+                            //move shopping cart items (if possible)
+                            foreach (var draftOrderItem in await _draftOrderService.GetOrderItemsAsync(draftOrder.Id))
+                            {
+                                var product = await _productService.GetProductByIdAsync(draftOrderItem.ProductId);
+
+                                await _shoppingCartService.AddToCartAsync(customer, product,
+                                    ShoppingCartType.ShoppingCart, draftOrder.StoreId,
+                                    draftOrderItem.AttributesXml, draftOrderItem.UnitPriceExclTax,
+                                    draftOrderItem.RentalStartDateUtc, draftOrderItem.RentalEndDateUtc,
+                                    draftOrderItem.Quantity, false, ignoreDeletedProductWarnings: true);
+                            }
+
+                            if (draftOrder.CustomDiscountValue != decimal.Zero)
+                            {
+                                //apply discount coupon codes to customer
+                                await _customerService.ApplyDiscountCouponCodeAsync(customer, draftOrder.OrderGuid.ToString());
+
+                            }
+
+                            cart = await _shoppingCartService.GetShoppingCartAsync(customer, ShoppingCartType.ShoppingCart, store.Id);
+                            isDraftOrder = true;
+                            _workContext.SetDraftOrderCookie(draftOrder.OrderGuid);
+
+                        }
+                    }
+                }
+            }
+        }
 
         if (!cart.Any())
             return RedirectToRoute("ShoppingCart");
@@ -1922,6 +2048,12 @@ public partial class CheckoutController : BasePublicController
         }
     }
 
+    [HttpGet]
+    public virtual IActionResult ShoppingCartSummary()
+    {
+        return ViewComponent("ShoppingCartSummary");
+    }
+
     [HttpPost]
     [IgnoreAntiforgeryToken]
     public virtual async Task<IActionResult> OpcSavePaymentInfo(IFormCollection form)
@@ -2000,6 +2132,12 @@ public partial class CheckoutController : BasePublicController
     {
         try
         {
+            List<Product> listOfDeletedCustomProducts = new List<Product>();
+            DraftOrder draftOrder = null;
+            //validation
+            if (_orderSettings.CheckoutDisabled)
+                throw new Exception(await _localizationService.GetResourceAsync("Checkout.Disabled"));
+
             var customer = await _workContext.GetCurrentCustomerAsync();
 
             var isCaptchaSettingEnabled = await _customerService.IsGuestAsync(customer) &&
@@ -2019,6 +2157,27 @@ public partial class CheckoutController : BasePublicController
 
                 var store = await _storeContext.GetCurrentStoreAsync();
                 var cart = await _shoppingCartService.GetShoppingCartAsync(customer, ShoppingCartType.ShoppingCart, store.Id);
+
+                var draftOrderGuidCookie = _workContext.GetDraftOrderCookie();
+                if (draftOrderGuidCookie != null)
+                {
+                    draftOrder = await _draftOrderService.GetOrderByGuidAsync(Guid.Parse(draftOrderGuidCookie));
+                    if (draftOrder != null)
+                    {
+                        var listOfDraftItems = await _draftOrderService.GetOrderItemsAsync(draftOrder.Id);
+                        foreach (var item in cart)
+                        {
+                            var product = await _productService.GetProductByIdAsync(item.ProductId);
+                            if (product != null && listOfDraftItems.Any(x => x.ProductId == product.Id) && product.Deleted)
+                            {
+                                product.Deleted = false;
+                                await _productService.UpdateProductAsync(product);
+                                //we need to flip these back to deleted after we are done processing the order
+                                listOfDeletedCustomProducts.Add(product);
+                            }
+                        }
+                    }
+                }
 
                 if (!cart.Any())
                     throw new Exception("Your cart is empty");
