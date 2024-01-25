@@ -185,6 +185,7 @@ public partial record OrderModel : BaseNopEntityModel
     public AddressModel ShippingAddress { get; set; }
     [NopResourceDisplayName("Admin.Orders.Fields.ShippingMethod")]
     public string ShippingMethod { get; set; }
+    public string OriginalShippingMethod { get; set; }
     public string ShippingAddressGoogleMapsUrl { get; set; }
     public bool CanAddNewShipments { get; set; }
 

@@ -1060,6 +1060,7 @@ public partial class OrderModelFactory : IOrderModelFactory
 
         model.IsShippable = true;
         model.ShippingMethod = order.ShippingMethod;
+        model.OriginalShippingMethod = order.OriginalShippingMethod;
         model.CanAddNewShipments = await _orderService.HasItemsToAddToShipmentAsync(order);
         model.PickupInStore = order.PickupInStore;
         if (!order.PickupInStore)
