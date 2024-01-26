@@ -12885,6 +12885,9 @@
   <LocaleResource Name="Admin.Orders.Fields.VoidOffline">
     <Value>Void (Offline)</Value>
   </LocaleResource>
+  <LocaleResource Name="Admin.Orders.Fields.RiskLevel">
+      <Value>Risk</Value>
+  </LocaleResource>
   <LocaleResource Name="Admin.Orders.Info">
     <Value>Info</Value>
   </LocaleResource>

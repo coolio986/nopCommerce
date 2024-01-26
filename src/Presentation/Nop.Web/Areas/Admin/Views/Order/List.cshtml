@@ -363,7 +363,7 @@
                                         Width = "80"
                                     }
                                 };
-                                //a vendor does not have access to this functionality
+                                                    //a vendor does not have access to this functionality
                                 if (!Model.IsLoggedInAsVendor)
                                 {
                                     gridModel.ColumnCollection.Add(new ColumnProperty(nameof(OrderModel.OrderStatus))
@@ -376,7 +376,14 @@
                                 gridModel.ColumnCollection.Add(new ColumnProperty(nameof(OrderModel.PaymentStatus))
                                 {
                                     Title = T("Admin.Orders.Fields.PaymentStatus").Text,
-                                    Width = "130"
+                                    Width = "90"
+                                });
+
+                                gridModel.ColumnCollection.Add(new ColumnProperty(nameof(OrderModel.RiskLevel))
+                                {
+                                    Title = T("Admin.Orders.Fields.RiskLevel").Text,
+                                    Width = "110",
+                                    Render = new RenderCustom("renderColumnRiskLevel")
                                 });
                                 //a vendor does not have access to this functionality
                                 if (!Model.IsLoggedInAsVendor)
@@ -384,7 +391,7 @@
                                     gridModel.ColumnCollection.Add(new ColumnProperty(nameof(OrderModel.ShippingStatus))
                                     {
                                         Title = T("Admin.Orders.Fields.ShippingStatus").Text,
-                                        Width = "150"
+                                        Width = "100"
                                     });
                                 }
                                 gridModel.ColumnCollection.Add(new ColumnProperty(nameof(OrderModel.CustomerEmail))
@@ -431,7 +438,7 @@
                             @await Html.PartialAsync("Table", gridModel)
 
                             <script>
-                            function renderColumnOrderStatus(data, type, row, meta) {
+                                function renderColumnOrderStatus(data, type, row, meta) {
                                 var color;
                                 switch (row.OrderStatusId) {
                                 case 10:
@@ -449,6 +456,23 @@
                                 }
                                 return '<span class="grid-report-item ' + color + '">' + data + '</span >';
                             }
+
+                                function renderColumnRiskLevel(data, type, row, meta) {
+                                    var color;
+                                    switch (row.RiskLevel) {
+                                        case 'MEDIUM':
+                                            color = 'yellow';
+                                            break;
+                                        case 'HIGH':
+                                            return '<span class="grid-report-item red">DO NOT SHIP</span >';
+                                            break;
+                                        case null:
+                                            return '<span class="grid-report-item"></span >';
+                                            break;
+                                            
+                                    }
+                                    return '<span class="grid-report-item ' + color + '">' + data + '</span >';
+                                }
 
                             $(document).ready(function() {
                                 $("#@Html.IdFor(model => model.GoDirectlyToCustomOrderNumber)").keydown(
