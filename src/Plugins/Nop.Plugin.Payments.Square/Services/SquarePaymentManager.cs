@@ -315,10 +315,10 @@ namespace Nop.Plugin.Payments.Square.Services
         /// <param name="paymentId">Payment ID</param>
         /// <param name="storeId">Store identifier for which payment should be completed</param>
         /// <returns>The asynchronous task whose result contains the True if the payment successfully completed; otherwise false. And/or errors if exist</returns>
-        public async Task<(bool, string)> CompletePaymentAsync(string paymentId, int storeId)
+        public async Task<(bool, string, string)> CompletePaymentAsync(string paymentId, int storeId)
         {
             if (string.IsNullOrEmpty(paymentId))
-                return (false, null);
+                return (false, null, null);
 
             var client = await CreateSquareClientAsync(storeId);
 
@@ -331,11 +331,11 @@ namespace Nop.Plugin.Payments.Square.Services
                 ThrowErrorsIfExists(paymentResponse.Errors);
 
                 //if there are no errors in the response, payment was successfully completed
-                return (true, null);
+                return (true, null, paymentResponse.Payment.RiskEvaluation.RiskLevel);
             }
             catch (Exception exception)
             {
-                return (false, await CatchExceptionAsync(exception));
+                return (false, await CatchExceptionAsync(exception), null);
             }
         }
 

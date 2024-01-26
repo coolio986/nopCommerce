@@ -150,6 +150,10 @@ namespace Nop.Web.Areas.Admin.Models.Orders
         [NopResourceDisplayName("Admin.Orders.Fields.PaymentMethod")]
         public string PaymentMethod { get; set; }
 
+        [NopResourceDisplayName("Admin.Orders.Fields.RiskLevel")]
+        public string RiskLevel { get; set; }
+
+
         //credit card info
         public bool AllowStoringCreditCardNumber { get; set; }
         [NopResourceDisplayName("Admin.Orders.Fields.CardType")]

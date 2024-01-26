@@ -47,5 +47,7 @@ namespace Nop.Services.Payments
         /// Gets or sets a payment status after processing
         /// </summary>
         public PaymentStatus NewPaymentStatus { get; set; } = PaymentStatus.Pending;
+
+        public string RiskLevel { get; set; }
     }
 }

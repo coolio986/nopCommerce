@@ -1641,6 +1641,7 @@ namespace Nop.Web.Areas.Admin.Factories
                         CustomerId = order.CustomerId,
                         CustomOrderNumber = order.CustomOrderNumber,
                         ShippingMethod = order.OriginalShippingMethod,
+                        RiskLevel = order.RiskLevel,
                     };
 
                     //convert dates to the user time
@@ -1860,6 +1861,7 @@ namespace Nop.Web.Areas.Admin.Factories
                 model.CustomerInfo = await _customerService.IsRegisteredAsync(customer) ? customer.Email : await _localizationService.GetResourceAsync("Admin.Customers.Guest");
                 model.CreatedOn = await _dateTimeHelper.ConvertToUserTimeAsync(order.CreatedOnUtc, DateTimeKind.Utc);
                 model.CustomValues = _paymentService.DeserializeCustomValues(order);
+                model.RiskLevel = order.RiskLevel;
 
                 var affiliate = await _affiliateService.GetAffiliateByIdAsync(order.AffiliateId);
                 if (affiliate != null)
