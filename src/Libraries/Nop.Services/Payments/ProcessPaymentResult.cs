@@ -84,6 +84,11 @@ namespace Nop.Services.Payments
         public bool RecurringPaymentFailed { get; set; }
 
         /// <summary>
+        /// Gets or sets the payment risk level
+        /// </summary>
+        public string RiskLevel { get; set; }
+
+        /// <summary>
         /// Gets or sets a payment status after processing
         /// </summary>
         public PaymentStatus NewPaymentStatus { get; set; } = PaymentStatus.Pending;

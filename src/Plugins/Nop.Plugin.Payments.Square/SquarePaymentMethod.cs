@@ -158,7 +158,8 @@ namespace Nop.Plugin.Payments.Square
             //return result
             var result = new ProcessPaymentResult
             {
-                NewPaymentStatus = GetPaymentStatus(paymentStatus)
+                NewPaymentStatus = GetPaymentStatus(paymentStatus),
+                RiskLevel = payment.RiskEvaluation.RiskLevel
             };
 
             if (_squarePaymentSettings.TransactionMode == TransactionMode.Authorize)
