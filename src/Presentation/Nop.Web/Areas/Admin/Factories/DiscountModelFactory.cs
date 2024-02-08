@@ -231,7 +231,7 @@ public partial class DiscountModelFactory : IDiscountModelFactory
             discountName: searchModel.SearchDiscountName,
             startDateUtc: startDateUtc,
             endDateUtc: endDateUtc,
-            isActive: isActive)).ToPagedList(searchModel);
+            isActive: isActive)).Where(x => x.Name != "CustomDiscount").ToList().ToPagedList(searchModel);
 
         //prepare list model
         var model = await new DiscountListModel().PrepareToGridAsync(searchModel, discounts, () =>

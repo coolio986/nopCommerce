@@ -198,6 +198,10 @@
                                             <i class="fas fa-search"></i>
                                             @T("Admin.Common.Search")
                                         </button>
+                                        <button type="button" id="clear-search" class="btn btn-info btn-search">
+                                            <i class="fas fa-history"></i>
+                                            @T("Admin.Common.Clear")
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -215,6 +219,9 @@
                              SearchButtonId = "search-products",
                              Length = Model.PageSize,
                              LengthMenu = Model.AvailablePageSizes,
+                             StateSave = true,
+                             StateSaveParams = "stateSaveParams",
+                             StateLoadParams = "stateLoadParams",
                              Filters = new List<FilterParameter>
                                   {
                                       new FilterParameter(nameof(Model.SearchProductName)),
@@ -309,6 +316,12 @@
                                     return false;
                                 });
                             });
+                                    $('#clear-search').click(function () {
+                                        var dataTable = $('#products-grid').DataTable();
+                                        dataTable.state.clear();
+                                        reloadDefaultParams();
+                                        dataTable.ajax.reload();
+                                    });
 
                               </script>
                               <nop-alert asp-alert-id="deleteSelectedFailed" />
@@ -328,6 +341,45 @@
                 }
             });
         });
+
+            function stateSaveParams(settings, data) {
+                data.SearchProductName = $('#@Html.IdFor(model => model.SearchProductName)').val();
+                data.SearchCategoryId = $('#@Html.IdFor(model => model.SearchCategoryId)').val();
+                data.SearchIncludeSubCategories = $('#@Html.IdFor(model => model.SearchIncludeSubCategories)').val();
+                data.SearchManufacturerId = $('#@Html.IdFor(model => model.SearchManufacturerId)').val();
+                data.SearchStoreId = $('#@Html.IdFor(model => model.SearchStoreId)').val();
+                data.SearchVendorId = $('#@Html.IdFor(model => model.SearchVendorId)').val();
+                data.SearchWarehouseId = $('#@Html.IdFor(model => model.SearchWarehouseId)').val();
+                data.SearchProductTypeId = $('#@Html.IdFor(model => model.SearchProductTypeId)').val();
+                data.SearchPublishedId = $('#@Html.IdFor(model => model.SearchPublishedId)').val();
+                data.GoDirectlyToSku = $('#@Html.IdFor(model => model.GoDirectlyToSku)').val();
+            }
+
+            function reloadDefaultParams() {
+                $('#@Html.IdFor(model => model.SearchProductName)').val(null);
+                $('#@Html.IdFor(model => model.SearchCategoryId)').val(null);
+                $('#@Html.IdFor(model => model.SearchIncludeSubCategories)').val(null);
+                $('#@Html.IdFor(model => model.SearchManufacturerId)').val(null);
+                $('#@Html.IdFor(model => model.SearchStoreId)').val(null);
+                $('#@Html.IdFor(model => model.SearchVendorId)').val(null);
+                $('#@Html.IdFor(model => model.SearchWarehouseId)').val(null);
+                $('#@Html.IdFor(model => model.SearchProductTypeId)').val(null);
+                $('#@Html.IdFor(model => model.SearchPublishedId)').val(null);
+                $('#@Html.IdFor(model => model.GoDirectlyToSku)').val(null);
+            }
+
+            function stateLoadParams(settings, data) {
+                $('#@Html.IdFor(model => model.SearchProductName)').val(data.SearchProductName);
+                $('#@Html.IdFor(model => model.SearchCategoryId)').val(data.SearchCategoryId);
+                $('#@Html.IdFor(model => model.SearchIncludeSubCategories)').val(data.SearchIncludeSubCategories);
+                $('#@Html.IdFor(model => model.SearchManufacturerId)').val(data.SearchManufacturerId);
+                $('#@Html.IdFor(model => model.SearchStoreId)').val(data.SearchStoreId);
+                $('#@Html.IdFor(model => model.SearchVendorId)').val(data.SearchVendorId);
+                $('#@Html.IdFor(model => model.SearchWarehouseId)').val(data.SearchWarehouseId);
+                $('#@Html.IdFor(model => model.SearchProductTypeId)').val(data.SearchProductTypeId);
+                $('#@Html.IdFor(model => model.SearchPublishedId)').val(data.SearchPublishedId);
+                $('#@Html.IdFor(model => model.GoDirectlyToSku)').val(data.GoDirectlyToSku);
+            }
     </script>
 </form>
 }

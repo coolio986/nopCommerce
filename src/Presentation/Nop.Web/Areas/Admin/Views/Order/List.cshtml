@@ -598,13 +598,11 @@
 <nop-alert asp-alert-id="exportExcelSelected" />
 
 @*Print packaging slips selected (XML). We don't use GET approach because it's limited to 2K-4K chars and won't work for large number of entities*@
-<form asp-controller="Order" asp-action="PdfInvoiceSelected" method="post" id="pdf-invoice-selected-form">
-    <input type="hidden" id="selectedIds" name="selectedIds" value="" />
-</form>
-
-@* <form asp-controller="Order" asp-action="PdfPackagingSlipOrderSelected" method="post" id="pdf-packlist-selected-form">*@
+@*<form asp-controller="Order" asp-action="PdfInvoiceSelected" method="post" id="pdf-invoice-selected-form">*@
     <input type="hidden" id="selectedIds" name="selectedIds" value="" />
 @*</form>*@
+
+<input type="hidden" id="selectedIds" name="selectedIds" value="" />
 
 <script>
     $(document).ready(function () {
