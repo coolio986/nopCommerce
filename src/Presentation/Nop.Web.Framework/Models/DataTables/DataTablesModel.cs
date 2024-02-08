@@ -172,5 +172,23 @@ public partial record DataTablesModel : BaseNopModel
     /// </summary>
     public IList<ColumnProperty> ColumnCollection { get; set; }
 
+    /// <summary>
+    /// Feature control DataTables' stateSave mode
+    /// </summary>
+    public bool StateSave { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets state save params function name(js)
+    /// See also https://datatables.net/reference/option/stateSaveParams
+    /// </summary>
+    public string StateSaveParams { get; set; }
+
+    /// <summary>
+    /// Gets or sets state save params function name(js)
+    /// See also https://datatables.net/reference/option/stateLoadParams
+    /// </summary>
+    public string StateLoadParams { get; set; }
+
+
     #endregion
 }

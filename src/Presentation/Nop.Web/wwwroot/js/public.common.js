@@ -160,6 +160,16 @@ function displayBarNotification(message, messagetype, timeout) {
             clearTimeout(notificationTimeout);
         });
 
+    $(htmlcode)
+      .on('mouseleave', function () {
+        //timeout (if set)
+        if (timeout > 0) {
+          notificationTimeout = setTimeout(function () {
+            $(htmlcode).fadeOut('slow', removeNoteItem);
+          }, timeout);
+        }
+      });
+
     //callback for notification removing
     var removeNoteItem = function () {
         $(htmlcode).remove();

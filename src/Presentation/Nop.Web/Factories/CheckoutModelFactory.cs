@@ -208,6 +208,14 @@ public partial class CheckoutModelFactory : ICheckoutModelFactory
                     model.Warnings.Add(error);
         }
 
+
+        if (customer.ShippingAddressId != null)
+        {
+            var customerShippingAddress = await _addressService.GetAddressByIdAsync((int)customer.ShippingAddressId);
+            var customerState = await _stateProvinceService.GetStateProvinceByIdAsync(customerShippingAddress.StateProvinceId ?? 0);
+            model.AllowPickupInStore = model.PickupPoints.Any(x => x.StateName == customerState.Name);
+        }
+
         //only available pickup points
         var shippingProviders = await _shippingPluginManager.LoadActivePluginsAsync(customer, store.Id);
         if (!shippingProviders.Any())

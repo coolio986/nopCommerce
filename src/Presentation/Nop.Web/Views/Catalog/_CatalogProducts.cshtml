@@ -19,6 +19,7 @@
         addPagerHandlers();
         $(CatalogProducts).on('loaded', function () {
             addPagerHandlers();
+            $("html, body").animate({ scrollTop: 500 }, 900);
         });
     });
 

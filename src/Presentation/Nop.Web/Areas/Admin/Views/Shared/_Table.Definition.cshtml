@@ -87,6 +87,30 @@
     serverSide: @Model.ServerSide.ToString().ToLowerInvariant(),
     </text>
 }
+
+@if (Model.StateSave)
+{
+    <text>
+        stateSave: @Model.StateSave.ToString().ToLower(),
+    </text>
+}
+@if (!string.IsNullOrEmpty(Model.StateSaveParams))
+{
+    <text>
+        stateSaveParams: function (settings, data) {
+        return @(Model.StateSaveParams)(settings, data);
+        },
+    </text>
+}
+@if (!string.IsNullOrEmpty(Model.StateLoadParams))
+{
+    <text>
+        stateLoadParams: function (settings, data) {
+        return @(Model.StateLoadParams)(settings, data);
+        },
+    </text>
+}
+
 @if (!string.IsNullOrEmpty(Model.RowIdBasedOnField))
 {
     <text>

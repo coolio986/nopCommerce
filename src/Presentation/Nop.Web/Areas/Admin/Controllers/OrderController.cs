@@ -3159,7 +3159,7 @@ public partial class OrderController : BaseAdminController
         }
     }
 
-    
+    [HttpGet]
     public virtual async Task<IActionResult> PreparePackingSlipSelected(string selectedIds)
     {
         if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
