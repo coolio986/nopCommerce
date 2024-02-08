@@ -461,7 +461,7 @@ namespace Nop.Plugin.Payments.Square
             var storeId = (await _storeContext.GetCurrentStoreAsync()).Id;
             var transactionId = capturePaymentRequest.Order.AuthorizationTransactionId;
             var completePaymentRequest = new SquareModel.CompletePaymentRequest();
-            var (successfullyCompleted, error) = await _squarePaymentManager.CompletePaymentAsync(transactionId, completePaymentRequest, storeId);
+            var (successfullyCompleted, error, riskLevel) = await _squarePaymentManager.CompletePaymentAsync(transactionId, completePaymentRequest, storeId);
             if (!successfullyCompleted)
                 throw new NopException(error);
 
@@ -469,7 +469,8 @@ namespace Nop.Plugin.Payments.Square
             return new CapturePaymentResult
             {
                 NewPaymentStatus = PaymentStatus.Paid,
-                CaptureTransactionId = transactionId
+                CaptureTransactionId = transactionId,
+                RiskLevel = riskLevel
             };
         }
 

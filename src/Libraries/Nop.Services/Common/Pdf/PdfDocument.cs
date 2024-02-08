@@ -55,7 +55,7 @@ public abstract class PdfDocument<T> : IDocument where T : DocumentSource
     public TextDescriptor ComposeField<TModel, TOut>(
         TextDescriptor text, TModel source,
         Expression<Func<TModel, TOut>> propertyExpression,
-        Func<TOut, string> format = null, string delimiter = " ")
+        Func<TOut, string> format = null, string delimiter = " ", bool displayLabel = true)
     {
         var expression = (MemberExpression)propertyExpression.Body;
         var propertyInfo = (PropertyInfo)expression.Member;
@@ -64,6 +64,9 @@ public abstract class PdfDocument<T> : IDocument where T : DocumentSource
             .GetCustomAttributes<DisplayNameAttribute>(true)
             .FirstOrDefault() is DisplayNameAttribute attr ?
             _localizationService.GetResourceAsync(attr.DisplayName, Source.Language?.Id ?? 0).Result : string.Empty;
+
+        if (!displayLabel)
+            label = null;
 
         if (source is null)
             return text;

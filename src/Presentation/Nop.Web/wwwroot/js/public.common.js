@@ -102,6 +102,10 @@ function displayPopupContentFromUrl(url, title, modal, width) {
             width: targetWidth,
             maxHeight: maxHeight,
             title: title,
+            position: {
+              my: "center top",
+              at: "center top"
+            },
             close: function(event, ui) {
                 $(this).dialog('destroy').remove();
             }

@@ -3151,6 +3151,74 @@ public partial class OrderController : BaseAdminController
         }
     }
 
+    
+    public virtual async Task<IActionResult> PreparePackingSlipSelected(string selectedIds)
+    {
+        if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
+            return AccessDeniedView();
+
+        var orders = new List<Order>();
+        if (selectedIds != null)
+        {
+            var ids = selectedIds
+                .Split(_separator, StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => Convert.ToInt32(x))
+                .ToArray();
+            orders.AddRange(await _orderService.GetOrdersByIdsAsync(ids));
+        }
+
+        //a vendor should have access only to his products
+        var currentVendor = await _workContext.GetCurrentVendorAsync();
+        if (currentVendor != null)
+        {
+            orders = await orders.WhereAwait(HasAccessToOrderAsync).ToListAsync();
+        }
+
+        try
+        {
+            byte[] bytes;
+            await using (var stream = new MemoryStream())
+            {
+                await _pdfService.PrintPackingSlipOrdersToPdfAsync(stream, orders, _orderSettings.GeneratePdfInvoiceInCustomerLanguage ? null : await _workContext.GetWorkingLanguageAsync(), currentVendor);
+                bytes = stream.ToArray();
+            }
+            return File(bytes, MimeTypes.ApplicationPdf);
+            //return File(bytes, "application/zip", "orders.zip");
+        }
+        catch (Exception exc)
+        {
+            await _notificationService.ErrorNotificationAsync(exc);
+            return RedirectToAction("List");
+        }
+    }
+
+    private async Task<IActionResult> PreparePackingSlipSelected(string selectedIds, IEnumerable<BaseEntity> orderOrShipment)
+    {
+        List<Shipment> shipment = orderOrShipment as List<Shipment>;
+        List<Order> order = orderOrShipment as List<Order>;
+
+
+        try
+        {
+            byte[] bytes;
+            await using (var stream = new MemoryStream())
+            {
+                if (shipment != null)
+                    await _pdfService.PrintPackagingSlipsToPdfAsync(stream, shipment, _orderSettings.GeneratePdfInvoiceInCustomerLanguage ? null : await _workContext.GetWorkingLanguageAsync());
+                else if (order != null)
+                    await _pdfService.PrintPackagingSlipsToPdfAsync(stream, order, _orderSettings.GeneratePdfInvoiceInCustomerLanguage ? null : await _workContext.GetWorkingLanguageAsync(), await _workContext.GetCurrentVendorAsync());
+                bytes = stream.ToArray();
+            }
+
+            return File(bytes, MimeTypes.ApplicationPdf, "packagingslips.pdf");
+        }
+        catch (Exception exc)
+        {
+            await _notificationService.ErrorNotificationAsync(exc);
+            return RedirectToAction("ShipmentList");
+        }
+    }
+
     [HttpPost]
     public virtual async Task<IActionResult> SetAsShippedSelected(ICollection<int> selectedIds)
     {

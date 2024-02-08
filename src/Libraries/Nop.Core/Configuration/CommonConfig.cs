@@ -75,4 +75,10 @@ public partial class CommonConfig : IConfig
     /// Default status code to set on the response when a request is rejected.
     /// </summary>
     public int RejectionStatusCode { get; set; } = 503;
+
+    /// <summary>
+    /// Get or set a value indicating whether to allow admins to login from the site, useful for dual depolyments where admin access is restricted
+    /// </summary>
+    /// <value></value>
+    public bool AllowAdministratorLoginAccess { get; private set; } = false;
 }

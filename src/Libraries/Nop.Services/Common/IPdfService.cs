@@ -4,6 +4,7 @@ using Nop.Core.Domain.Orders;
 using Nop.Core.Domain.Shipping;
 using Nop.Core.Domain.Stores;
 using Nop.Core.Domain.Vendors;
+using Nop.Services.Common.Pdf;
 
 namespace Nop.Services.Common;
 
@@ -35,6 +36,10 @@ public partial interface IPdfService
     /// <returns>A task that represents the asynchronous operation</returns>
     Task PrintOrdersToPdfAsync(Stream stream, IList<Order> orders, Language language = null, Vendor vendor = null);
 
+    Task PrintPackingSlipOrdersToPdfAsync(Stream stream, IList<Order> orders, Language language = null, Vendor vendor = null);
+
+    Task<PackingSlipSource> PrintPackingSlipOrderToPdfAsync(Stream stream, Order order, Language language = null, Store store = null, Vendor vendor = null);
+
     /// <summary>
     /// Write packaging slip to the specified stream
     /// </summary>
@@ -54,12 +59,23 @@ public partial interface IPdfService
     Task PrintPackagingSlipsToPdfAsync(Stream stream, IList<Shipment> shipments, Language language = null);
 
     /// <summary>
+    /// Print packaging slips to PDF
+    /// </summary>
+    /// <param name="stream">Stream</param>
+    /// <param name="shipments">Shipments</param>
+    /// <param name="languageId">Language identifier; 0 to use a language used when placing an order</param>
+    /// <returns>A task that represents the asynchronous operation</returns>
+    Task PrintPackagingSlipsToPdfAsync(Stream stream, IList<Order> order, Language language = null, Vendor vendor = null);
+
+    /// <summary>
     /// Write PDF catalog to the specified stream
     /// </summary>
     /// <param name="stream">Stream</param>
     /// <param name="products">Products</param>
     /// <returns>A task that represents the asynchronous operation</returns>
     Task PrintProductsToPdfAsync(Stream stream, IList<Product> products);
+
+    Task PrintPackagingSlipToPdfAsync(Stream stream, Order order, Language language = null, Vendor vendor = null);
 
     /// <summary>
     /// Export an order to PDF and save to disk

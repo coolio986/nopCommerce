@@ -270,6 +270,8 @@ public static class ServiceCollectionExtensions
             options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
             options.LoginPath = NopAuthenticationDefaults.LoginPath;
             options.AccessDeniedPath = NopAuthenticationDefaults.AccessDeniedPath;
+            options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+            options.SlidingExpiration = true;
         });
 
         //add external authentication

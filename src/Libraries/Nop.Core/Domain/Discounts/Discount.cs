@@ -82,6 +82,12 @@ public partial class Discount : BaseEntity
     public int? MaximumDiscountedQuantity { get; set; }
 
     /// <summary>
+    /// Gets or sets the minimum product quantity which could be discounted
+    /// Used with "Assigned to products" or "Assigned to categories" type
+    /// </summary>
+    public int? MinimumDiscountedQuantity { get; set; }
+
+    /// <summary>
     /// Gets or sets value indicating whether it should be applied to all subcategories or the selected one
     /// Used with "Assigned to categories" type only.
     /// </summary>

@@ -28,6 +28,7 @@ using Nop.Services.Stores;
 using Nop.Services.Vendors;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 
 namespace Nop.Services.Common;
 
@@ -137,6 +138,8 @@ public partial class PdfService : IPdfService
         _measureSettings = measureSettings;
         _taxSettings = taxSettings;
         _vendorSettings = vendorSettings;
+
+        QuestPDF.Settings.License = LicenseType.Community;
     }
 
     #endregion
@@ -161,6 +164,8 @@ public partial class PdfService : IPdfService
 
         addressResult.Name = $"{billingAddress.FirstName} {billingAddress.LastName}";
 
+        string addressLine = string.Empty;
+
         if (_addressSettings.PhoneEnabled)
             addressResult.Phone = billingAddress.PhoneNumber;
 
@@ -168,27 +173,47 @@ public partial class PdfService : IPdfService
             addressResult.Fax = billingAddress.FaxNumber;
 
         if (_addressSettings.StreetAddressEnabled)
+        {
             addressResult.Address = billingAddress.Address1;
+            addressLine += $"{addressResult.Address}{Environment.NewLine}";
+        }
 
         if (_addressSettings.StreetAddress2Enabled && !string.IsNullOrEmpty(billingAddress.Address2))
+        {
             addressResult.Address2 = billingAddress.Address2;
+            addressLine += $"{addressResult.Address2}{Environment.NewLine}";
+        }
 
         if (_addressSettings.CityEnabled && !string.IsNullOrEmpty(billingAddress.City))
+        {
             addressResult.City = billingAddress.City;
+            addressLine += $"{addressResult.City}, ";
+        }
 
         if (_addressSettings.CountyEnabled && !string.IsNullOrEmpty(billingAddress.County))
             addressResult.County = billingAddress.County;
 
-        if (_addressSettings.ZipPostalCodeEnabled && !string.IsNullOrEmpty(billingAddress.ZipPostalCode))
-            addressResult.ZipPostalCode = billingAddress.ZipPostalCode;
+        
 
         var stateProvince = await _stateProvinceService.GetStateProvinceByAddressAsync(billingAddress);
         addressResult.StateProvinceName = stateProvince != null ? await _localizationService.GetLocalizedAsync(stateProvince, x => x.Name, lang.Id) : string.Empty;
 
-        if (_addressSettings.CountryEnabled && await _countryService.GetCountryByAddressAsync(billingAddress) is Country country)
-            addressResult.Country = await _localizationService.GetLocalizedAsync(country, x => x.Name, lang.Id);
+        addressLine += $"{stateProvince.Abbreviation} ";
 
-        var (addressLine, _) = await _addressService.FormatAddressAsync(billingAddress, lang.Id);
+        if (_addressSettings.ZipPostalCodeEnabled && !string.IsNullOrEmpty(billingAddress.ZipPostalCode))
+        {
+            addressResult.ZipPostalCode = billingAddress.ZipPostalCode;
+            addressLine += $"{addressResult.ZipPostalCode}";
+        }
+
+
+        if (_addressSettings.CountryEnabled && await _countryService.GetCountryByAddressAsync(billingAddress) is Country country)
+        {
+            addressResult.Country = await _localizationService.GetLocalizedAsync(country, x => x.Name, lang.Id);
+            if(country.ThreeLetterIsoCode != "USA") //TODO need to get the shipping origin from settings
+                addressLine += $"{Environment.NewLine}{country.ThreeLetterIsoCode}";
+        }
+
         addressResult.AddressLine = addressLine;
 
         //VAT number
@@ -237,6 +262,8 @@ public partial class PdfService : IPdfService
     {
         var addressResult = new AddressItem();
 
+        string addressLine = string.Empty;
+
         if (order.ShippingStatus != ShippingStatus.ShippingNotRequired)
         {
             if (!order.PickupInStore)
@@ -256,30 +283,46 @@ public partial class PdfService : IPdfService
                     addressResult.Fax = shippingAddress.FaxNumber;
 
                 if (_addressSettings.StreetAddressEnabled)
+                {
                     addressResult.Address = shippingAddress.Address1;
+                    addressLine += $"{addressResult.Address}{Environment.NewLine}";
+                }
 
                 if (_addressSettings.StreetAddress2Enabled && !string.IsNullOrEmpty(shippingAddress.Address2))
+                {
                     addressResult.Address2 = shippingAddress.Address2;
+                    addressLine += $"{addressResult.Address2}{Environment.NewLine}";
+                }
 
                 if (_addressSettings.CityEnabled && !string.IsNullOrEmpty(shippingAddress.City))
+                {
                     addressResult.City = shippingAddress.City;
+                    addressLine += $"{addressResult.City}, ";
+                }
 
                 if (_addressSettings.CountyEnabled && !string.IsNullOrEmpty(shippingAddress.County))
                     addressResult.County = shippingAddress.County;
 
-                if (_addressSettings.ZipPostalCodeEnabled && !string.IsNullOrEmpty(shippingAddress.ZipPostalCode))
-                    addressResult.ZipPostalCode = shippingAddress.ZipPostalCode;
 
                 var stateProvince = await _stateProvinceService.GetStateProvinceByAddressAsync(shippingAddress);
                 addressResult.StateProvinceName = stateProvince != null ? await _localizationService.GetLocalizedAsync(stateProvince, x => x.Name, lang.Id) : string.Empty;
 
+                addressLine += $"{stateProvince.Abbreviation} ";
+
+                if (_addressSettings.ZipPostalCodeEnabled && !string.IsNullOrEmpty(shippingAddress.ZipPostalCode))
+                {
+                    addressResult.ZipPostalCode = shippingAddress.ZipPostalCode;
+                    addressLine += $"{addressResult.ZipPostalCode}";
+                }
+
+
                 if (_addressSettings.CountryEnabled && await _countryService.GetCountryByAddressAsync(shippingAddress) is Country country)
                 {
                     addressResult.Country = await _localizationService.GetLocalizedAsync(country, x => x.Name, lang.Id);
+                    if (country.ThreeLetterIsoCode != "USA") //TODO need to get the shipping origin from settings
+                        addressLine += $"{Environment.NewLine}{country.ThreeLetterIsoCode}";
                 }
 
-                var (addressLine, _) = await _addressService.FormatAddressAsync(shippingAddress, lang.Id);
-                addressResult.AddressLine = addressLine;
 
                 //custom attributes
                 var customShippingAddressAttributes = await _addressAttributeFormatter
@@ -293,33 +336,49 @@ public partial class PdfService : IPdfService
             else if (order.PickupAddressId.HasValue && await _addressService.GetAddressByIdAsync(order.PickupAddressId.Value) is Address pickupAddress)
             {
                 if (!string.IsNullOrEmpty(pickupAddress.Address1))
+                {
                     addressResult.Address = pickupAddress.Address1;
+                    addressLine += $"{addressResult.Address}{Environment.NewLine}";
+                }
 
                 if (_addressSettings.StreetAddress2Enabled && !string.IsNullOrEmpty(pickupAddress.Address2))
+                {
                     addressResult.Address2 = pickupAddress.Address2;
+                    addressLine += $"{addressResult.Address2}{Environment.NewLine}";
+                }
 
                 if (_addressSettings.CityEnabled && !string.IsNullOrEmpty(pickupAddress.City))
+                {
                     addressResult.City = pickupAddress.City;
+                    addressLine += $"{addressResult.City}, ";
+                }
 
                 if (_addressSettings.CountyEnabled && !string.IsNullOrEmpty(pickupAddress.County))
                     addressResult.County = pickupAddress.County;
 
-                if (_addressSettings.ZipPostalCodeEnabled && !string.IsNullOrEmpty(pickupAddress.ZipPostalCode))
-                    addressResult.ZipPostalCode = pickupAddress.ZipPostalCode;
-
-                var (addressLine, _) = await _addressService.FormatAddressAsync(pickupAddress, lang.Id);
-                addressResult.AddressLine = addressLine;
 
                 var stateProvince = await _stateProvinceService.GetStateProvinceByAddressAsync(pickupAddress);
                 addressResult.StateProvinceName = stateProvince != null ? await _localizationService.GetLocalizedAsync(stateProvince, x => x.Name, lang.Id) : string.Empty;
 
+                addressLine += $"{stateProvince.Abbreviation} ";
+
+                if (_addressSettings.ZipPostalCodeEnabled && !string.IsNullOrEmpty(pickupAddress.ZipPostalCode))
+                {
+                    addressResult.ZipPostalCode = pickupAddress.ZipPostalCode;
+                    addressLine += $"{addressResult.ZipPostalCode}";
+                }
+
                 if (await _countryService.GetCountryByAddressAsync(pickupAddress) is Country country)
+                {
                     addressResult.Country = await _localizationService.GetLocalizedAsync(country, x => x.Name, lang.Id);
+                    if (country.ThreeLetterIsoCode != "USA") //TODO need to get the shipping origin from settings
+                        addressLine += $"{Environment.NewLine}{country.ThreeLetterIsoCode}";
+                }
             }
 
             addressResult.ShippingMethod = order.ShippingMethod;
         }
-
+        addressResult.AddressLine = addressLine;
         return addressResult;
     }
 
@@ -730,6 +789,93 @@ public partial class PdfService : IPdfService
         await pdfStream.CopyToAsync(stream);
     }
 
+    public virtual async Task<PackingSlipSource> PrintPackingSlipOrderToPdfAsync(Stream stream, Order order, Language language = null, Store store = null, Vendor vendor = null)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+
+        //store info
+        store ??= await _storeContext.GetCurrentStoreAsync();
+
+        var orderStore = order.StoreId == 0 || order.StoreId == store?.Id ?
+            store : await _storeService.GetStoreByIdAsync(order.StoreId);
+
+        //language info
+        language ??= await _languageService.GetLanguageByIdAsync(order.CustomerLanguageId);
+
+        if (language?.Published != true)
+            language = await _workContext.GetWorkingLanguageAsync();
+
+        //by default _pdfSettings contains settings for the current active store
+        //and we need PdfSettings for the store which was used to place an order
+        //so let's load it based on a store of the current order
+        var pdfSettingsByStore = await _settingService.LoadSettingAsync<PdfSettings>(orderStore.Id);
+
+        byte[] logo = null;
+        var logoPicture = await _pictureService.GetPictureByIdAsync(pdfSettingsByStore.LogoPictureId);
+        if (logoPicture != null)
+        {
+            var logoFilePath = await _pictureService.GetThumbLocalPathAsync(logoPicture, 0, false);
+
+            if (logoPicture.MimeType == MimeTypes.ImageSvg)
+            {
+                logo = await _pictureService.ConvertSvgToPngAsync(logoFilePath);
+            }
+            else
+            {
+                logo = await _fileProvider.ReadAllBytesAsync(logoFilePath);
+            }
+        }
+
+        var date = await _dateTimeHelper.ConvertToUserTimeAsync(order.CreatedOnUtc, DateTimeKind.Utc);
+
+        //a vendor should have access only to products
+        var orderItems = await _orderService.GetOrderItemsAsync(order.Id, vendorId: vendor?.Id ?? 0);
+
+        var column1Lines = string.IsNullOrEmpty(pdfSettingsByStore.InvoiceFooterTextColumn1) ?
+            new List<string>()
+            : pdfSettingsByStore.InvoiceFooterTextColumn1
+                .Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries)
+                .ToList();
+
+        var column2Lines = string.IsNullOrEmpty(pdfSettingsByStore.InvoiceFooterTextColumn2) ?
+            new List<string>()
+            : pdfSettingsByStore.InvoiceFooterTextColumn2
+                .Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries)
+                .ToList();
+
+        var source = new PackingSlipSource()
+        {
+            StoreUrl = orderStore.Url?.Trim('/'),
+            Language = language,
+            FontFamily = pdfSettingsByStore.FontFamily,
+            OrderDateUser = date,
+            LogoData = logo,
+            OrderNumberText = order.CustomOrderNumber,
+            PageSize = pdfSettingsByStore.LetterPageSizeEnabled ? PageSizes.Letter : PageSizes.A4,
+            BillingAddress = await GetBillingAddressAsync(vendor, language, order),
+            ShippingAddress = await GetShippingAddressAsync(language, order),
+            Products = await GetOrderProductItemsAsync(order, orderItems, language),
+            ShowSkuInProductList = _catalogSettings.ShowSkuOnProductDetailsPage,
+            ShowVendorInProductList = _vendorSettings.ShowVendorOnOrderDetailsPage,
+            CheckoutAttributes = vendor is null ? _htmlFormatter.ConvertHtmlToPlainText(order.CheckoutAttributeDescription, true, true) : string.Empty, //vendors cannot see checkout attributes
+            Totals = vendor is null ? await GetTotalsAsync(language, order) : new(), //vendors cannot see totals
+            OrderNotes = await GetOrderNotesAsync(pdfSettingsByStore, order, language),
+            FooterTextColumn1 = column1Lines,
+            FooterTextColumn2 = column2Lines
+        };
+        return source;
+
+        //await using var pdfStream = new MemoryStream();
+        //new PackingSlipDocument(source, _localizationService);
+            //.GeneratePdf(pdfStream);
+
+        
+        //pdfStream.Position = 0;
+       // await pdfStream.CopyToAsync(stream);
+    }
+
+    
+
     /// <summary>
     /// Write ZIP archive with invoices to the specified stream
     /// </summary>
@@ -760,6 +906,37 @@ public partial class PdfService : IPdfService
         }
     }
 
+    public virtual async Task PrintPackingSlipOrdersToPdfAsync(Stream stream, IList<Order> orders, Language language = null, Vendor vendor = null)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+
+        ArgumentNullException.ThrowIfNull(orders);
+
+        var currentStore = await _storeContext.GetCurrentStoreAsync();
+
+        //using var archive = new ZipArchive(stream, ZipArchiveMode.Create, true);
+        //await using var fileStreamInZip = new MemoryStream();
+        MergedDocument mergedDocument = null;
+
+        List<PackingSlipDocument> documents = new List<PackingSlipDocument>();
+        foreach (var order in orders)
+        {
+            //var entryName = string.Format("{0} {1}", await _localizationService.GetResourceAsync("Pdf.Order"), order.CustomOrderNumber);
+
+            //await using var fileStreamInZip = archive.CreateEntry($"{entryName}.pdf").Open();
+            await using var pdfStream = new MemoryStream();
+            var packingListSource =  await PrintPackingSlipOrderToPdfAsync(pdfStream, order, language, currentStore, vendor);
+
+            //pdfStream.Position = 0;
+            documents.Add(new PackingSlipDocument(packingListSource, _localizationService));
+            
+        }
+        mergedDocument = Document.Merge(documents);
+        byte[] documentBytes = mergedDocument.GeneratePdf();
+        stream.Write(documentBytes, 0, documentBytes.Length);
+        //await pdfStream.CopyToAsync(stream);
+    }
+
     /// <summary>
     /// Write ZIP archive with packaging slips to the specified stream
     /// </summary>
@@ -782,6 +959,34 @@ public partial class PdfService : IPdfService
             await using var fileStreamInZip = archive.CreateEntry($"{entryName}.pdf").Open();
             await using var pdfStream = new MemoryStream();
             await PrintPackagingSlipToPdfAsync(pdfStream, shipment, language);
+
+            pdfStream.Position = 0;
+            await pdfStream.CopyToAsync(fileStreamInZip);
+        }
+    }
+
+    /// <summary>
+    /// Write ZIP archive with packaging slips to the specified stream
+    /// </summary>
+    /// <param name="stream">Stream</param>
+    /// <param name="orders">Shipments</param>
+    /// <param name="language">Language; null to use a language used when placing an order</param>
+    /// <returns>A task that represents the asynchronous operation</returns>
+    public virtual async Task PrintPackagingSlipsToPdfAsync(Stream stream, IList<Order> orders, Language language = null, Vendor vendor = null)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+
+        ArgumentNullException.ThrowIfNull(orders);
+
+        using var archive = new ZipArchive(stream, ZipArchiveMode.Create, true);
+
+        foreach (var order in orders)
+        {
+            var entryName = $"{await _localizationService.GetResourceAsync("Pdf.Shipment")}{order.Id}";
+
+            await using var fileStreamInZip = archive.CreateEntry($"{entryName}.pdf").Open();
+            await using var pdfStream = new MemoryStream();
+            await PrintPackagingSlipToPdfAsync(pdfStream, order, language, vendor);
 
             pdfStream.Position = 0;
             await pdfStream.CopyToAsync(fileStreamInZip);
@@ -833,6 +1038,64 @@ public partial class PdfService : IPdfService
             OrderNumberText = order.CustomOrderNumber,
             Address = await GetShippingAddressAsync(language, order),
             Products = await GetOrderProductItemsAsync(order, orderItems, language, shipmentItems)
+        };
+
+        await using var pdfStream = new MemoryStream();
+
+        new ShipmentDocument(source, _localizationService)
+            .GeneratePdf(pdfStream);
+
+        pdfStream.Position = 0;
+        await pdfStream.CopyToAsync(stream);
+    }
+
+    /// <summary>
+    /// Write packaging slip to the specified stream
+    /// </summary>
+    /// <param name="stream">Stream</param>
+    /// <param name="order">Shipment</param>
+    /// <param name="language">Language; null to use a language used when placing an order</param>
+    /// <returns>A task that represents the asynchronous operation</returns>
+    public virtual async Task PrintPackagingSlipToPdfAsync(Stream stream, Order order, Language language = null, Vendor vendor = null)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+
+        ArgumentNullException.ThrowIfNull(order);
+
+
+        var pdfSettingsByStore = await _settingService.LoadSettingAsync<PdfSettings>(order.StoreId);
+
+        //language info
+        language ??= await _languageService.GetLanguageByIdAsync(order.CustomerLanguageId);
+
+        if (language?.Published != true)
+            language = await _workContext.GetWorkingLanguageAsync();
+
+        //var shipmentItems = await _shipmentService.GetShipmentItemsByShipmentIdAsync(order.Id);
+
+        //if (shipmentItems?.Any() != true)
+           // return;
+        //a vendor should have access only to products
+        var orderItems = await _orderService.GetOrderItemsAsync(order.Id, vendorId: vendor?.Id ?? 0);
+
+
+        //var orderItems = await shipmentItems
+        //    .SelectAwait(async si => await _orderService.GetOrderItemByIdAsync(si.OrderItemId))
+        //    .Where(pi => pi != null)
+        //    .ToListAsync();
+
+        if (orderItems?.Any() != true)
+            return;
+
+        var source = new ShipmentSource
+        {
+            PageSize = pdfSettingsByStore.LetterPageSizeEnabled ? PageSizes.Letter : PageSizes.A4,
+            Language = language,
+            FontFamily = pdfSettingsByStore.FontFamily,
+            ShipmentNumberText = order.Id.ToString(),
+            OrderNumberText = order.CustomOrderNumber,
+            Address = await GetShippingAddressAsync(language, order),
+            Products = await GetOrderProductItemsAsync(order, orderItems, language)
         };
 
         await using var pdfStream = new MemoryStream();

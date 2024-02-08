@@ -66,7 +66,13 @@ namespace Nop.Plugin.Product.HTMLSnippets
         /// <returns>View component type</returns>
         public Type GetWidgetViewComponent(string widgetZone)
         {
-            return typeof(HTMLSnippetsViewComponent);
+            if (widgetZone.Equals(AdminWidgetZones.ProductDetailsBlock))
+                return typeof(ProductDetailsViewComponentName);
+
+            if (widgetZone.Equals(PublicWidgetZones.ProductDetailsOverviewBottom))
+                return typeof(HTMLSnippetsViewComponent);
+
+            return null;
         }
 
         public Task<IList<string>> GetWidgetZonesAsync()

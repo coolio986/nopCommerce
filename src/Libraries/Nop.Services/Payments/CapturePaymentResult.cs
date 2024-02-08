@@ -45,4 +45,6 @@ public partial class CapturePaymentResult
     /// Gets or sets a payment status after processing
     /// </summary>
     public PaymentStatus NewPaymentStatus { get; set; } = PaymentStatus.Pending;
+
+    public string RiskLevel { get; set; }
 }
