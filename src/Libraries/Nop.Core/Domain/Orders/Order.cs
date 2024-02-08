@@ -302,6 +302,11 @@ public partial class Order : BaseEntity, ISoftDeletedEntity
     /// </summary>
     public virtual int? RedeemedRewardPointsEntryId { get; set; }
 
+    /// <summary>
+    /// Gets or sets the payment risk level
+    /// </summary>
+    public string RiskLevel { get; set; }
+
     #endregion
 
     #region Custom properties

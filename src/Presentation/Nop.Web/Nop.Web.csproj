@@ -44,6 +44,18 @@
 
     <!-- We copy the \Logs directory -->
     <Content Include="Logs\**" CopyToPublishDirectory="PreserveNewest" />
+    <None Remove="App_Data\Pdf\Roboto-Black.ttf" />
+    <None Remove="App_Data\Pdf\Roboto-BlackItalic.ttf" />
+    <None Remove="App_Data\Pdf\Roboto-Bold.ttf" />
+    <None Remove="App_Data\Pdf\Roboto-BoldItalic.ttf" />
+    <None Remove="App_Data\Pdf\Roboto-Italic.ttf" />
+    <None Remove="App_Data\Pdf\Roboto-Light.ttf" />
+    <None Remove="App_Data\Pdf\Roboto-LightItalic.ttf" />
+    <None Remove="App_Data\Pdf\Roboto-Medium.ttf" />
+    <None Remove="App_Data\Pdf\Roboto-MediumItalic.ttf" />
+    <None Remove="App_Data\Pdf\Roboto-Regular.ttf" />
+    <None Remove="App_Data\Pdf\Roboto-Thin.ttf" />
+    <None Remove="App_Data\Pdf\Roboto-ThinItalic.ttf" />
     <None Remove="Plugins\Uploaded\placeholder.txt" />
     <Content Include="Plugins\Uploaded\placeholder.txt">
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>

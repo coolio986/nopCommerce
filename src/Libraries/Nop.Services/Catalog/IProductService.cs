@@ -83,6 +83,16 @@ public partial interface IProductService
     Task<Product> GetProductByIdAsync(int productId);
 
     /// <summary>
+    /// Gets product from DB not from cache
+    /// </summary>
+    /// <param name="productId">Product identifier</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation
+    /// The task result contains the product
+    /// </returns>
+    Task<Product> GetProductByIdWithoutCacheAsync(int productId);
+
+    /// <summary>
     /// Gets products by identifier
     /// </summary>
     /// <param name="productIds">Product identifiers</param>
@@ -438,6 +448,16 @@ public partial interface IProductService
     #endregion
 
     #region Inventory management methods
+
+
+    /// <summary>
+    /// Applies the low stock activity to specified product by the total stock quantity
+    /// </summary>
+    /// <param name="product">Product</param>
+    /// <param name="totalStock">Total stock</param>
+    /// <returns>A task that represents the asynchronous operation</returns>
+    Task ApplyLowStockActivityAsync(Product product, int totalStock, bool forceUpdate = false);
+
 
     /// <summary>
     /// Adjust inventory

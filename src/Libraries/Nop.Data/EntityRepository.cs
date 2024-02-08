@@ -185,6 +185,26 @@ public partial class EntityRepository<TEntity> : IRepository<TEntity> where TEnt
         return await _staticCacheManager.GetAsync(cacheKey, getEntityAsync);
     }
 
+    public virtual async Task<TEntity> GetByIdAsyncWithoutCache(int? id, Func<ICacheKeyService, CacheKey> getCacheKey = null, bool includeDeleted = true)
+    {
+        if (!id.HasValue || id == 0)
+            return null;
+
+        async Task<TEntity> getEntityAsync()
+        {
+            return await AddDeletedFilter(Table, includeDeleted).FirstOrDefaultAsync(entity => entity.Id == Convert.ToInt32(id));
+        }
+
+        if (getCacheKey == null)
+            return await getEntityAsync();
+
+        //caching
+        var cacheKey = getCacheKey(_staticCacheManager)
+            ?? _staticCacheManager.PrepareKeyForDefaultCache(NopEntityCacheDefaults<TEntity>.ByIdCacheKey, id);
+
+        return await _staticCacheManager.GetAsyncWithoutCache(cacheKey, getEntityAsync);
+    }
+
     /// <summary>
     /// Get the entity entry
     /// </summary>

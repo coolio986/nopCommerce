@@ -957,7 +957,7 @@ public partial class ProductController : BaseAdminController
             return AccessDeniedView();
 
         //try to get a product with the specified id
-        var product = await _productService.GetProductByIdAsync(id);
+        var product = await _productService.GetProductByIdWithoutCacheAsync(id);
         if (product == null || product.Deleted)
             return RedirectToAction("List");
 
@@ -1020,7 +1020,9 @@ public partial class ProductController : BaseAdminController
             product = model.ToEntity(product);
 
             product.UpdatedOnUtc = DateTime.UtcNow;
-            await _productService.UpdateProductAsync(product);
+            await _productService.ApplyLowStockActivityAsync(product, product.StockQuantity, true);
+
+            //await _productService.UpdateProductAsync(product);
 
             //remove associated products
             if (previousProductType == ProductType.GroupedProduct && product.ProductType == ProductType.SimpleProduct)

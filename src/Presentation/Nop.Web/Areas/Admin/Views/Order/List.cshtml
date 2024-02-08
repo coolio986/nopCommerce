@@ -73,6 +73,11 @@
                     </button>
                     <ul class="dropdown-menu" role="menu">
                         <li class="dropdown-item">
+                            <button type="button" id="pdf-packingslip-selected">
+                                @T("Admin.Orders.Shipments.PrintPackagingSlips.Selected")
+                            </button>
+                        </li>
+                        <li class="dropdown-item">
                             <button asp-action="PdfInvoice" type="submit" name="pdf-invoice-all">
                                 @T("Admin.Orders.PdfInvoices.All")
                             </button>
@@ -344,7 +349,14 @@
                                     gridModel.ColumnCollection.Add(new ColumnProperty(nameof(OrderModel.PaymentStatus))
                                     {
                                         Title = T("Admin.Orders.Fields.PaymentStatus").Text,
-                                        Width = "150"
+                                        Width = "90"
+                                    });
+
+                                    gridModel.ColumnCollection.Add(new ColumnProperty(nameof(OrderModel.RiskLevel))
+                                    {
+                                        Title = T("Admin.Orders.Fields.RiskLevel").Text,
+                                        Width = "110",
+                                        Render = new RenderCustom("renderColumnRiskLevel")
                                     });
                                     //a vendor does not have access to this functionality
                                     if (!Model.IsLoggedInAsVendor)
@@ -352,7 +364,7 @@
                                         gridModel.ColumnCollection.Add(new ColumnProperty(nameof(OrderModel.ShippingStatus))
                                         {
                                             Title = T("Admin.Orders.Fields.ShippingStatus").Text,
-                                            Width = "150"
+                                            Width = "100"
                                         });
                                     }
                                     gridModel.ColumnCollection.Add(new ColumnProperty(nameof(OrderModel.CustomerEmail))
@@ -418,6 +430,23 @@
                                     var textRenderer = $.fn.dataTable.render.text().display;
                                     return `${textRenderer(row.CustomerFullName)} <br /><a href="${link}">${data}</a > `;
                                 }
+
+                                    function renderColumnRiskLevel(data, type, row, meta) {
+                                        var color;
+                                        switch (row.RiskLevel) {
+                                            case 'MEDIUM':
+                                                color = 'yellow';
+                                                break;
+                                            case 'HIGH':
+                                                return '<span class="grid-report-item red">DO NOT SHIP</span >';
+                                                break;
+                                            case null:
+                                                return '<span class="grid-report-item"></span >';
+                                                break;
+
+                                        }
+                                        return '<span class="grid-report-item ' + color + '">' + data + '</span >';
+                                    }
 
                                 $(function() {
                                     $("#@Html.IdFor(model => model.GoDirectlyToCustomOrderNumber)").keydown(
@@ -574,6 +603,10 @@
     <input type="hidden" id="selectedIds" name="selectedIds" value="" />
 </form>
 
+@* <form asp-controller="Order" asp-action="PdfPackagingSlipOrderSelected" method="post" id="pdf-packlist-selected-form">*@
+    <input type="hidden" id="selectedIds" name="selectedIds" value="" />
+@*</form>*@
+
 <script>
     $(function() {
         $('#pdf-invoice-selected').click(function (e) {
@@ -590,9 +623,26 @@
             }
             return false;
         });
+        $('#pdf-packingslip-selected').click(function (e) {
+            e.preventDefault();
+            var ids = selectedIds.join(",");
+            if (!ids) {
+                $('#pdfInvoiceSelected-info').text("@T("Admin.Orders.NoOrders")");
+                $("#pdfInvoiceSelected").click();
+            }
+            else {
+                window.open('@Url.Action("PreparePackingSlipSelected", "Order")?selectedIds=' + ids);
+
+                //$('#pdf-packlist-selected-form #selectedIds').val(ids);
+                //$('#pdf-packlist-selected-form').submit();
+                updateTable('#orders-grid');
+            }
+            return false;
+        });
     });
 </script>
 <nop-alert asp-alert-id="pdfInvoiceSelected" />
+<nop-alert asp-alert-id="pdfPackingSlipSelected" />
 
 @*import orders form*@
 <div id="importexcel-window" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="importexcel-window-title">

@@ -2382,6 +2382,7 @@ public partial class OrderProcessingService : IOrderProcessingService
                 order.CaptureTransactionResult = result.CaptureTransactionResult;
                 order.PaymentStatus = result.NewPaymentStatus;
                 order.PaidDateUtc = paidDate;
+                order.RiskLevel = result.RiskLevel;
                 await _orderService.UpdateOrderAsync(order);
 
                 //add a note

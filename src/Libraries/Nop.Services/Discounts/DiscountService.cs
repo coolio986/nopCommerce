@@ -575,6 +575,51 @@ public partial class DiscountService : IDiscountService
                 break;
         }
 
+        if (discount.DiscountType == DiscountType.AssignedToCategories)
+        {
+            var store = await _storeContext.GetCurrentStoreAsync();
+
+            //do not inject IShoppingCartService via constructor because it'll cause circular references
+            var shoppingCartService = EngineContext.Current.Resolve<IShoppingCartService>();
+            var categoryService = EngineContext.Current.Resolve<ICategoryService>();
+            var cart = await shoppingCartService.GetShoppingCartAsync(customer,
+                ShoppingCartType.ShoppingCart, storeId: store.Id);
+
+            var cartProductIds = cart.Select(ci => ci.ProductId).ToArray();
+
+            if (discount.MinimumDiscountedQuantity != null && discount.MinimumDiscountedQuantity > 0)
+            {
+                //load identifier of categories with this discount applied to
+                var discountCategoryIds = await categoryService.GetAppliedCategoryIdsAsync(discount, customer);
+                var productCategoryIds = new List<int>();
+                int itemCount = 0;
+
+                foreach (ShoppingCartItem shoppingCartItem in cart)
+                {
+                    productCategoryIds = (await categoryService
+                        .GetProductCategoriesByProductIdAsync(shoppingCartItem.ProductId))
+                        .Select(x => x.CategoryId)
+                        .ToList();
+
+                    var productIsInCategoryDiscount = discountCategoryIds.Any(x => productCategoryIds.Contains(x));
+                    if (productIsInCategoryDiscount)
+                        itemCount += shoppingCartItem.Quantity;
+
+                    if (itemCount >= discount.MinimumDiscountedQuantity)
+                    {
+                        result.IsValid = true;
+                        return result;
+                    }
+                }
+                if (itemCount < discount.MinimumDiscountedQuantity)
+                {
+                    result.Errors = new List<string> { await _localizationService.GetResourceAsync("ShoppingCart.Discount.MinimumQtyNotMet") };
+                    return result;
+                }
+            }
+        }
+
+
         //discount requirements
         var key = _staticCacheManager.PrepareKeyForDefaultCache(NopDiscountDefaults.DiscountRequirementsByDiscountCacheKey, discount);
 

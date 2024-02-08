@@ -158,7 +158,7 @@ public partial class ProductController : BasePublicController
 
     public virtual async Task<IActionResult> ProductDetails(int productId, int updatecartitemid = 0)
     {
-        var product = await _productService.GetProductByIdAsync(productId);
+        var product = await _productService.GetProductByIdWithoutCacheAsync(productId);
         if (product == null || product.Deleted)
             return InvokeHttp404();
 
@@ -260,7 +260,7 @@ public partial class ProductController : BasePublicController
                 Errors = errors
             });
 
-        var product = await _productService.GetProductByIdAsync(model.ProductId);
+        var product = await _productService.GetProductByIdWithoutCacheAsync(model.ProductId);
         if (product == null || product.Deleted)
         {
             errors.Add(await _localizationService.GetResourceAsync("Shipping.EstimateShippingPopUp.Product.IsNotFound"));

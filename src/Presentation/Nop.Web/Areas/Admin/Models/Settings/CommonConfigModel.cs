@@ -51,5 +51,8 @@ public partial record CommonConfigModel : BaseNopModel, IConfigModel
     [NopResourceDisplayName("Admin.Configuration.AppSettings.Common.RejectionStatusCode")]
     public int RejectionStatusCode { get; set; } = 503;
 
+    [NopResourceDisplayName("Admin.Configuration.AppSettings.Common.AllowAdministratorLoginAccess")]
+    public bool AllowAdministratorLoginAccess { get; set; }
+
     #endregion
 }
