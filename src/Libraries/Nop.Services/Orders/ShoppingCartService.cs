@@ -1626,6 +1626,13 @@ public partial class ShoppingCartService : IShoppingCartService
                 rentalStartDate, rentalEndDate,
                 quantity, addRequiredProducts));
 
+            if (ignoreDeletedProductWarnings && warnings.Any())
+            {
+                var deletedLanguage = await _localizationService.GetResourceAsync("ShoppingCart.ProductDeleted");
+                if (warnings.Contains(deletedLanguage))
+                    warnings.Remove(deletedLanguage);
+            }
+
             if (warnings.Any())
                 return warnings;
 

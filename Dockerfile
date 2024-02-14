@@ -15,8 +15,6 @@ RUN dotnet build Nop.Web.csproj -c Release
 # build plugins
 WORKDIR /src/Plugins/Nop.Plugin.DiscountRules.CustomerRoles
 RUN dotnet build Nop.Plugin.DiscountRules.CustomerRoles.csproj -c Release
-WORKDIR /src/Plugins/Nop.Plugin.ExchangeRate.EcbExchange
-RUN dotnet build Nop.Plugin.ExchangeRate.EcbExchange.csproj -c Release
 WORKDIR /src/Plugins/Nop.Plugin.ExternalAuth.Facebook
 RUN dotnet build Nop.Plugin.ExternalAuth.Facebook.csproj -c Release
 WORKDIR /src/Plugins/Nop.Plugin.Misc.Brevo
@@ -37,6 +35,8 @@ WORKDIR /src/Plugins/Nop.Plugin.Payments.PayPalCommerce
 RUN dotnet build Nop.Plugin.Payments.PayPalCommerce.csproj -c Release
 WORKDIR /src/Plugins/Nop.Plugin.Pickup.PickupInStore
 RUN dotnet build Nop.Plugin.Pickup.PickupInStore.csproj -c Release
+WORKDIR /src/Plugins/Nop.Plugin.Shipping.EasyPost
+RUN dotnet build Nop.Plugin.Shipping.EasyPost.csproj -c Release
 WORKDIR /src/Plugins/Nop.Plugin.Shipping.FixedByWeightByTotal
 RUN dotnet build Nop.Plugin.Shipping.FixedByWeightByTotal.csproj -c Release
 WORKDIR /src/Plugins/Nop.Plugin.Shipping.UPS
