@@ -48,7 +48,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Square" Version="25.0.0" />
+    <PackageReference Include="Square" Version="33.1.0" />
   </ItemGroup>
 
   <ItemGroup>

@@ -5100,7 +5100,7 @@ label, label + * {
 }
 
 .opc .payment-info .info tr {
-  text-align: left;
+  /*text-align: left;*/
 }
 
 .opc .section.order-summary {
@@ -8539,7 +8539,7 @@ label, label + * {
   .payment-info .info td:first-child {
     width: 265px !important;
     margin: 0 10px 0 0;
-    text-align: right;
+    /*text-align: right;*/
   }
 
   .payment-info .info td:only-child {
