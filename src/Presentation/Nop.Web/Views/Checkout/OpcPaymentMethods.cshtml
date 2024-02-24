@@ -26,37 +26,39 @@
         }
         @if (Model.PaymentMethods.Count > 0)
         {
-            <ul class="method-list" id="payment-method-block">
-                @for (var i = 0; i < Model.PaymentMethods.Count; i++)
-                {
-                    var paymentMethod = Model.PaymentMethods[i];
-                    var paymentMethodName = paymentMethod.Name;
-                    if (!string.IsNullOrEmpty(paymentMethod.Fee))
+            <div class="card fit-content">
+                <ul class="list-group list-group-flush">
+                    @for (var i = 0; i < Model.PaymentMethods.Count; i++)
                     {
-                        paymentMethodName = T("Checkout.SelectPaymentMethod.MethodAndFee", paymentMethodName, paymentMethod.Fee).Text;
-                    }
-                    <li>
-                        <div class="method-name">
-                            @if (!string.IsNullOrEmpty(paymentMethod.LogoUrl))
-                            {
-                                <div class="payment-logo">
-                                    <label for="paymentmethod_@(i)">
-                                        <img src="@paymentMethod.LogoUrl" alt="@paymentMethodName" />
-                                    </label>
-                                </div>
-                            }
-                            <div class="payment-details">
-                                <input id="paymentmethod_@(i)" type="radio" name="paymentmethod" value="@(paymentMethod.PaymentMethodSystemName)" checked="@paymentMethod.Selected" />
-                                <label for="paymentmethod_@(i)">@paymentMethodName</label>
+                        var paymentMethod = Model.PaymentMethods[i];
+                        var paymentMethodName = paymentMethod.Name;
+                        if (!string.IsNullOrEmpty(paymentMethod.Fee))
+                        {
+                            paymentMethodName = T("Checkout.SelectPaymentMethod.MethodAndFee", paymentMethodName, paymentMethod.Fee).Text;
+                        }
+                        <li class="list-group-item">
+                            <div>
+                                @if (!string.IsNullOrEmpty(paymentMethod.LogoUrl))
+                                {
+                                    <div class="payment-logo">
+                                        <label for="paymentmethod_@(i)">
+                                            <img src="@paymentMethod.LogoUrl" alt="@paymentMethodName" />
+                                        </label>
+                                    </div>
+                                }
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" id="paymentmethod_@(i)" type="radio" name="paymentmethod" value="@(paymentMethod.PaymentMethodSystemName)" checked="@paymentMethod.Selected" />
+                                <label class="form-check-label-name" for="paymentmethod_@(i)">@paymentMethodName</label>
                                 @if (!string.IsNullOrEmpty(paymentMethod.Description))
                                 {
                                     <div class="payment-description">@paymentMethod.Description</div>
                                 }
                             </div>
-                        </div>
-                    </li>
-                }
-            </ul>
+                        </li>
+                    }
+                </ul>
+            </div>
         }
         else
         {

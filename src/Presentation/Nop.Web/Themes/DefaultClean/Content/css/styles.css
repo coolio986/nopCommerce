@@ -7396,7 +7396,7 @@ label, label + * {
 
   .payment-method .payment-logo {
     display: block;
-    background-color: #f6f6f6;
+    /*background-color: #f6f6f6;*/
     padding: 10px;
   }
 
