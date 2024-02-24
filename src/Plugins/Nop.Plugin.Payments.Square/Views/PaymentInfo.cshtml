@@ -103,20 +103,15 @@
         displayAjaxLoading(false);
 
         payButton.click(async function () {
-            var tokenResult = await card.tokenize();
-            if (tokenResult.status === 'OK') {
-
-
-                displayAjaxLoading(true);
-                var selectedStoredCardId = $('#@Html.IdFor(model => model.StoredCardId)').val();
-                if ((!selectedStoredCardId || selectedStoredCardId == '@(Guid.Empty.ToString())')) {
-                    await handlePaymentMethodSubmission(card);
-                } else if (use3ds) {
-                    await verifyBuyer(payments, selectedStoredCardId);
-                }
-                displayAjaxLoading(false);
-                $('.payment-info-next-step-button').click();
+            displayAjaxLoading(true);
+            var selectedStoredCardId = $('#@Html.IdFor(model => model.StoredCardId)').val();
+            if ((!selectedStoredCardId || selectedStoredCardId == '@(Guid.Empty.ToString())')) {
+                await handlePaymentMethodSubmission(card);
+            } else if (use3ds) {
+                await verifyBuyer(payments, selectedStoredCardId);
             }
+            displayAjaxLoading(false);
+            $('.payment-info-next-step-button').click();
         });
 
         async function verifyBuyer(payments, token) {
@@ -194,7 +189,7 @@
             <td>
                 <label asp-for="SaveCard">@T("Plugins.Payments.Square.Fields.SaveCard")</label>
             </td>
-            
+
         </tr>
     </table>*@
 }
