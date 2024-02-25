@@ -158,7 +158,8 @@ public class SquarePaymentMethod : BasePlugin, IPaymentMethod
         //return result
         var result = new ProcessPaymentResult
         {
-            NewPaymentStatus = GetPaymentStatus(paymentStatus)
+            NewPaymentStatus = GetPaymentStatus(paymentStatus),
+            RiskLevel = payment.RiskEvaluation.RiskLevel
         };
 
         switch (_squarePaymentSettings.TransactionMode)

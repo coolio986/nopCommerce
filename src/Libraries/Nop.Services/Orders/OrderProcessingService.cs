@@ -706,6 +706,7 @@ public partial class OrderProcessingService : IOrderProcessingService
         {
             StoreId = processPaymentRequest.StoreId,
             OrderGuid = processPaymentRequest.OrderGuid,
+            RiskLevel = processPaymentResult.RiskLevel,
             CustomerId = details.Customer.Id,
             CustomerLanguageId = details.CustomerLanguage.Id,
             CustomerTaxDisplayType = details.CustomerTaxDisplayType,
