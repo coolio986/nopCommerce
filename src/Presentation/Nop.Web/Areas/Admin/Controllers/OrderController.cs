@@ -2439,6 +2439,7 @@ public partial class OrderController : BaseAdminController
                 RequiresCouponCode = true,
                 DiscountLimitationId = (int)DiscountLimitationType.NTimesOnly,
                 LimitationTimes = 1,
+                IsActive = true
 
             });
         }
