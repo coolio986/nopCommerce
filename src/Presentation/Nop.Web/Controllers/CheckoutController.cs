@@ -1359,7 +1359,10 @@ public partial class CheckoutController : BasePublicController
             }
         }
 
-        var shippingMethodModel = await _checkoutModelFactory.PrepareShippingMethodModelAsync(cart, await _customerService.GetCustomerShippingAddressAsync(customer));
+        var shippingMethodModel = checkoutShippingMethodModel == null ? await _checkoutModelFactory.PrepareShippingMethodModelAsync(cart, await _customerService.GetCustomerShippingAddressAsync(customer)) :
+                checkoutShippingMethodModel;
+
+
         if (_shippingSettings.BypassShippingMethodSelectionIfOnlyOne &&
             shippingMethodModel.ShippingMethods.Count == 1)
         {
