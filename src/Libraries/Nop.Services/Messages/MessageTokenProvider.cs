@@ -200,6 +200,8 @@ public partial class MessageTokenProvider : IMessageTokenProvider
                         "%Store.CompanyAddress%",
                         "%Store.CompanyPhoneNumber%",
                         "%Store.CompanyVat%",
+                        "%Store.CurrentDate%",
+                        "%Store.CurrentTime%",
                         "%Facebook.URL%",
                         "%Twitter.URL%",
                         "%YouTube.URL%",
