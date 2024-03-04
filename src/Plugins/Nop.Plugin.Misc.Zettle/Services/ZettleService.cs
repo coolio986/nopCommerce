@@ -19,6 +19,7 @@ using Nop.Services.Directory;
 using Nop.Services.Discounts;
 using Nop.Services.Logging;
 using Nop.Services.Media;
+using Nop.Services.Seo;
 
 namespace Nop.Plugin.Misc.Zettle.Services;
 
@@ -43,6 +44,8 @@ public class ZettleService
     protected readonly ZettleHttpClient _zettleHttpClient;
     protected readonly ZettleRecordService _zettleRecordService;
     protected readonly ZettleSettings _zettleSettings;
+    protected readonly IUrlRecordService _urlRecordService;
+    protected readonly IStoreContext _storeContext;
 
     protected Dictionary<string, string> _locations = new();
 
@@ -63,7 +66,9 @@ public class ZettleService
         MediaSettings mediaSettings,
         ZettleHttpClient zettleHttpClient,
         ZettleRecordService zettleRecordService,
-        ZettleSettings zettleSettings)
+        ZettleSettings zettleSettings,
+        IUrlRecordService urlRecordService,
+        IStoreContext storeContext)
     {
         _currencySettings = currencySettings;
         _currencyService = currencyService;
@@ -79,6 +84,8 @@ public class ZettleService
         _zettleHttpClient = zettleHttpClient;
         _zettleRecordService = zettleRecordService;
         _zettleSettings = zettleSettings;
+        _urlRecordService = urlRecordService;
+        _storeContext = storeContext;
     }
 
     #endregion
@@ -416,13 +423,18 @@ public class ZettleService
                     .ToList();
                 if (!combinationRecords.Any())
                 {
+                    var store = await _storeContext.GetCurrentStoreAsync();
+
+                    string barcodeUrl = string.Format("{0}{1}", store.Url, await _urlRecordService.GetSeNameAsync(product.Id, nameof(Product)));
+
                     //a single variant
                     var variant = new Product.ProductVariant
                     {
                         Uuid = product.VariantUuid,
                         Name = product.Name,
                         Sku = product.Sku,
-                        Description = product.Description
+                        Description = product.Description,
+                        Barcode = barcodeUrl
                     };
 
                     //set the price if available
