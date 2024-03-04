@@ -1,6 +1,71 @@
 ﻿@model ProductModel
 @using Nop.Core.Domain.Catalog;
 @using Nop.Services
+
+<style>
+    .ui-widget input, .ui-widget select, .ui-widget textarea, .ui-widget button {
+        outline: 0px; /* add this bit */
+        
+    }
+
+    .ui-spinner-input{
+        width: 50%;
+    }
+    .popover__title {
+        text-decoration: none;
+    }
+
+    .popover__wrapper {
+        position: relative;
+        margin-top: 5px;
+        display: inline-block;
+    }
+
+    .popover__content {
+        opacity: 0;
+        visibility: hidden;
+        position: absolute;
+        
+        transform: translate(0, 10px);
+        background-color: #FFFFFF;
+        padding: 0.5rem;
+        box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26);
+        border-style: solid;
+        border-width: 1px;
+        border-color: black;
+        border-radius: 5px;
+        width: 200px;
+    }
+
+        .popover__content:before {
+            position: absolute;
+            z-index: -1;
+            content: "";
+            right: calc(50% - 10px);
+            top: -8px;
+            border-style: solid;
+            border-width: 0 10px 10px 10px;
+            border-color: transparent transparent #bfbfbf transparent;
+            transition-duration: 0.3s;
+            transition-property: transform;
+        }
+
+    .popover__wrapper:focus-within .popover__content {
+        z-index: 10;
+        opacity: 1;
+        visibility: visible;
+        transform: translate(0, px);
+        transition: all 0.5s cubic-bezier(0.75, -0.02, 0.2, 0.97);
+    }
+
+    .popover__message {
+        text-align: center;
+    }
+
+    
+</style>
+
+
 <script>
     $(function() {
         $("#@Html.IdFor(model => model.ManageInventoryMethodId)").change(toggleManageStock);
@@ -9,7 +74,35 @@
         $("#@Html.IdFor(model => model.DisplayStockAvailability)").click(toggleManageStock);
 
         toggleManageStock();
+
+        var inventory_popover = $('[data-toggle="inventory_popover"]');
+        inventory_popover.popover();
+        var spinnerAdjust = $("#spinnerAdjust").spinner({ spin: adjustStock });
+        var spinnerNew = $("#spinnerNew").spinner({ spin: newStock });
+
+        spinnerAdjust.val(0);
+        spinnerNew.val(initialStockQty);
     });
+
+    var initialStockQty = @Model.StockQuantity;
+    var newStockQty = 0;
+
+    function adjustStock(event, value) {
+        newStockQty = initialStockQty + value.value;
+        //console.log(newStockQty);
+        $("#StockQuantity").val(newStockQty);
+        $("#spinnerNew").spinner().val(newStockQty);
+
+    }
+
+    function newStock(event, value) {
+        newStockQty = value.value;
+        $("#StockQuantity").val(newStockQty);
+        var value = newStockQty - initialStockQty;
+        $("#spinnerAdjust").spinner().val(value);
+        console.log(value);
+
+    }
 
 
     function toggleManageStock() {
@@ -105,6 +198,7 @@
     }
 
 </script>
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
 
 <div class="card-body">
     <div id="product-inventory-area">
@@ -121,10 +215,25 @@
             <div class="col-md-3">
                 <nop-label asp-for="StockQuantity" />
             </div>
-            <div class="col-md-9">
-                <nop-editor asp-for="StockQuantity" />
-                <input type="hidden" asp-for="LastStockQuantity" />
-                <span asp-validation-for="StockQuantity"></span>
+            <div class="col-md-9 popover__wrapper">
+                <div class="popover__title">
+
+                    <input asp-for="StockQuantity" readonly />
+                    <input type="hidden" asp-for="LastStockQuantity" />
+                    <span asp-validation-for="StockQuantity"></span>
+                </div>
+                <div class="popover__content">
+                    <div class="form-group row">
+                        <div class="col-md-6">
+                            <label>Adjust by</label>
+                            <input id="spinnerAdjust" />
+                        </div>
+                        <div class="col-md-6">
+                            <label>New</label>
+                            <input id="spinnerNew" />
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="form-group row @(Model.ProductEditorSettingsModel.Warehouse ? null : "advanced-setting")" id="pnlWarehouse">

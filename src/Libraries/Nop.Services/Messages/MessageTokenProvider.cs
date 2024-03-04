@@ -1019,6 +1019,8 @@ public partial class MessageTokenProvider : IMessageTokenProvider
     {
         ArgumentNullException.ThrowIfNull(emailAccount);
 
+        var currentdate = await _dateTimeHelper.ConvertToUserTimeAsync(DateTime.UtcNow, DateTimeKind.Utc);
+
         tokens.Add(new Token("Store.Name", await _localizationService.GetLocalizedAsync(store, x => x.Name)));
         tokens.Add(new Token("Store.URL", store.Url, true));
         tokens.Add(new Token("Store.Email", emailAccount.Email));
@@ -1026,6 +1028,8 @@ public partial class MessageTokenProvider : IMessageTokenProvider
         tokens.Add(new Token("Store.CompanyAddress", store.CompanyAddress));
         tokens.Add(new Token("Store.CompanyPhoneNumber", store.CompanyPhoneNumber));
         tokens.Add(new Token("Store.CompanyVat", store.CompanyVat));
+        tokens.Add(new Token("Store.CurrentDate", currentdate.ToString("MMMM dd, yyyy", CultureInfo.InvariantCulture)));
+        tokens.Add(new Token("Store.CurrentTime", currentdate.ToShortTimeString()));
 
         tokens.Add(new Token("Facebook.URL", _storeInformationSettings.FacebookLink));
         tokens.Add(new Token("Twitter.URL", _storeInformationSettings.TwitterLink));
