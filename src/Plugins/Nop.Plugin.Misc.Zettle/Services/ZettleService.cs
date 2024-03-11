@@ -985,6 +985,7 @@ public class ZettleService
                             record.InventoryTrackingEnabled = false;
                             record.UpdatedOnUtc = DateTime.UtcNow;
                         }
+                        await _logger.InformationAsync($"{ZettleDefaults.SystemName} InventoryTrackingStopped request: {JsonConvert.SerializeObject(inventoryTrackingInfo)}");
                         await _zettleRecordService.UpdateRecordsAsync(records);
 
                         break;
