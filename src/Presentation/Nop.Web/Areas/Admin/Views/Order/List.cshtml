@@ -367,6 +367,11 @@
                                             Width = "100"
                                         });
                                     }
+                                    gridModel.ColumnCollection.Add(new ColumnProperty(nameof(OrderModel.ShippingMethod))
+                                    {
+                                        Title = T("Admin.Orders.Fields.ShippingMethod").Text,
+                                        Width = "150"
+                                    });
                                     gridModel.ColumnCollection.Add(new ColumnProperty(nameof(OrderModel.CustomerEmail))
                                     {
                                         Title = T("Admin.Orders.Fields.Customer").Text,
