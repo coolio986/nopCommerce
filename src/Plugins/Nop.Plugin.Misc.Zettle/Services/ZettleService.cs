@@ -992,6 +992,7 @@ public class ZettleService
                             record.InventoryTrackingEnabled = false;
                             record.UpdatedOnUtc = DateTime.UtcNow;
                         }
+                        await _logger.InformationAsync($"{ZettleDefaults.SystemName} InventoryTrackingStopped request: {JsonConvert.SerializeObject(inventoryTrackingInfo)}");
                         await _zettleRecordService.UpdateRecordsAsync(records);
 
                         break;
@@ -1052,6 +1053,7 @@ public class ZettleService
                             _zettleSettings.InventoryTrackingIds = new();
                             await _settingService.SaveSettingAsync(_zettleSettings);
                         }
+                        await _logger.InformationAsync($"{ZettleDefaults.SystemName} ApplicationConnectionRemoved request: {JsonConvert.SerializeObject(applicationInfo)}");
                         await _logger.WarningAsync($"{ZettleDefaults.SystemName}. {warning}");
 
                         break;
