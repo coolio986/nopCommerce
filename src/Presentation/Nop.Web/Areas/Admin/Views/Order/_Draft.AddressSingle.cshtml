@@ -12,46 +12,79 @@
 }
 
 
-
-
-<input type="hidden" id="shippingAddress.Id" name="shippingAddress.Id" value="@Model.Id">
-
-<div class="d-flex justify-content-between">
-    <div class="col-md-8">
-        <span>@Model.FirstName @Model.LastName</span>
-    </div>
-    <div class="col-md-4">
-        @if (orderStatusId == 0)
-        {
-            <button type="button" class="btn btn-primary" onclick="changeAddress()" style="background:unset;border:0;padding-top:inherit;padding-bottom:4px">
-                <span style="color:#2c6ecb"> Change</span>
-
-            </button>
-        }
-        else
-        {
-            <span style="color:black;background:unset;border:0;padding-top:inherit;padding-bottom:4px;display:flex"> (Unsaved)</span>
-        }
-    </div>
-</div>
-<div class="col-md-12">
-    <span>@Model.Address1</span>
-</div>
-<div class="col-md-12">
-    <span>@Model.Address2</span>
-</div>
-<div class="col-md-12">
-    @{
-        var stateprovincebilling = await stateProvinceService.GetStateProvinceByIdAsync((int)Model.StateProvinceId);
+@{
+    //unable to find address or customer doesn't have an address
+    if(Model == null)
+    {
+        <!-- Modal -->
+        <div class="modal fade" id="addressNotFoundModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">Address not found</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <h3>
+                            This customer does not have an address, you must add one to create a draft order.
+                        </h3>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+            $('#addressNotFoundModal').modal('show');
+        </script>
     }
-    <span>@Model.City @stateprovincebilling?.Abbreviation, @Model.ZipPostalCode</span>
-</div>
-<div class="col-md-12">
-    @{
-        var countrybilling = await countryService.GetCountryByIdAsync((int)Model.CountryId);
+    else
+    {
+        <input type="hidden" id="shippingAddress.Id" name="shippingAddress.Id" value="@Model.Id">
+
+        <div class="d-flex justify-content-between">
+            <div class="col-md-8">
+                <span>@Model.FirstName @Model.LastName</span>
+            </div>
+            <div class="col-md-4">
+                @if (orderStatusId == 0)
+                {
+                    <button type="button" class="btn btn-primary" onclick="changeAddress()" style="background:unset;border:0;padding-top:inherit;padding-bottom:4px">
+                        <span style="color:#2c6ecb"> Change</span>
+
+                    </button>
+                }
+                else
+                {
+                    <span style="color:black;background:unset;border:0;padding-top:inherit;padding-bottom:4px;display:flex"> (Unsaved)</span>
+                }
+            </div>
+        </div>
+        <div class="col-md-12">
+            <span>@Model.Address1</span>
+        </div>
+        <div class="col-md-12">
+            <span>@Model.Address2</span>
+        </div>
+        <div class="col-md-12">
+            @{
+                var stateprovincebilling = await stateProvinceService.GetStateProvinceByIdAsync((int)Model.StateProvinceId);
+            }
+            <span>@Model.City @stateprovincebilling?.Abbreviation, @Model.ZipPostalCode</span>
+        </div>
+        <div class="col-md-12">
+            @{
+                var countrybilling = await countryService.GetCountryByIdAsync((int)Model.CountryId);
+            }
+            <span>@countrybilling?.ThreeLetterIsoCode</span>
+        </div>
     }
-    <span>@countrybilling?.ThreeLetterIsoCode</span>
-</div>
+}
+
+
 
 <script>
     function changeAddress() {
