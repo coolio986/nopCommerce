@@ -1511,7 +1511,7 @@ public partial class CheckoutController : BasePublicController
 
             var draftOrder = await _draftOrderService.GetOrderByGuidAsync(draftOrderGuid);
 
-            if (draftOrder != null && draftOrder.PaymentStatusId < (int)OrderStatus.Complete)
+            if (draftOrder != null && draftOrder.OrderStatusId < (int)OrderStatus.Complete)
             {
                 if (customer.Id == draftOrder.CustomerId)
                 {
@@ -1608,6 +1608,7 @@ public partial class CheckoutController : BasePublicController
                     }
                 }
             }
+            return InvokeHttp404();
         }
 
         if (!cart.Any())
@@ -2242,6 +2243,20 @@ public partial class CheckoutController : BasePublicController
                     }
 
                     await _paymentService.PostProcessPaymentAsync(postProcessPaymentRequest);
+
+                    if (draftOrder != null)
+                    {
+                        draftOrder.PaymentStatusId = (int)PaymentStatus.Paid;
+                        draftOrder.OrderStatusId = (int)OrderStatus.Complete;
+                        await _draftOrderService.UpdateOrderAsync(draftOrder);
+                    }
+                    foreach (var deletedProduct in listOfDeletedCustomProducts)
+                    {
+                        deletedProduct.Deleted = true;
+                        await _productService.UpdateProductAsync(deletedProduct);
+                    }
+
+
                     //success
                     return Json(new { success = 1 });
                 }
