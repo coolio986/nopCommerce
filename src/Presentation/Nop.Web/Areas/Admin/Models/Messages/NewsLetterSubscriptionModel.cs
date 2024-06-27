@@ -21,6 +21,12 @@ public partial record NewsletterSubscriptionModel : BaseNopEntityModel
     [NopResourceDisplayName("Admin.Promotions.NewsLetterSubscriptions.Fields.Store")]
     public string StoreName { get; set; }
 
+    [NopResourceDisplayName("Admin.Promotions.NewsLetterSubscriptions.Fields.FirstName")]
+    public string FirstName { get; set; }
+
+    [NopResourceDisplayName("Admin.Promotions.NewsLetterSubscriptions.Fields.LastName")]
+    public string LastName { get; set; }
+
     [NopResourceDisplayName("Admin.Promotions.NewsLetterSubscriptions.Fields.Language")]
     public string LanguageName { get; set; }
 
