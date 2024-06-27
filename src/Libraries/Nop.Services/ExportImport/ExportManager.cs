@@ -2166,15 +2166,25 @@ public partial class ExportManager : IExportManager
         sb.Append(await _localizationService.GetResourceAsync("Admin.Promotions.NewsLetterSubscriptions.Fields.Active"));
         sb.Append(separator);
         sb.Append(await _localizationService.GetResourceAsync("Admin.Promotions.NewsLetterSubscriptions.Fields.Store"));
+        sb.Append(separator);
+        sb.Append(await _localizationService.GetResourceAsync("Admin.Promotions.NewsLetterSubscriptions.Fields.FirstName"));
+        sb.Append(separator);
+        sb.Append(await _localizationService.GetResourceAsync("Admin.Promotions.NewsLetterSubscriptions.Fields.LastName"));
         sb.Append(Environment.NewLine);
 
         foreach (var subscription in subscriptions)
         {
+            var customer = await _customerService.GetCustomerByEmailAsync(subscription.Email) ?? new Customer();
+
             sb.Append(subscription.Email);
             sb.Append(separator);
             sb.Append(subscription.Active);
             sb.Append(separator);
             sb.Append(subscription.StoreId);
+            sb.Append(separator);
+            sb.Append(customer.FirstName);
+            sb.Append(separator);
+            sb.Append(customer.LastName);
             sb.Append(Environment.NewLine);
         }
 

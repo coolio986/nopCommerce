@@ -14391,6 +14391,12 @@
   <LocaleResource Name="Admin.Promotions.NewsLetterSubscriptions.Fields.Store">
     <Value>Store</Value>
   </LocaleResource>
+    <LocaleResource Name="Admin.Promotions.NewsLetterSubscriptions.Fields.FirstName">
+        <Value>First Name</Value>
+    </LocaleResource>
+    <LocaleResource Name="Admin.Promotions.NewsLetterSubscriptions.Fields.LastName">
+        <Value>Last Name</Value>
+    </LocaleResource>
   <LocaleResource Name="Admin.Promotions.NewsLetterSubscriptions.ImportEmailsSuccess">
     <Value>{0} emails have been successfully imported</Value>
   </LocaleResource>
