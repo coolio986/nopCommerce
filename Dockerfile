@@ -15,10 +15,6 @@ RUN dotnet build Nop.Web.csproj -c Release
 # build plugins
 WORKDIR /src/Plugins/Nop.Plugin.DiscountRules.CustomerRoles
 RUN dotnet build Nop.Plugin.DiscountRules.CustomerRoles.csproj -c Release
-WORKDIR /src/Plugins/Nop.Plugin.ExternalAuth.Facebook
-RUN dotnet build Nop.Plugin.ExternalAuth.Facebook.csproj -c Release
-WORKDIR /src/Plugins/Nop.Plugin.Misc.Brevo
-RUN dotnet build Nop.Plugin.Misc.Brevo.csproj -c Release
 WORKDIR /src/Plugins/Nop.Plugin.Misc.WebApi.Frontend
 RUN dotnet build Nop.Plugin.Misc.WebApi.Frontend.csproj -c Release
 WORKDIR /src/Plugins/Nop.Plugin.Misc.Zettle
@@ -27,8 +23,6 @@ WORKDIR /src/Plugins/Nop.Plugin.MultiFactorAuth.GoogleAuthenticator
 RUN dotnet build Nop.Plugin.MultiFactorAuth.GoogleAuthenticator.csproj -c Release
 WORKDIR /src/Plugins/Nop.Plugin.Payments.CheckMoneyOrder
 RUN dotnet build Nop.Plugin.Payments.CheckMoneyOrder.csproj -c Release
-WORKDIR /src/Plugins/Nop.Plugin.Payments.CyberSource
-RUN dotnet build Nop.Plugin.Payments.CyberSource.csproj -c Release
 WORKDIR /src/Plugins/Nop.Plugin.Payments.Manual
 RUN dotnet build Nop.Plugin.Payments.Manual.csproj -c Release
 WORKDIR /src/Plugins/Nop.Plugin.Payments.PayPalCommerce
@@ -39,14 +33,8 @@ WORKDIR /src/Plugins/Nop.Plugin.Shipping.EasyPost
 RUN dotnet build Nop.Plugin.Shipping.EasyPost.csproj -c Release
 WORKDIR /src/Plugins/Nop.Plugin.Shipping.FixedByWeightByTotal
 RUN dotnet build Nop.Plugin.Shipping.FixedByWeightByTotal.csproj -c Release
-WORKDIR /src/Plugins/Nop.Plugin.Shipping.UPS
-RUN dotnet build Nop.Plugin.Shipping.UPS.csproj -c Release
-WORKDIR /src/Plugins/Nop.Plugin.Tax.Avalara
-RUN dotnet build Nop.Plugin.Tax.Avalara.csproj -c Release
 WORKDIR /src/Plugins/Nop.Plugin.Tax.FixedOrByCountryStateZip
 RUN dotnet build Nop.Plugin.Tax.FixedOrByCountryStateZip.csproj -c Release
-WORKDIR /src/Plugins/Nop.Plugin.Widgets.FacebookPixel
-RUN dotnet build Nop.Plugin.Widgets.FacebookPixel.csproj -c Release
 WORKDIR /src/Plugins/Nop.Plugin.Widgets.GoogleAnalytics
 RUN dotnet build Nop.Plugin.Widgets.GoogleAnalytics.csproj -c Release
 WORKDIR /src/Plugins/Nop.Plugin.Widgets.NivoSlider
