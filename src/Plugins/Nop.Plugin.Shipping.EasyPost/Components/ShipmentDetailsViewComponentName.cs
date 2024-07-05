@@ -140,25 +140,33 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
 
                 var customer = await _easyPostService.GetCustomerByIdAsync(order.CustomerId);
                 var fixedShipmentId = await _genericAttributeService.GetAttributeAsync<string>(customer, EasyPostDefaults.ShipmentIdAttribute, order.StoreId);
-                var (fixedShipment, fixedShipmentError) = await _easyPostService.GetShipmentAsync(fixedShipmentId);
-
-                if (string.IsNullOrEmpty(fixedShipmentError) && fixedShipment != null)
+                if (fixedShipmentId != null)
                 {
-                    var storeCurrency = await _easyPostService.GetCurrencyByIdAsync(_easyPostService.GetCurrencySettings().PrimaryStoreCurrencyId)
-                    ?? throw new NopException("Primary store currency is not set");
+                    var (fixedShipment, fixedShipmentError) = await _easyPostService.GetShipmentAsync(fixedShipmentId);
 
-
-                    var easyPostRates = await fixedShipment.rates.SelectAwait(async rate => new ShippingOption
+                    if (string.IsNullOrEmpty(fixedShipmentError))
                     {
-                        Id = rate.id,
-                        Description = string.Format("{0} {1}", rate.carrier, rate.service),
-                        Rate = await _easyPostService.ConvertRateAsync(rate.rate, rate.currency, storeCurrency),
-                        Currency = rate.currency
-                    }).ToListAsync();
+                        var storeCurrency = await _easyPostService.GetCurrencyByIdAsync(_easyPostService.GetCurrencySettings().PrimaryStoreCurrencyId)
+                        ?? throw new NopException("Primary store currency is not set");
 
-                    shippingModel.ShippingOptions = easyPostRates;
-                    shippingModel = _easyPostService.SortShippingOptions(shippingModel);
-                    shippingModel.SelectedShippingOptionId = shippingModel.ShippingOptions.FirstOrDefault()?.Id;
+
+                        var easyPostRates = await fixedShipment.rates.SelectAwait(async rate => new ShippingOption
+                        {
+                            Id = rate.id,
+                            Description = string.Format("{0} {1}", rate.carrier, rate.service),
+                            Rate = await _easyPostService.ConvertRateAsync(rate.rate, rate.currency, storeCurrency),
+                            Currency = rate.currency
+                        }).ToListAsync();
+
+                        foreach (var rate in easyPostRates)
+                        {
+                            rate.Description = rate.Description.TrimEnd(' ').Replace("UPSDAP", "UPS");
+                        }
+
+                        shippingModel.ShippingOptions = easyPostRates;
+                        shippingModel = _easyPostService.SortShippingOptions(shippingModel);
+                        shippingModel.SelectedShippingOptionId = shippingModel.ShippingOptions.FirstOrDefault()?.Id;
+                    }
                 }
 
                 return View("~/Plugins/Shipping.EasyPost/Views/Shipment/_ShipmentDetails.EasyPost.Rates.cshtml", shippingModel);
