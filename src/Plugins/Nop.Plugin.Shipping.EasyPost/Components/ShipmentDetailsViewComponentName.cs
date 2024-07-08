@@ -156,10 +156,16 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
                         
                         //Testing for now, but if the customer tries to get a rate quote and then decides to select the flat rate this can happen.
                         //Unsure yet if the rest of the address can be tested. Need to see more edge cases
-                        if(fixedShipment.to_address.zip != shippingAddress.ZipPostalCode)
+                        if(fixedShipment.to_address.verifications.delivery == null)
                         {
                             await _genericAttributeService.SaveAttributeAsync<string>(customer, EasyPostDefaults.ShipmentIdAttribute, null, order.StoreId);
                             return View("~/Plugins/Shipping.EasyPost/Views/Shipment/_ShipmentDetails.EasyPost.Rates.cshtml", shippingModel);
+                        }
+                        if(fixedShipment.to_address.verifications.delivery != null && !fixedShipment.to_address.verifications.delivery.success)
+                        {
+                            model.Error = string
+                            .Format(await _localizationService.GetResourceAsync("Plugins.Shipping.EasyPost.Error.Alert"), fixedShipment.to_address.verifications.delivery.errors.FirstOrDefault()?.message );
+                            return View("~/Plugins/Shipping.EasyPost/Views/Shipment/ShipmentDetails.cshtml", model);
                         }
 
                         var storeCurrency = await _easyPostService.GetCurrencyByIdAsync(_easyPostService.GetCurrencySettings().PrimaryStoreCurrencyId)
