@@ -42,6 +42,7 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
         private readonly IPriceFormatter _priceFormatter;
         private readonly IShipmentService _shipmentService;
         private readonly IShippingPluginManager _shippingPluginManager;
+        private readonly IAddressService _addressService;
 
         #endregion
 
@@ -55,7 +56,8 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
             IPermissionService permissionService,
             IPriceFormatter priceFormatter,
             IShipmentService shipmentService,
-            IShippingPluginManager shippingPluginManager)
+            IShippingPluginManager shippingPluginManager,
+            IAddressService addressService)
         {
             _easyPostModelFactory = easyPostModelFactory;
             _easyPostService = easyPostService;
@@ -66,6 +68,7 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
             _priceFormatter = priceFormatter;
             _shipmentService = shipmentService;
             _shippingPluginManager = shippingPluginManager;
+            _addressService = addressService;
         }
 
         #endregion
@@ -146,6 +149,19 @@ namespace Nop.Plugin.Shipping.EasyPost.Components
 
                     if (string.IsNullOrEmpty(fixedShipmentError))
                     {
+                        int shippingAddressId = customer.ShippingAddressId 
+                            ?? throw new NopException("Unable to find customer shipping address");
+
+                        var shippingAddress = await _addressService.GetAddressByIdAsync(shippingAddressId);
+                        
+                        //Testing for now, but if the customer tries to get a rate quote and then decides to select the flat rate this can happen.
+                        //Unsure yet if the rest of the address can be tested. Need to see more edge cases
+                        if(fixedShipment.to_address.zip != shippingAddress.ZipPostalCode)
+                        {
+                            await _genericAttributeService.SaveAttributeAsync<string>(customer, EasyPostDefaults.ShipmentIdAttribute, null, order.StoreId);
+                            return View("~/Plugins/Shipping.EasyPost/Views/Shipment/_ShipmentDetails.EasyPost.Rates.cshtml", shippingModel);
+                        }
+
                         var storeCurrency = await _easyPostService.GetCurrencyByIdAsync(_easyPostService.GetCurrencySettings().PrimaryStoreCurrencyId)
                         ?? throw new NopException("Primary store currency is not set");
 
