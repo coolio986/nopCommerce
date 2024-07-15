@@ -1608,7 +1608,10 @@ public partial class CheckoutController : BasePublicController
                     }
                 }
             }
-            return InvokeHttp404();
+            else
+            {
+                return InvokeHttp404();
+            }
         }
 
         if (!cart.Any())
