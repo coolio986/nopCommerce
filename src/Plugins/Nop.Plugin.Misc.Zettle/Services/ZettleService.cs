@@ -930,10 +930,10 @@ public class ZettleService
                                 externalUuidrecords.Add(record);
                         }
 
-                    for (var i = 0; i < (balanceInfo.BalanceBefore ?? new()).Count; i++)
-                    {
-                        var balanceBefore = balanceInfo.BalanceBefore?.ElementAtOrDefault(i);
-                        var balanceAfter = balanceInfo.BalanceAfter?.ElementAtOrDefault(i);
+                        for (var i = 0; i < (balanceInfo.BalanceBefore ?? new()).Count; i++)
+                        {
+                            var balanceBefore = balanceInfo.BalanceBefore?.ElementAtOrDefault(i);
+                            var balanceAfter = balanceInfo.BalanceAfter?.ElementAtOrDefault(i);
 
                             if (string.IsNullOrEmpty(balanceBefore?.ProductUuid) || string.IsNullOrEmpty(balanceAfter?.ProductUuid))
                                 continue;
@@ -962,13 +962,13 @@ public class ZettleService
                             continue;
                         }
 
-                        //adjust inventory
-                        var product = await _productService.GetProductByIdAsync(productRecord.ProductId);
-                        var combination = await _productAttributeService.GetProductAttributeCombinationByIdAsync(productRecord.CombinationId);
-                        var quantityToChange = balanceAfter.Balance.Value - balanceBefore.Balance.Value;
-                        var logMessage = $"{ZettleDefaults.SystemName} update. Inventory balance changed at {balanceAfter.Created?.ToLongTimeString()}";
-                        await _productService.AdjustInventoryAsync(product, quantityToChange, combination?.AttributesXml, logMessage);
-                    }
+                            //adjust inventory
+                            var product = await _productService.GetProductByIdAsync(productRecord.ProductId);
+                            var combination = await _productAttributeService.GetProductAttributeCombinationByIdAsync(productRecord.CombinationId);
+                            var quantityToChange = balanceAfter.Balance.Value - balanceBefore.Balance.Value;
+                            var logMessage = $"{ZettleDefaults.SystemName} update. Inventory balance changed at {balanceAfter.Created?.ToLongTimeString()}";
+                            await _productService.AdjustInventoryAsync(product, quantityToChange, combination?.AttributesXml, logMessage);
+                        }
 
                         break;
                     }
