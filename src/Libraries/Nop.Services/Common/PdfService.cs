@@ -198,7 +198,8 @@ public partial class PdfService : IPdfService
         var stateProvince = await _stateProvinceService.GetStateProvinceByAddressAsync(billingAddress);
         addressResult.StateProvinceName = stateProvince != null ? await _localizationService.GetLocalizedAsync(stateProvince, x => x.Name, lang.Id) : string.Empty;
 
-        addressLine += $"{stateProvince.Abbreviation} ";
+        
+        addressLine += stateProvince != null ? $"{stateProvince.Abbreviation} " : " ";
 
         if (_addressSettings.ZipPostalCodeEnabled && !string.IsNullOrEmpty(billingAddress.ZipPostalCode))
         {
