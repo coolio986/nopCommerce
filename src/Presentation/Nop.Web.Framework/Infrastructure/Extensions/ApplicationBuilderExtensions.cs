@@ -234,12 +234,12 @@ public static class ApplicationBuilderExtensions
         [
             new FileProviderOptions
             {
-                RequestPath =  new PathString("/Plugins"),
+                RequestPath = new PathString("/Plugins"),
                 FileProvider = new PhysicalFileProvider(fileProvider.MapPath(@"Plugins"))
             },
             new FileProviderOptions
             {
-                RequestPath =  new PathString("/Themes"),
+                RequestPath = new PathString("/Themes"),
                 FileProvider = new PhysicalFileProvider(fileProvider.MapPath(@"Themes"))
             }
         ]);
@@ -295,6 +295,35 @@ public static class ApplicationBuilderExtensions
             RequestPath = new PathString("/Plugins"),
             OnPrepareResponse = staticFileResponse
         };
+
+        //downloadable static files
+        application.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = new PhysicalFileProvider(fileProvider.Combine(fileProvider.WebRootPath, "files")),
+            RequestPath = new PathString("/files"),
+            OnPrepareResponse = staticFileResponse,
+            ContentTypeProvider = new FileExtensionContentTypeProvider
+            {
+                Mappings =
+                {
+                    [".3mf"] = MimeTypes.ApplicationOctetStream,
+                    [".zip"] = MimeTypes.ApplicationOctetStream,
+                    [".stl"] = MimeTypes.ApplicationOctetStream,
+                    [".stp"] = MimeTypes.ApplicationOctetStream,
+                    [".step"] = MimeTypes.ApplicationOctetStream,
+                    [".doc"] = MimeTypes.ApplicationOctetStream,
+                    [".pdf"] = MimeTypes.ApplicationOctetStream,
+                    [".jpg"] = MimeTypes.ApplicationOctetStream,
+                    [".jpeg"] = MimeTypes.ApplicationOctetStream,
+                    [".png"] = MimeTypes.ApplicationOctetStream,
+                    [".bmp"] = MimeTypes.ApplicationOctetStream,
+                    [".gif"] = MimeTypes.ApplicationOctetStream,
+                    [".webp"] = MimeTypes.ApplicationOctetStream,
+                    [".svg"] = MimeTypes.ApplicationOctetStream,
+                }
+
+            }
+        });
 
         //exclude files in blacklist
         if (!string.IsNullOrEmpty(appSettings.Get<CommonConfig>().PluginStaticFileExtensionsBlacklist))
