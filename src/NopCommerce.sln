@@ -51,7 +51,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nop.Plugin.Misc.Zettle", "P
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nop.Plugin.Misc.NopMobileApp", "Plugins\Nop.Plugin.Misc.NopMobileApp\Nop.Plugin.Misc.NopMobileApp.csproj", "{B3DBB095-6CF0-4A6D-AD40-CFCD8D17AF1D}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nop.Plugin.Product.HTMLSnippets", "Plugins\Nop.Plugin.Products.HTMLSnippets\Nop.Plugin.Product.HTMLSnippets.csproj", "{F44B7041-0A89-4EF4-9575-F5DBB75CE034}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nop.Plugin.Product.HTMLSnippets", "Plugins\Nop.Plugin.Product.HTMLSnippets\Nop.Plugin.Product.HTMLSnippets.csproj", "{F44B7041-0A89-4EF4-9575-F5DBB75CE034}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nop.Plugin.Shipping.EasyPost", "Plugins\Nop.Plugin.Shipping.EasyPost\Nop.Plugin.Shipping.EasyPost.csproj", "{0D680F05-6293-46DC-A0DA-18B3AEED4FD0}"
 EndProject
