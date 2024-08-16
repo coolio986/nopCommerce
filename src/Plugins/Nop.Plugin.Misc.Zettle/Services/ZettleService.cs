@@ -314,6 +314,8 @@ public class ZettleService
             return;
 
         var productChanges = new List<CreateTrackingRequest.ProductBalanceChange>();
+        var recordsToUpdate = new List<ZettleRecord>();
+
         foreach (var product in products)
         {
             log.AppendLine($"\tStart inventory tracking for product #{product.ProductRecord.ProductId}");
@@ -334,20 +336,24 @@ public class ZettleService
             }
             var productChange = await PrepareInventoryBalanceChangeAsync(InventoryBalanceChangeType.StartTracking,
                 productRecordToStart, combinationRecordsToStart);
-            if (productChange is not null)
-                productChanges.Add(productChange);
+            if (productChange is null)
+                continue;
+
+            productChanges.Add(productChange);
+            recordsToUpdate.AddRange(product.CombinationRecords.Union([product.ProductRecord]));
         }
 
-        await _logger.InformationAsync($"{ZettleDefaults.SystemName} ImportInventoryTrackingAsync request: {JsonConvert.SerializeObject(productChanges)}");
-
-        await UpdateInventoryBalanceAsync(InventoryBalanceChangeType.StartTracking, productChanges);
+        await UpdateInventoryBalanceAsync(productChanges, recordsToUpdate);
     }
 
     /// <summary>
     /// Create or update products in Zettle library
     /// </summary>
     /// <param name="log">Log message</param>
-    /// <returns>A task that represents the asynchronous operation</returns>
+    /// <returns>
+    /// A task that represents the asynchronous operation
+    /// The task result contains the import details
+    /// </returns>
     protected async Task<Import> ImportCreatedOrUpdatedAsync(StringBuilder log)
     {
         log.AppendLine("Create and update products...");
@@ -690,10 +696,10 @@ public class ZettleService
     /// <summary>
     /// Update inventory balance
     /// </summary>
-    /// <param name="changeType">Inventory balance change type</param>
     /// <param name="productChanges">List of product changes</param>
+    /// <param name="records">Records</param>
     /// <returns>A task that represents the asynchronous operation</returns>
-    protected async Task UpdateInventoryBalanceAsync(InventoryBalanceChangeType changeType, List<CreateTrackingRequest.ProductBalanceChange> productChanges)
+    protected async Task UpdateInventoryBalanceAsync(List<CreateTrackingRequest.ProductBalanceChange> productChanges, List<ZettleRecord> records)
     {
         if (!productChanges.Any())
             return;
@@ -705,24 +711,12 @@ public class ZettleService
             ExternalUuid = GuidGenerator.GenerateTimeBasedGuid().ToString()
         };
 
-        var records = (await _zettleRecordService.GetAllRecordsAsync()).Select(x =>
+        //save external UUID to avoid a double change, we will check it when receive a webhook event
+        foreach (var record in records)
         {
-            var product = productChanges.FirstOrDefault(y => y.ProductUuid == x.Uuid);
-            if (product != null)
-            {
-                x.ExternalUuid = inventoryRequest.ExternalUuid;
-                return x;
-            }
-            return null;
-        }).Where(x => x != null).ToList();
-
-
-        if (records.Count() > 0)
-        {
-            //save external id to avoid a double change, we will check it when receive a webhook event
-            await _logger.InformationAsync($"{ZettleDefaults.SystemName} tracking request: {JsonConvert.SerializeObject(inventoryRequest)}");
-            await _zettleRecordService.UpdateRecordsAsync(records);
+            record.ExternalUuid = inventoryRequest.ExternalUuid;
         }
+        await _zettleRecordService.UpdateRecordsAsync(records);
 
         //update balances
         await _zettleHttpClient.RequestAsync<CreateTrackingRequest, LocationInventoryBalance>(inventoryRequest);
@@ -936,20 +930,6 @@ public class ZettleService
                                 externalUuidrecords.Add(record);
                         }
 
-                        //сhange initiated by the plugin
-                        if (externalUuidrecords.Count() > 0)
-                        {
-                            //keep external ids for a day in case of errors when processing webhook requests
-                            var balanceChangeDate = balanceInfo.UpdateDetails.Timestamp ?? DateTime.UtcNow;
-                            if (balanceChangeDate < DateTime.UtcNow.AddDays(-1))
-                            {
-                                externalUuidrecords.ForEach(x => x.ExternalUuid = null);
-                                await _zettleRecordService.UpdateRecordsAsync(externalUuidrecords);
-                            }
-                            await _logger.InformationAsync($"{ZettleDefaults.SystemName} InventoryBalanceChanged Complete");
-                            break;
-                        }
-
                         for (var i = 0; i < (balanceInfo.BalanceBefore ?? new()).Count; i++)
                         {
                             var balanceBefore = balanceInfo.BalanceBefore?.ElementAtOrDefault(i);
@@ -968,6 +948,19 @@ public class ZettleService
                             string.Equals(record.Uuid, balanceAfter.ProductUuid, StringComparison.InvariantCultureIgnoreCase));
                             if (productRecord is null || !productRecord.Active || !productRecord.InventoryTrackingEnabled)
                                 continue;
+
+                        //whether the сhange is initiated by the plugin (inventory balance has already been changed)
+                        if (productRecord.ExternalUuid == balanceInfo.ExternalUuid)
+                        {
+                            //keep external UUID for a day in case of errors when processing webhook requests
+                            var balanceChangeDate = balanceInfo.UpdateDetails.Timestamp ?? DateTime.UtcNow;
+                            if (balanceChangeDate < DateTime.UtcNow.AddDays(-1))
+                            {
+                                productRecord.ExternalUuid = null;
+                                await _zettleRecordService.UpdateRecordAsync(productRecord);
+                            }
+                            continue;
+                        }
 
                             //adjust inventory
                             var product = await _productService.GetProductByIdAsync(productRecord.ProductId);
@@ -1026,9 +1019,7 @@ public class ZettleService
                         if (productChange is null)
                             break;
 
-                        await _logger.InformationAsync($"{ZettleDefaults.SystemName} ProductCreated request: {JsonConvert.SerializeObject(productChange)}");
-
-                        await UpdateInventoryBalanceAsync(InventoryBalanceChangeType.StartTracking, [productChange]);
+                    await UpdateInventoryBalanceAsync([productChange], combinationRecords.Union([productRecord]).ToList());
 
                         break;
                     }
@@ -1045,16 +1036,14 @@ public class ZettleService
                         {
                             warning = "The application was disconnected from PayPal Zettle organization. You need to reconfigure the plugin.";
 
-                            _zettleSettings.ClientId = string.Empty;
-                            _zettleSettings.ApiKey = string.Empty;
-                            _zettleSettings.WebhookUrl = string.Empty;
-                            _zettleSettings.WebhookKey = string.Empty;
-                            _zettleSettings.ImportId = string.Empty;
-                            _zettleSettings.InventoryTrackingIds = new();
-                            await _settingService.SaveSettingAsync(_zettleSettings);
-                        }
-                        await _logger.InformationAsync($"{ZettleDefaults.SystemName} ApplicationConnectionRemoved request: {JsonConvert.SerializeObject(applicationInfo)}");
-                        await _logger.WarningAsync($"{ZettleDefaults.SystemName}. {warning}");
+                        _zettleSettings.ClientId = string.Empty;
+                        _zettleSettings.ApiKey = string.Empty;
+                        _zettleSettings.WebhookUrl = string.Empty;
+                        _zettleSettings.WebhookKey = string.Empty;
+                        _zettleSettings.ImportId = string.Empty;
+                        await _settingService.SaveSettingAsync(_zettleSettings);
+                    }
+                    await _logger.WarningAsync($"{ZettleDefaults.SystemName}. {warning}");
 
                         break;
                     }
@@ -1171,7 +1160,7 @@ public class ZettleService
         if (productChange is null)
             return;
 
-        await UpdateInventoryBalanceAsync(changeType, [productChange]);
+        await UpdateInventoryBalanceAsync([productChange], combinationRecords.Union([productRecord]).ToList());
     }
 
     #endregion

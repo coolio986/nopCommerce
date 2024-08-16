@@ -54,5 +54,8 @@ public partial record CommonConfigModel : BaseNopModel, IConfigModel
     [NopResourceDisplayName("Admin.Configuration.AppSettings.Common.AllowAdministratorLoginAccess")]
     public bool AllowAdministratorLoginAccess { get; set; }
 
+    [NopResourceDisplayName("Admin.Configuration.AppSettings.Common.EnableCheckout")]
+    public bool EnableCheckoutProcess { get; set; }
+
     #endregion
 }

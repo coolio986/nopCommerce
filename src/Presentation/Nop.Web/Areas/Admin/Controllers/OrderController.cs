@@ -1261,7 +1261,7 @@ public partial class OrderController : BaseAdminController
                 orderItemId = Convert.ToInt32(formValue["btnSaveOrderItem".Length..]);
 
         var orderItem = await _orderService.GetOrderItemByIdAsync(orderItemId)
-                        ?? throw new ArgumentException("No order item found with the specified id");
+            ?? throw new ArgumentException("No order item found with the specified id");
 
         if (!decimal.TryParse(form["pvUnitPriceInclTax" + orderItemId], out var unitPriceInclTax))
             unitPriceInclTax = orderItem.UnitPriceInclTax;
@@ -1366,7 +1366,7 @@ public partial class OrderController : BaseAdminController
                 orderItemId = Convert.ToInt32(formValue["btnDeleteOrderItem".Length..]);
 
         var orderItem = await _orderService.GetOrderItemByIdAsync(orderItemId)
-                        ?? throw new ArgumentException("No order item found with the specified id");
+            ?? throw new ArgumentException("No order item found with the specified id");
 
         if ((await _giftCardService.GetGiftCardsByPurchasedWithOrderItemIdAsync(orderItem.Id)).Any())
         {
@@ -1430,7 +1430,7 @@ public partial class OrderController : BaseAdminController
                 orderItemId = Convert.ToInt32(formValue["btnResetDownloadCount".Length..]);
 
         var orderItem = await _orderService.GetOrderItemByIdAsync(orderItemId)
-                        ?? throw new ArgumentException("No order item found with the specified id");
+            ?? throw new ArgumentException("No order item found with the specified id");
 
         //ensure a vendor has access only to his products 
         if (await _workContext.GetCurrentVendorAsync() != null && !await HasAccessToProductAsync(orderItem))
@@ -1465,7 +1465,7 @@ public partial class OrderController : BaseAdminController
                 orderItemId = Convert.ToInt32(formValue["btnPvActivateDownload".Length..]);
 
         var orderItem = await _orderService.GetOrderItemByIdAsync(orderItemId)
-                        ?? throw new ArgumentException("No order item found with the specified id");
+            ?? throw new ArgumentException("No order item found with the specified id");
 
         //ensure a vendor has access only to his products 
         if (await _workContext.GetCurrentVendorAsync() != null && !await HasAccessToProductAsync(orderItem))
@@ -1494,10 +1494,10 @@ public partial class OrderController : BaseAdminController
 
         //try to get an order item with the specified id
         var orderItem = await _orderService.GetOrderItemByIdAsync(orderItemId)
-                        ?? throw new ArgumentException("No order item found with the specified id");
+            ?? throw new ArgumentException("No order item found with the specified id");
 
         var product = await _productService.GetProductByIdAsync(orderItem.ProductId)
-                      ?? throw new ArgumentException("No product found with the specified order item id");
+            ?? throw new ArgumentException("No product found with the specified order item id");
 
         if (!product.IsDownload)
             throw new ArgumentException("Product is not downloadable");
@@ -1525,7 +1525,7 @@ public partial class OrderController : BaseAdminController
             return RedirectToAction("List");
 
         var orderItem = await _orderService.GetOrderItemByIdAsync(model.OrderItemId)
-                        ?? throw new ArgumentException("No order item found with the specified id");
+            ?? throw new ArgumentException("No order item found with the specified id");
 
         //ensure a vendor has access only to his products 
         if (await _workContext.GetCurrentVendorAsync() != null && !await HasAccessToProductAsync(orderItem))
@@ -1560,7 +1560,7 @@ public partial class OrderController : BaseAdminController
             return RedirectToAction("List");
 
         var orderItem = await _orderService.GetOrderItemByIdAsync(model.OrderItemId)
-                        ?? throw new ArgumentException("No order item found with the specified id");
+            ?? throw new ArgumentException("No order item found with the specified id");
 
         //ensure a vendor has access only to his products 
         if (await _workContext.GetCurrentVendorAsync() != null && !await HasAccessToProductAsync(orderItem))
@@ -1607,7 +1607,7 @@ public partial class OrderController : BaseAdminController
 
         //try to get an order with the specified id
         var order = await _orderService.GetOrderByIdAsync(searchModel.OrderId)
-                    ?? throw new ArgumentException("No order found with the specified id");
+            ?? throw new ArgumentException("No order found with the specified id");
 
         //a vendor does not have access to this functionality
         if (await _workContext.GetCurrentVendorAsync() != null)
@@ -1626,11 +1626,11 @@ public partial class OrderController : BaseAdminController
 
         //try to get an order with the specified id
         var order = await _orderService.GetOrderByIdAsync(orderId)
-                    ?? throw new ArgumentException("No order found with the specified id");
+            ?? throw new ArgumentException("No order found with the specified id");
 
         //try to get a product with the specified id
         var product = await _productService.GetProductByIdAsync(productId)
-                      ?? throw new ArgumentException("No product found with the specified id");
+            ?? throw new ArgumentException("No product found with the specified id");
 
         //a vendor does not have access to this functionality
         if (await _workContext.GetCurrentVendorAsync() != null)
@@ -1654,15 +1654,15 @@ public partial class OrderController : BaseAdminController
 
         //try to get an order with the specified id
         var order = await _orderService.GetOrderByIdAsync(orderId)
-                    ?? throw new ArgumentException("No order found with the specified id");
+            ?? throw new ArgumentException("No order found with the specified id");
 
         //try to get a product with the specified id
         var product = await _productService.GetProductByIdAsync(productId)
-                      ?? throw new ArgumentException("No product found with the specified id");
+            ?? throw new ArgumentException("No product found with the specified id");
 
         //try to get a customer with the specified id
         var customer = await _customerService.GetCustomerByIdAsync(order.CustomerId)
-                       ?? throw new ArgumentException("No customer found with the specified id");
+            ?? throw new ArgumentException("No customer found with the specified id");
 
         //basic properties
         _ = decimal.TryParse(form["UnitPriceInclTax"], out var unitPriceInclTax);
@@ -1812,7 +1812,7 @@ public partial class OrderController : BaseAdminController
 
         //try to get an address with the specified id
         var address = await _addressService.GetAddressByIdAsync(addressId)
-                      ?? throw new ArgumentException("No address found with the specified id", nameof(addressId));
+            ?? throw new ArgumentException("No address found with the specified id", nameof(addressId));
 
         //prepare model
         var model = await _orderModelFactory.PrepareOrderAddressModelAsync(new OrderAddressModel(), order, address);
@@ -1837,7 +1837,7 @@ public partial class OrderController : BaseAdminController
 
         //try to get an address with the specified id
         var address = await _addressService.GetAddressByIdAsync(model.Address.Id)
-                      ?? throw new ArgumentException("No address found with the specified id");
+            ?? throw new ArgumentException("No address found with the specified id");
 
         //custom address attributes
         var customAttributes = await _addressAttributeParser.ParseCustomAttributesAsync(form, NopCommonDefaults.AddressAttributeControlName);
@@ -2523,7 +2523,7 @@ public partial class OrderController : BaseAdminController
 
         //try to get an order with the specified id
         var order = await _orderService.GetOrderByIdAsync(searchModel.OrderId)
-                    ?? throw new ArgumentException("No order found with the specified id");
+            ?? throw new ArgumentException("No order found with the specified id");
 
         //a vendor should have access only to his products
         if (await _workContext.GetCurrentVendorAsync() != null && !await HasAccessToOrderAsync(order))
@@ -2543,7 +2543,7 @@ public partial class OrderController : BaseAdminController
 
         //try to get a shipment with the specified id
         var shipment = await _shipmentService.GetShipmentByIdAsync(searchModel.ShipmentId)
-                       ?? throw new ArgumentException("No shipment found with the specified id");
+            ?? throw new ArgumentException("No shipment found with the specified id");
 
         //a vendor should have access only to his products
         var currentVendor = await _workContext.GetCurrentVendorAsync();
@@ -2552,7 +2552,7 @@ public partial class OrderController : BaseAdminController
 
         //try to get an order with the specified id
         var order = await _orderService.GetOrderByIdAsync(shipment.OrderId)
-                    ?? throw new ArgumentException("No order found with the specified id");
+            ?? throw new ArgumentException("No order found with the specified id");
 
         //a vendor should have access only to his products
         if (currentVendor != null && !await HasAccessToOrderAsync(order))
@@ -2706,6 +2706,9 @@ public partial class OrderController : BaseAdminController
 
             await _eventPublisher.PublishAsync(new ShipmentCreatedEvent(shipment));
 
+            if (!string.IsNullOrWhiteSpace(shipment.TrackingNumber))
+                await _eventPublisher.PublishAsync(new ShipmentTrackingNumberSetEvent(shipment));
+
             var canShip = !order.PickupInStore && model.CanShip;
             if (canShip)
                 await _orderProcessingService.ShipAsync(shipment, true);
@@ -2812,8 +2815,13 @@ public partial class OrderController : BaseAdminController
         if (await _workContext.GetCurrentVendorAsync() != null && !await HasAccessToShipmentAsync(shipment))
             return RedirectToAction("List");
 
+        if (shipment.TrackingNumber == model.TrackingNumber)
+            return RedirectToAction("ShipmentDetails", new { id = shipment.Id });
+
         shipment.TrackingNumber = model.TrackingNumber;
         await _shipmentService.UpdateShipmentAsync(shipment);
+
+        await _eventPublisher.PublishAsync(new ShipmentTrackingNumberSetEvent(shipment));
 
         return RedirectToAction("ShipmentDetails", new { id = shipment.Id });
     }
@@ -3224,7 +3232,7 @@ public partial class OrderController : BaseAdminController
     public virtual async Task<IActionResult> SetAsShippedSelected(ICollection<int> selectedIds)
     {
         if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
-            return AccessDeniedView();
+            return await AccessDeniedDataTablesJson();
 
         if (selectedIds == null || !selectedIds.Any())
             return NoContent();
@@ -3256,7 +3264,7 @@ public partial class OrderController : BaseAdminController
     public virtual async Task<IActionResult> SetAsReadyForPickupSelected(ICollection<int> selectedIds)
     {
         if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
-            return AccessDeniedView();
+            return await AccessDeniedDataTablesJson();
 
         if (selectedIds == null || !selectedIds.Any())
             return NoContent();
@@ -3288,7 +3296,7 @@ public partial class OrderController : BaseAdminController
     public virtual async Task<IActionResult> SetAsDeliveredSelected(ICollection<int> selectedIds)
     {
         if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
-            return AccessDeniedView();
+            return await AccessDeniedDataTablesJson();
 
         if (selectedIds == null || !selectedIds.Any())
             return NoContent();
@@ -3328,7 +3336,7 @@ public partial class OrderController : BaseAdminController
 
         //try to get an order with the specified id
         var order = await _orderService.GetOrderByIdAsync(searchModel.OrderId)
-                    ?? throw new ArgumentException("No order found with the specified id");
+            ?? throw new ArgumentException("No order found with the specified id");
 
         //a vendor does not have access to this functionality
         if (await _workContext.GetCurrentVendorAsync() != null)
@@ -3343,7 +3351,7 @@ public partial class OrderController : BaseAdminController
     public virtual async Task<IActionResult> OrderNoteAdd(int orderId, int downloadId, bool displayToCustomer, string message)
     {
         if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
-            return AccessDeniedView();
+            return await AccessDeniedDataTablesJson();
 
         if (string.IsNullOrEmpty(message))
             return ErrorJson(await _localizationService.GetResourceAsync("Admin.Orders.OrderNotes.Fields.Note.Validation"));
@@ -3382,7 +3390,7 @@ public partial class OrderController : BaseAdminController
     public virtual async Task<IActionResult> OrderNoteDelete(int id, int orderId)
     {
         if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageOrders))
-            return AccessDeniedView();
+            return await AccessDeniedDataTablesJson();
 
         //try to get an order with the specified id
         _ = await _orderService.GetOrderByIdAsync(orderId)
@@ -3394,7 +3402,7 @@ public partial class OrderController : BaseAdminController
 
         //try to get an order note with the specified id
         var orderNote = await _orderService.GetOrderNoteByIdAsync(id)
-                        ?? throw new ArgumentException("No order note found with the specified id");
+            ?? throw new ArgumentException("No order note found with the specified id");
 
         await _orderService.DeleteOrderNoteAsync(orderNote);
 

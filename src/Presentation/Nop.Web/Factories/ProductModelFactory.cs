@@ -268,6 +268,7 @@ public partial class ProductModelFactory : IProductModelFactory
         {
             productReview.ProductId = product.Id;
             productReview.AllowCustomerReviews = product.AllowCustomerReviews;
+            productReview.CanCurrentCustomerLeaveReview = _catalogSettings.AllowAnonymousUsersToReviewProduct || !await _customerService.IsGuestAsync(await _workContext.GetCurrentCustomerAsync());
             productReview.CanAddNewReview = await _productService.CanAddReviewAsync(product.Id, _catalogSettings.ShowProductReviewsPerStore ? currentStore.Id : 0);
         }
 
@@ -398,25 +399,28 @@ public partial class ProductModelFactory : IProductModelFactory
                                 continue;
 
                             //get price with additional charge
-                            var additionalCharge = decimal.Zero;
                             var combination = await _productAttributeParser.FindProductAttributeCombinationAsync(product, attributesXml);
                             if (combination?.OverriddenPrice.HasValue ?? false)
-                                additionalCharge = combination.OverriddenPrice.Value;
+                            {
+                                (var priceWithoutDiscount, var priceWithDiscount, _, _) = await _priceCalculationService
+                                    .GetFinalPriceAsync(product, customer, store, combination.OverriddenPrice.Value, decimal.Zero, true, 1, null, null);
+                                prices.Add((priceWithoutDiscount, priceWithDiscount));
+                            }
                             else
                             {
+                                var additionalCharge = decimal.Zero;
                                 var attributeValues = await _productAttributeParser.ParseProductAttributeValuesAsync(attributesXml);
                                 foreach (var attributeValue in attributeValues)
                                 {
                                     additionalCharge += await _priceCalculationService.
                                         GetProductAttributeValuePriceAdjustmentAsync(product, attributeValue, customer, store);
                                 }
-                            }
-
-                            if (additionalCharge != decimal.Zero)
-                            {
-                                (var priceWithoutDiscount, var priceWithDiscount, _, _) = await _priceCalculationService
-                                    .GetFinalPriceAsync(product, customer, store, additionalCharge);
-                                prices.Add((priceWithoutDiscount, priceWithDiscount));
+                                if (additionalCharge != decimal.Zero)
+                                {
+                                    (var priceWithoutDiscount, var priceWithDiscount, _, _) = await _priceCalculationService
+                                        .GetFinalPriceAsync(product, customer, store, additionalCharge);
+                                    prices.Add((priceWithoutDiscount, priceWithDiscount));
+                                }
                             }
                         }
 
@@ -500,9 +504,7 @@ public partial class ProductModelFactory : IProductModelFactory
                 {
                     //rental product
                     priceModel.OldPrice = await _priceFormatter.FormatRentalProductPeriodAsync(product, priceModel.OldPrice);
-                    priceModel.OldPriceValue = priceModel.OldPriceValue;
                     priceModel.Price = await _priceFormatter.FormatRentalProductPeriodAsync(product, priceModel.Price);
-                    priceModel.PriceValue = priceModel.PriceValue;
                 }
 
                 //property for German market
@@ -1076,15 +1078,15 @@ public partial class ProductModelFactory : IProductModelFactory
                             //select new values
                             var selectedValues = await _productAttributeParser.ParseProductAttributeValuesAsync(updatecartitem.AttributesXml);
                             foreach (var attributeValue in selectedValues)
-                            foreach (var item in attributeModel.Values)
-                                if (attributeValue.Id == item.Id)
-                                {
-                                    item.IsPreSelected = true;
+                                foreach (var item in attributeModel.Values)
+                                    if (attributeValue.Id == item.Id)
+                                    {
+                                        item.IsPreSelected = true;
 
-                                    //set customer entered quantity
-                                    if (attributeValue.CustomerEntersQty)
-                                        item.Quantity = attributeValue.Quantity;
-                                }
+                                        //set customer entered quantity
+                                        if (attributeValue.CustomerEntersQty)
+                                            item.Quantity = attributeValue.Quantity;
+                                    }
                         }
                     }
 

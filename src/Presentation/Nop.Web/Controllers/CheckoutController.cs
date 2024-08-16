@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using Nop.Core;
+using Nop.Core.Configuration;
 using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Common;
 using Nop.Core.Domain.Customers;
@@ -35,6 +36,7 @@ public partial class CheckoutController : BasePublicController
     #region Fields
 
     protected readonly AddressSettings _addressSettings;
+    protected readonly AppSettings _appSettings;
     protected readonly CaptchaSettings _captchaSettings;
     protected readonly CustomerSettings _customerSettings;
     protected readonly IAddressModelFactory _addressModelFactory;
@@ -70,6 +72,7 @@ public partial class CheckoutController : BasePublicController
     #region Ctor
 
     public CheckoutController(AddressSettings addressSettings,
+        AppSettings appSettings,
         CaptchaSettings captchaSettings,
         CustomerSettings customerSettings,
         IAddressModelFactory addressModelFactory,
@@ -100,6 +103,7 @@ public partial class CheckoutController : BasePublicController
         TaxSettings taxSettings)
     {
         _addressSettings = addressSettings;
+        _appSettings = appSettings;
         _captchaSettings = captchaSettings;
         _customerSettings = customerSettings;
         _addressModelFactory = addressModelFactory;
@@ -1257,7 +1261,7 @@ public partial class CheckoutController : BasePublicController
     public virtual async Task<IActionResult> ConfirmOrder(bool captchaValid)
     {
         //validation
-        if (_orderSettings.CheckoutDisabled)
+        if (_orderSettings.CheckoutDisabled || !_appSettings.Get<CommonConfig>().EnableCheckoutProcess)
             return RedirectToRoute("ShoppingCart");
 
         var customer = await _workContext.GetCurrentCustomerAsync();
@@ -1688,6 +1692,7 @@ public partial class CheckoutController : BasePublicController
                         selectedCountryId: newAddress.CountryId,
                         overrideAttributesXml: customAttributes);
                     billingAddressModel.NewAddressPreselected = true;
+                    
                     return Json(new
                     {
                         update_section = new UpdateSectionJsonModel
@@ -1696,6 +1701,9 @@ public partial class CheckoutController : BasePublicController
                             html = await RenderPartialViewToStringAsync("OpcBillingAddress", billingAddressModel)
                         },
                         wrong_billing_address = true,
+                        error = true,
+                        message = string.Join(", ", ModelState.Values.Where(p => p.Errors.Any()).SelectMany(p => p.Errors)
+                            .Select(p => p.ErrorMessage))
                     });
                 }
 
@@ -1856,7 +1864,10 @@ public partial class CheckoutController : BasePublicController
                         {
                             name = "shipping",
                             html = await RenderPartialViewToStringAsync("OpcShippingAddress", shippingAddressModel)
-                        }
+                        },
+                        error = true,
+                        message = string.Join(", ", ModelState.Values.Where(p => p.Errors.Any()).SelectMany(p => p.Errors)
+                            .Select(p => p.ErrorMessage))
                     });
                 }
 
@@ -2135,7 +2146,7 @@ public partial class CheckoutController : BasePublicController
             List<Product> listOfDeletedCustomProducts = new List<Product>();
             DraftOrder draftOrder = null;
             //validation
-            if (_orderSettings.CheckoutDisabled)
+            if (_orderSettings.CheckoutDisabled || !_appSettings.Get<CommonConfig>().EnableCheckoutProcess)
                 throw new Exception(await _localizationService.GetResourceAsync("Checkout.Disabled"));
 
             var customer = await _workContext.GetCurrentCustomerAsync();

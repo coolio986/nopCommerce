@@ -1740,7 +1740,6 @@ public partial class ImportManager : IImportManager
         }
 
         var iRow = 2;
-        var rolesToSave = new List<int>();
         var allRoles = await _customerService.GetAllCustomerRolesAsync();
         var countries = await _countryService.GetAllCountriesAsync();
         var states = await _stateProvinceService.GetStateProvincesAsync();
@@ -1773,6 +1772,8 @@ public partial class ImportManager : IImportManager
                     CustomerGuid = Guid.Empty.Equals(customerGuid) ? Guid.NewGuid() : customerGuid,
                     CreatedOnUtc = DateTime.UtcNow
                 };
+
+            var rolesToSave = new List<int>();
 
             foreach (var property in manager.GetDefaultProperties)
             {
@@ -1941,8 +1942,9 @@ public partial class ImportManager : IImportManager
             if (_securitySettings.AllowStoreOwnerExportImportCustomersWithHashedPassword &&
                 !string.IsNullOrEmpty(password) && !string.IsNullOrEmpty(passwordSalt))
             {
-                var lastPassword = await _customerService.GetCurrentPasswordAsync(customer.Id);
-                if (!lastPassword.Password.Equals(password) || lastPassword.PasswordSalt.Equals(passwordSalt))
+                var lastPassword = isNew ? null : await _customerService.GetCurrentPasswordAsync(customer.Id);
+                
+                if (lastPassword == null || !(lastPassword.Password.Equals(password) && lastPassword.PasswordSalt.Equals(passwordSalt)))
                     await _customerService.InsertCustomerPasswordAsync(new CustomerPassword
                     {
                         CustomerId = customer.Id,
@@ -2658,12 +2660,14 @@ public partial class ImportManager : IImportManager
                 }
                 else
                 {
+                    var customer = await _customerService.GetCustomerByEmailAsync(email);
                     subscription = new NewsLetterSubscription
                     {
                         Active = isActive,
                         CreatedOnUtc = DateTime.UtcNow,
                         Email = email,
                         StoreId = storeId,
+                        LanguageId = customer?.LanguageId ?? store.DefaultLanguageId,
                         NewsLetterSubscriptionGuid = Guid.NewGuid()
                     };
                     await _newsLetterSubscriptionService.InsertNewsLetterSubscriptionAsync(subscription);
@@ -3388,8 +3392,7 @@ public partial class ImportManager : IImportManager
 
         public override bool Equals(object obj)
         {
-            var other = obj as CategoryKey;
-            return other?.Equals(other) ?? false;
+            return obj is CategoryKey other && other.Equals(this);
         }
     }
 
