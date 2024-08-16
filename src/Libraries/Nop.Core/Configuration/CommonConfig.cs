@@ -81,4 +81,10 @@ public partial class CommonConfig : IConfig
     /// </summary>
     /// <value></value>
     public bool AllowAdministratorLoginAccess { get; private set; } = false;
+
+    /// <summary>
+    /// Get or set a value indicating whether to allow checkout, useful for overriding checkout process when used in multiple hosting envrionment
+    /// </summary>
+    /// <value></value>
+    public bool EnableCheckoutProcess { get; private set; } = true;
 }

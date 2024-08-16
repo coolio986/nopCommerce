@@ -4515,6 +4515,18 @@
   <LocaleResource Name="Admin.Configuration.AppSettings.Common.RejectionStatusCode.Hint">
     <Value>Default status code to set on the response when a request is rejected.</Value>
   </LocaleResource>
+  <LocaleResource Name="Admin.Configuration.AppSettings.Common.AllowAdministratorLoginAccess">
+      <Value>Allow administrator access</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Configuration.AppSettings.Common.AllowAdministratorLoginAccess.Hint">
+      <Value>When checked, allows administrators to administer the system. Useful for blocking admin access if you have a client site and admin site.</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Configuration.AppSettings.Common.EnableCheckout">
+      <Value>Enable checkout process</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Configuration.AppSettings.Common.EnableCheckout.Hint">
+      <Value>Useful for overriding checkout process when used in multiple hosting environment</Value>
+  </LocaleResource>
   <LocaleResource Name="Admin.Configuration.AppSettings.Common.ScheduleTaskRunTimeout">
     <Value>Schedule task run timeout</Value>
   </LocaleResource>
