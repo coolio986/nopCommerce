@@ -28,6 +28,7 @@
     <None Remove="Views\Pickup\_PickupDetails.cshtml" />
     <None Remove="Views\Product\_CreateOrUpdate.EasyPost.cshtml" />
     <None Remove="Views\Shipment\_ShipmentButtons.cshtml" />
+    <None Remove="Views\Shipment\_ShipmentDetails.EasyPost.Address.cshtml" />
     <None Remove="Views\Shipment\_ShipmentDetails.EasyPost.cshtml" />
     <None Remove="Views\Shipment\ShipmentDetails.cshtml" />
     <None Remove="Views\Shipment\_ShipmentDetails.EasyPost.RateDetails.cshtml" />
@@ -76,6 +77,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Views\Shipment\ShipmentDetails.cshtml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Views\Shipment\_ShipmentDetails.EasyPost.Address.cshtml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Views\_ViewImports.cshtml">
