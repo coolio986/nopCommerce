@@ -18,16 +18,14 @@ else
 {
     @await Html.PartialAsync("~/Plugins/Shipping.EasyPost/Views/Pickup/_PickupButtons.cshtml", Model.PickupModel)
     <div class="btn-group">
-        <button class="btn btn-success" type="button" asp-route="@EasyPostDefaults.DownloadLabelRouteName" asp-route-labelFormat="pdf" id="downloadPDF">
+        <button class="btn btn-success" type="button" asp-route="@EasyPostDefaults.DownloadLabelRouteName" asp-route-labelFormat="pdf" onclick="downloadLabel()">
             <i class="fa fa-download"></i>
             @T("Plugins.Shipping.EasyPost.Shipment.DownloadLabel")
         </button>
 
         <script>
-            $(document).ready(function () {
-                $("#downloadPDF").click(function (e){
-                    e.preventDefault();
 
+            function downloadLabel() {
                     var postData = {
                         id: '@Model.Id',
                         labelFormat: 'PDF'
@@ -48,8 +46,7 @@ else
                             window.open(data.Result);
                         }
                     });
-                });
-            });
+                };
         </script>
 
         @*<button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
