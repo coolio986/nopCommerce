@@ -17,6 +17,7 @@ using Nop.Services.Common;
 using Nop.Services.Customers;
 using Nop.Services.Directory;
 using Nop.Services.Localization;
+using Nop.Services.Messages;
 using Nop.Services.Orders;
 using Nop.Services.Payments;
 using Nop.Services.Shipping;
@@ -50,6 +51,7 @@ public partial class CheckoutController : BasePublicController
     protected readonly ILogger _logger;
     protected readonly IOrderProcessingService _orderProcessingService;
     protected readonly IOrderService _orderService;
+    protected readonly INotificationService _notificationService;
     protected readonly IPaymentPluginManager _paymentPluginManager;
     protected readonly IPaymentService _paymentService;
     protected readonly IProductService _productService;
@@ -86,6 +88,7 @@ public partial class CheckoutController : BasePublicController
         ILogger logger,
         IOrderProcessingService orderProcessingService,
         IOrderService orderService,
+        INotificationService notificationService,
         IPaymentPluginManager paymentPluginManager,
         IPaymentService paymentService,
         IProductService productService,
@@ -117,6 +120,7 @@ public partial class CheckoutController : BasePublicController
         _logger = logger;
         _orderProcessingService = orderProcessingService;
         _orderService = orderService;
+        _notificationService = notificationService;
         _paymentPluginManager = paymentPluginManager;
         _paymentService = paymentService;
         _productService = productService;
@@ -1590,11 +1594,14 @@ public partial class CheckoutController : BasePublicController
                             {
                                 var product = await _productService.GetProductByIdAsync(draftOrderItem.ProductId);
 
-                                await _shoppingCartService.AddToCartAsync(customer, product,
+                                 IList<string> warnings = await _shoppingCartService.AddToCartAsync(customer, product,
                                     ShoppingCartType.ShoppingCart, draftOrder.StoreId,
                                     draftOrderItem.AttributesXml, draftOrderItem.UnitPriceExclTax,
                                     draftOrderItem.RentalStartDateUtc, draftOrderItem.RentalEndDateUtc,
                                     draftOrderItem.Quantity, false, ignoreDeletedProductWarnings: true);
+
+                                if (warnings.Any())
+                                    _notificationService.ErrorNotification($"{warnings.Last()} {product.Name}");
                             }
 
                             if (draftOrder.CustomDiscountValue != decimal.Zero)

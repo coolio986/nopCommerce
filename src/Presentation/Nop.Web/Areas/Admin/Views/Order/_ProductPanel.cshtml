@@ -1,4 +1,6 @@
 ﻿@model DraftOrderModel
+@using Nop.Services.Catalog;
+@inject IProductService ProductService;
 
 <div id="productPanel">
     @await Html.PartialAsync("_CustomProductPopUp", Model)
@@ -36,6 +38,13 @@
                             @if (!item.IsCustomItem)
                             {
                                 <a style="margin-left:10px" asp-controller="Product" asp-action="Edit" asp-route-id="@item.ProductId">@item.ProductName</a>
+                                {
+                                    var product = await ProductService.GetProductByIdAsync(item.ProductId);
+                                    if (item.Quantity > await ProductService.GetTotalStockQuantityAsync(product))
+                                    {
+                                        <div style="margin-left:10px;color:red">Insufficient quantity</div>
+                                    }
+                                }
                             }
                             else
                             {
