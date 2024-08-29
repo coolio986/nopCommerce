@@ -579,7 +579,8 @@ public partial class OrderReportService : IOrderReportService
                     OrderTaxSum = result.Sum(o => o.OrderTax),
                     OrderTotalSum = result.Sum(o => o.OrderTotal),
                     OrderRefundedAmountSum = result.Sum(o => o.RefundedAmount),
-                    OrderTotalCost = orderItems.Sum(oi => (decimal?)oi.OriginalProductCost * oi.Quantity)
+                    OrderTotalCost = orderItems.Sum(oi => (decimal?)oi.OriginalProductCost * oi.Quantity),
+                    OrderTotalItemQuantity = orderItems.Sum(oi => oi.Quantity)
                 },
             GroupByOptions.Week => from oq in query
                 group oq by oq.CreatedOnUtc.AddMinutes(utcOffsetInMinutes).AddDays(-(int)oq.CreatedOnUtc.AddMinutes(utcOffsetInMinutes).DayOfWeek).Date into result
@@ -594,7 +595,8 @@ public partial class OrderReportService : IOrderReportService
                     OrderTaxSum = result.Sum(o => o.OrderTax),
                     OrderTotalSum = result.Sum(o => o.OrderTotal),
                     OrderRefundedAmountSum = result.Sum(o => o.RefundedAmount),
-                    OrderTotalCost = orderItems.Sum(oi => (decimal?)oi.OriginalProductCost * oi.Quantity)
+                    OrderTotalCost = orderItems.Sum(oi => (decimal?)oi.OriginalProductCost * oi.Quantity),
+                    OrderTotalItemQuantity = orderItems.Sum(oi => oi.Quantity)
                 },
             GroupByOptions.Month => from oq in query
                 group oq by oq.CreatedOnUtc.AddMinutes(utcOffsetInMinutes).AddDays(1 - oq.CreatedOnUtc.AddMinutes(utcOffsetInMinutes).Day).Date into result
@@ -609,7 +611,8 @@ public partial class OrderReportService : IOrderReportService
                     OrderTaxSum = result.Sum(o => o.OrderTax),
                     OrderTotalSum = result.Sum(o => o.OrderTotal),
                     OrderRefundedAmountSum = result.Sum(o => o.RefundedAmount),
-                    OrderTotalCost = orderItems.Sum(oi => (decimal?)oi.OriginalProductCost * oi.Quantity)
+                    OrderTotalCost = orderItems.Sum(oi => (decimal?)oi.OriginalProductCost * oi.Quantity),
+                    OrderTotalItemQuantity = orderItems.Sum(oi => oi.Quantity)
                 },
             _ => throw new ArgumentException("Wrong groupBy parameter", nameof(groupBy)),
         };
@@ -630,7 +633,8 @@ public partial class OrderReportService : IOrderReportService
                          - Convert.ToDecimal(orderItem.OrderTotalCost),
                 Shipping = orderItem.OrderShippingExclTaxSum.ToString(CultureInfo.CurrentCulture),
                 Tax = orderItem.OrderTaxSum.ToString(CultureInfo.CurrentCulture),
-                OrderTotal = orderItem.OrderTotalSum.ToString(CultureInfo.CurrentCulture)
+                OrderTotal = orderItem.OrderTotalSum.ToString(CultureInfo.CurrentCulture),
+                NumberOfItems = orderItem.OrderTotalItemQuantity
             };
 
         var report = await ssReport.ToPagedListAsync(pageIndex, pageSize);

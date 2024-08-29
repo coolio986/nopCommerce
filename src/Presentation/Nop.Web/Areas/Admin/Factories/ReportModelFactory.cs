@@ -240,7 +240,8 @@ public partial class ReportModelFactory : IReportModelFactory
                     ProfitStr = sale.ProfitStr,
                     Shipping = sale.Shipping,
                     Tax = sale.Tax,
-                    OrderTotal = sale.OrderTotal
+                    OrderTotal = sale.OrderTotal,
+                    NumberOfItems = sale.NumberOfItems,
                 };
 
                 return salesSummaryModel;

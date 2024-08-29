@@ -16,6 +16,9 @@ public partial record SalesSummaryModel : BaseNopModel
     [NopResourceDisplayName("Admin.Reports.SalesSummary.Fields.NumberOfOrders")]
     public int NumberOfOrders { get; set; }
 
+    [NopResourceDisplayName("Admin.Reports.SalesSummary.Fields.NumberOfItems")]
+    public int NumberOfItems { get; set; }
+
     [NopResourceDisplayName("Admin.Reports.SalesSummary.Fields.Profit")]
     public string ProfitStr { get; set; }
 

@@ -14910,6 +14910,9 @@
   <LocaleResource Name="Admin.Reports.SalesSummary.Fields.NumberOfOrders">
     <Value>Number of orders</Value>
   </LocaleResource>
+  <LocaleResource Name="Admin.Reports.SalesSummary.Fields.Items">
+      <Value>Number of items</Value>
+  </LocaleResource>
   <LocaleResource Name="Admin.Reports.SalesSummary.Fields.OrderTotal">
     <Value>OrderTotal</Value>
   </LocaleResource>

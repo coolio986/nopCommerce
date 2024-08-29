@@ -11,6 +11,8 @@ public partial class SalesSummaryReportLine
 
     public int NumberOfOrders { get; set; }
 
+    public int NumberOfItems { get; set; }
+
     public decimal Profit { get; set; }
     public string ProfitStr { get; set; }
 
