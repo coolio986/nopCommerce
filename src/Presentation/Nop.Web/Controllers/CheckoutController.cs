@@ -2240,9 +2240,19 @@ public partial class CheckoutController : BasePublicController
                     var paymentMethod = await _paymentPluginManager
                         .LoadPluginBySystemNameAsync(placeOrderResult.PlacedOrder.PaymentMethodSystemName, customer, store.Id);
                     if (paymentMethod == null)
+                    {
+                        if (draftOrder != null)
+                        {
+                            draftOrder.PaymentStatusId = (int)PaymentStatus.Paid;
+                            draftOrder.OrderStatusId = (int)OrderStatus.Complete;
+                            await _draftOrderService.UpdateOrderAsync(draftOrder);
+                        }
+
                         //payment method could be null if order total is 0
                         //success
                         return Json(new { success = 1 });
+
+                    }
 
                     if (paymentMethod.PaymentMethodType == PaymentMethodType.Redirection)
                     {
@@ -2258,18 +2268,19 @@ public partial class CheckoutController : BasePublicController
 
                     await _paymentService.PostProcessPaymentAsync(postProcessPaymentRequest);
 
-                    if (draftOrder != null)
-                    {
-                        draftOrder.PaymentStatusId = (int)PaymentStatus.Paid;
-                        draftOrder.OrderStatusId = (int)OrderStatus.Complete;
-                        await _draftOrderService.UpdateOrderAsync(draftOrder);
-                    }
+                    
                     foreach (var deletedProduct in listOfDeletedCustomProducts)
                     {
                         deletedProduct.Deleted = true;
                         await _productService.UpdateProductAsync(deletedProduct);
                     }
 
+                    if (draftOrder != null)
+                    {
+                        draftOrder.PaymentStatusId = (int)PaymentStatus.Paid;
+                        draftOrder.OrderStatusId = (int)OrderStatus.Complete;
+                        await _draftOrderService.UpdateOrderAsync(draftOrder);
+                    }
 
                     //success
                     return Json(new { success = 1 });
