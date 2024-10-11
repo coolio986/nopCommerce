@@ -55,7 +55,7 @@
                                     height: 30px;">
 
                     <div style="grid-area: 1 / 1 / 2 / 2;">
-                        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addDiscountPopup" style="background:unset;border:0;padding:0;" data-backdrop="static" onclick="">
+                        <button type="button" class="btn btn-primary" data-toggle="modal" data-bs-dismiss="modal" data-target="#addDiscountPopup" style="background:unset;border:0;padding:0;" data-backdrop="static" onclick="">
                             <span style="color:#2c6ecb">@(Model.CustomDiscountValue > 0 ? "Edit" : "Add") discount</span>
                         </button>
                     </div>
@@ -324,11 +324,11 @@
                 @if (Model.CustomDiscountValue > 0)
                 {
                     <button type="button" class="btn btn-danger" onclick="removeDiscount()">Remove Discount</button>
-                    <button id="btnDone" type="button" class="btn btn-secondary" onclick="updateDiscount()" data-dismiss="modal">Done</button>
+                    <button id="btnDone" type="button" class="btn btn-secondary" onclick="updateDiscount()">Done</button>
                 }
                 else
                 {
-                    <button id="btnCancel" type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button id="btnCancel" type="button" class="btn btn-secondary" >Cancel</button>
                     <button type="button" class="btn btn-primary" onclick="updateDiscount()">Apply</button>
                 }
             </div>
@@ -382,7 +382,6 @@
             discountType: $("#CustomDiscountId").val(),
             draftOrderId: @Model.Id,
             discountValue: $("#discountValue").val()
-
         };
         sendDiscountUpdate(postData);
     }
@@ -407,6 +406,7 @@
 
             error: function (jqXHR, textStatus, errorThrown) {
                 console.log(errorThrown);
+                $('#addDiscountPopup').modal('hide');
             },
             success: function (data) {
                 //console.log(data);
@@ -417,6 +417,7 @@
                 }
 
                 $('.modal-backdrop').remove();
+                $('#addDiscountPopup').modal('hide');
             }
         });
     }
@@ -441,6 +442,7 @@
 
             error: function (jqXHR, textStatus, errorThrown) {
                 console.log(errorThrown);
+                $('#addShippingPopup').modal('hide');
             },
             success: function (data) {
                 //console.log(data);
@@ -449,7 +451,7 @@
                 if (typeof updateDraftPricing === "function") {
                     updateDraftPricing(draftOrderId)
                 }
-
+                $('#addShippingPopup').modal('hide');
                 $('.modal-backdrop').remove();
             }
         });

@@ -1543,7 +1543,7 @@ public partial class CheckoutController : BasePublicController
                             ShoppingCartType.ShoppingCart, draftOrder.StoreId,
                             draftOrderItem.AttributesXml, draftOrderItem.UnitPriceExclTax,
                             draftOrderItem.RentalStartDateUtc, draftOrderItem.RentalEndDateUtc,
-                            draftOrderItem.Quantity, false, ignoreDeletedProductWarnings: true);
+                            draftOrderItem.Quantity, false);
                     }
 
                     if (draftOrder.CustomDiscountValue != decimal.Zero)
@@ -1598,7 +1598,7 @@ public partial class CheckoutController : BasePublicController
                                     ShoppingCartType.ShoppingCart, draftOrder.StoreId,
                                     draftOrderItem.AttributesXml, draftOrderItem.UnitPriceExclTax,
                                     draftOrderItem.RentalStartDateUtc, draftOrderItem.RentalEndDateUtc,
-                                    draftOrderItem.Quantity, false, ignoreDeletedProductWarnings: true);
+                                    draftOrderItem.Quantity, false);
 
                                 if (warnings.Any())
                                     _notificationService.ErrorNotification($"{warnings.Last()} {product.Name}");
@@ -2245,6 +2245,7 @@ public partial class CheckoutController : BasePublicController
                         {
                             draftOrder.PaymentStatusId = (int)PaymentStatus.Paid;
                             draftOrder.OrderStatusId = (int)OrderStatus.Complete;
+                            draftOrder.CheckoutOrderNumber = placeOrderResult.PlacedOrder.CustomOrderNumber;
                             await _draftOrderService.UpdateOrderAsync(draftOrder);
                         }
 
@@ -2279,6 +2280,7 @@ public partial class CheckoutController : BasePublicController
                     {
                         draftOrder.PaymentStatusId = (int)PaymentStatus.Paid;
                         draftOrder.OrderStatusId = (int)OrderStatus.Complete;
+                        draftOrder.CheckoutOrderNumber = placeOrderResult.PlacedOrder.CustomOrderNumber;
                         await _draftOrderService.UpdateOrderAsync(draftOrder);
                     }
 

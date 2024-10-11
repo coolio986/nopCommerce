@@ -1,4 +1,8 @@
 ﻿@model List<CustomerModel>
+@inject IStateProvinceService stateProvinceService;
+@inject ICountryService countryService
+
+@using Nop.Services.Directory;
 
 <div class="row">
     <div class="col-12">
@@ -14,15 +18,32 @@
                         <span>@customerModel.FullName</span>
                     </div>
                     <div class="col-md-12">
+                        <span>@customerModel.Company</span>
+                    </div>
+                    <div class="col-md-12">
+                        <span>@customerModel.StreetAddress</span>
+                    </div>
+                    <div class="col-md-12">
+                        <span>@customerModel.StreetAddress2</span>
+                    </div>
+                    <div class="col-md-12">
+                        <span>@customerModel.City</span>
+                        @{
+                            var stateprovincebilling = await stateProvinceService.GetStateProvinceByIdAsync((int)customerModel.StateProvinceId);
+                        }
+                        <span>@stateprovincebilling.Abbreviation,</span>
+                        <span>@customerModel.ZipPostalCode</span>
+                    </div>
+                    <div class="col-md-12">
+                        @{
+                            var countrybilling = await countryService.GetCountryByIdAsync((int)customerModel.CountryId);
+                        }
+                        <span>@countrybilling.ThreeLetterIsoCode</span>
+                    </div>
+                    <div class="col-md-12">
                         <span>@customerModel.Email</span>
                     </div>
                     @*<div class="col-md-12">
-                        <span>@addressModel.Address1</span>
-                    </div>
-                    <div class="col-md-12">
-                        <span>@addressModel.Address2</span>
-                    </div>
-                    <div class="col-md-12">
                         @{
                             var stateprovincebilling = await stateProvinceService.GetStateProvinceByIdAsync((int)addressModel.StateProvinceId);
                         }

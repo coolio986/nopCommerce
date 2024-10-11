@@ -13065,6 +13065,9 @@
   <LocaleResource Name="Admin.Orders.Fields.CustomValues.Hint">
     <Value>Custom values from the payment method.</Value>
   </LocaleResource>
+  <LocaleResource Name="Admin.Orders.Fields.DraftOrderNumber">
+      <Value>Draft Order #</Value>
+  </LocaleResource>
   <LocaleResource Name="Admin.Orders.Fields.Edit.ExclTax">
     <Value>excl tax:</Value>
   </LocaleResource>

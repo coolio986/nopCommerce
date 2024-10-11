@@ -308,10 +308,16 @@
                                         ClassName =  NopColumnClassDefaults.CenterAll,
                                         Width = "50"
                                     },
-                            new ColumnProperty(nameof(DraftOrderModel.CustomOrderNumber))
+                                    new ColumnProperty(nameof(DraftOrderModel.CustomOrderNumber))
                                     {
-                                        Title = T("Admin.Orders.Fields.CustomOrderNumber").Text,
-                                        Width = "80"
+                                        Title = T("Admin.Orders.Fields.DraftOrderNumber").Text,
+                                        Width = "92"
+                                    },
+                                    new ColumnProperty(nameof(DraftOrderModel.CheckoutOrderNumber))
+                                    {
+                                        Title = T("Admin.Orders.Fields.CheckoutOrderNumber").Text,
+                                        Width = "80",
+                                        Render = new RenderCustom("renderCheckoutOrderNumber")
                                     }
                                 };
                                 //a vendor does not have access to this functionality
@@ -394,6 +400,13 @@
                                     break;
                                 }
                                 return '<span class="grid-report-item ' + color + '">' + data + '</span >';
+                            }
+
+                            function renderCheckoutOrderNumber(data, type, row, meta) {
+                                if (row.CheckoutOrderNumber != null) {
+                                    return '<text><a href=Edit/' + row.CheckoutOrderNumber + '>' + row.CheckoutOrderNumber + '</a></text > ';
+                                }
+                                return '';
                             }
 
                             $(document).ready(function() {

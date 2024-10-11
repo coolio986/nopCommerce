@@ -48,25 +48,6 @@ public partial class OrderSummaryViewComponent : NopViewComponent
             isEditable: false,
             prepareAndDisplayOrderReviewData: prepareAndDisplayOrderReviewData.GetValueOrDefault());
 
-        string orderQuery = HttpContext.Request.Query["order"];
-        orderQuery = orderQuery ?? Guid.Empty.ToString();
-
-        var deletedLanguage = await _localizationService.GetResourceAsync("ShoppingCart.ProductDeleted");
-
-        var draftOrderGuid = Guid.Parse(orderQuery);
-        if (draftOrderGuid != Guid.Empty)
-        {
-            var draftOrder = await _draftOrderService.GetOrderByGuidAsync(draftOrderGuid);
-            if (draftOrder != null)
-            {
-                foreach (var item in model.Items)
-                {
-                    if (item.Warnings.Contains(deletedLanguage))
-                        item.Warnings.Remove(deletedLanguage);
-                }
-            }
-        }
-
         return View(model);
     }
 }

@@ -8,13 +8,13 @@
 
 @{
     var orderStatusId = ViewBag.OrderStatusId;
-
+    var shippingAddress = ViewBag.ShippingAddress;
 }
 
 
 @{
     //unable to find address or customer doesn't have an address
-    if(Model == null)
+    if (Model == null)
     {
         <!-- Modal -->
         <div class="modal fade" id="addressNotFoundModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
@@ -57,11 +57,12 @@
 
                     </button>
                 }
-                else
-                {
-                    <span style="color:black;background:unset;border:0;padding-top:inherit;padding-bottom:4px;display:flex"> (Unsaved)</span>
-                }
+                <span style="color:black;background:unset;border:0;padding-top:inherit;padding-bottom:4px;display:flex"> @(shippingAddress == null ? "(Unsaved)" : "")</span>
+
             </div>
+        </div>
+        <div class="col-md-12">
+            <span>@Model.Company</span>
         </div>
         <div class="col-md-12">
             <span>@Model.Address1</span>
@@ -80,6 +81,9 @@
                 var countrybilling = await countryService.GetCountryByIdAsync((int)Model.CountryId);
             }
             <span>@countrybilling?.ThreeLetterIsoCode</span>
+        </div>
+        <div class="col-md-12">
+            <span>@Model.Email</span>
         </div>
     }
 }

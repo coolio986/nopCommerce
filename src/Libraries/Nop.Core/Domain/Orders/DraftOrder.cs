@@ -299,6 +299,11 @@ namespace Nop.Core.Domain.Orders
         public string CustomOrderNumber { get; set; }
 
         /// <summary>
+        /// Gets or sets the checkout order number
+        /// </summary>
+        public string CheckoutOrderNumber { get; set; }
+
+        /// <summary>
         /// Gets or sets the reward points history record (spent by a customer when placing this order)
         /// </summary>
         public virtual int? RedeemedRewardPointsEntryId { get; set; }

@@ -1160,6 +1160,19 @@ public partial class ShoppingCartService : IShoppingCartService
         if (getRentalWarnings)
             warnings.AddRange(await GetRentalProductWarningsAsync(product, rentalStartDate, rentalEndDate));
 
+        string orderQuery = _workContext.GetDraftOrderCookie();
+        orderQuery = orderQuery ?? Guid.Empty.ToString();
+        var draftOrderGuid = Guid.Parse(orderQuery);
+
+        if (!string.IsNullOrEmpty(orderQuery) && draftOrderGuid != Guid.Empty)
+        {
+            var deletedLanguage = await _localizationService.GetResourceAsync("ShoppingCart.ProductDeleted");
+            if (warnings.Contains(deletedLanguage))
+                warnings.Remove(deletedLanguage);
+            var notPublishedLanguage = await _localizationService.GetResourceAsync("ShoppingCart.ProductUnpublished");
+            if (warnings.Contains(notPublishedLanguage))
+                warnings.Remove(notPublishedLanguage);
+        }
         return warnings;
     }
 
@@ -1554,7 +1567,7 @@ public partial class ShoppingCartService : IShoppingCartService
         ShoppingCartType shoppingCartType, int storeId, string attributesXml = null,
         decimal customerEnteredPrice = decimal.Zero,
         DateTime? rentalStartDate = null, DateTime? rentalEndDate = null,
-        int quantity = 1, bool addRequiredProducts = true, bool ignoreDeletedProductWarnings = false)
+        int quantity = 1, bool addRequiredProducts = true)
     {
         ArgumentNullException.ThrowIfNull(customer);
 
@@ -1609,13 +1622,6 @@ public partial class ShoppingCartService : IShoppingCartService
                 customerEnteredPrice, rentalStartDate, rentalEndDate,
                 newQuantity, addRequiredProducts, shoppingCartItem.Id));
 
-            if (ignoreDeletedProductWarnings && warnings.Any())
-            {
-                var deletedLanguage = await _localizationService.GetResourceAsync("ShoppingCart.ProductDeleted");
-                if (warnings.Contains(deletedLanguage))
-                    warnings.Remove(deletedLanguage);
-            }
-
             if (warnings.Any())
                 return warnings;
 
@@ -1632,13 +1638,6 @@ public partial class ShoppingCartService : IShoppingCartService
                 storeId, attributesXml, customerEnteredPrice,
                 rentalStartDate, rentalEndDate,
                 quantity, addRequiredProducts));
-
-            if (ignoreDeletedProductWarnings && warnings.Any())
-            {
-                var deletedLanguage = await _localizationService.GetResourceAsync("ShoppingCart.ProductDeleted");
-                if (warnings.Contains(deletedLanguage))
-                    warnings.Remove(deletedLanguage);
-            }
 
             if (warnings.Any())
                 return warnings;

@@ -2108,35 +2108,41 @@ public partial class OrderController : BaseAdminController
         foreach (var address in addresses.ToList())
         {
             var customer = await _customerService.GetCustomerByShippinngAddressIdAsync(address.Id);
-            if (customer != null && customers != null)
-                customers.Add(customer);
+            if (customer != null && customers != null && !string.IsNullOrEmpty(customer.Email))
+            {
+                if (!customers.Any(x => x.BillingAddressId == address.Id && x.CustomerGuid == customer.CustomerGuid))
+                    customers.Add(customer);
+            }
             else
                 addresses.Remove(address);
         }
 
-
         sortedCustomers = await customers?.OrderByDescending(x => x.LastActivityDateUtc).ToListAsync();
-
 
         List<CustomerModel> customersModel = await sortedCustomers.SelectAwait(async customer =>
         {
             var customerModel = customer.ToModel<CustomerModel>();
             customerModel.FullName = await _customerService.GetCustomerFullNameAsync(customer);
-            if (string.IsNullOrEmpty(customerModel.FullName))
+
+            var customerAddress = addresses.FirstOrDefault(x => x.Id == customer.ShippingAddressId);
+            if (customerAddress != null)
             {
-                var customerAddress = addresses.FirstOrDefault(x => x.Id == customer.ShippingAddressId);
-                if (customerAddress != null)
-                {
-                    customerModel.FirstName = customerAddress.FirstName;
-                    customerModel.LastName = customerAddress.LastName;
-                    customerModel.FullName = $"{customerAddress.FirstName} {customerAddress.LastName}";
-                }
+                customerModel.FirstName = customerAddress.FirstName;
+                customerModel.LastName = customerAddress.LastName;
+                customerModel.FullName = $"{customerAddress.FirstName} {customerAddress.LastName}";
+                customerModel.StreetAddress = customerAddress.Address1;
+                customerModel.StreetAddress2 = customerAddress.Address2;
+                customerModel.StateProvinceId = customerAddress.StateProvinceId ?? 0;
+                customerModel.Company = customerAddress.Company;
+                customerModel.ZipPostalCode = customerAddress.ZipPostalCode;
+                customerModel.City = customerAddress.City;
+                customerModel.CountryId = customerAddress.CountryId ?? 0;
             }
+
             customerModel.Email = customer.Email;
 
             if (string.IsNullOrEmpty(customerModel.Email))
             {
-                var customerAddress = addresses.FirstOrDefault(x => x.Id == customer.ShippingAddressId);
                 if (customerAddress != null)
                     customerModel.Email = customerAddress.Email;
             }
@@ -2454,7 +2460,7 @@ public partial class OrderController : BaseAdminController
             await _discountService.UpdateDiscountAsync(existingDiscount);
         }
 
-        return RedirectToAction("Draft");
+        return RedirectToAction("EditDraft", "Order", new { model.Id });
     }
 
     [HttpPost]
