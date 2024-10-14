@@ -1356,15 +1356,14 @@ public partial class CheckoutController : BasePublicController
     {
         var customer = await _workContext.GetCurrentCustomerAsync();
 
-        var draftOrderGuidCookie = _workContext.GetDraftOrderCookie();
+        Guid draftOrderCookie = _workContext.GetDraftOrderCookie();
+        
         CheckoutShippingMethodModel checkoutShippingMethodModel = null;
-        if (draftOrderGuidCookie != null)
+        if (draftOrderCookie != Guid.Empty)
         {
-            var draftOrder = await _draftOrderService.GetOrderByGuidAsync(Guid.Parse(draftOrderGuidCookie));
+            var draftOrder = await _draftOrderService.GetOrderByGuidAsync(draftOrderCookie);
             if (draftOrder != null)
-            {
                 checkoutShippingMethodModel = await _checkoutModelFactory.PrepareShippingMethodModelDraftOrderAsync(await _customerService.GetCustomerShippingAddressAsync(customer), draftOrder, cart);
-            }
         }
 
         var shippingMethodModel = checkoutShippingMethodModel == null ? await _checkoutModelFactory.PrepareShippingMethodModelAsync(cart, await _customerService.GetCustomerShippingAddressAsync(customer)) :
@@ -2177,9 +2176,9 @@ public partial class CheckoutController : BasePublicController
                 var cart = await _shoppingCartService.GetShoppingCartAsync(customer, ShoppingCartType.ShoppingCart, store.Id);
 
                 var draftOrderGuidCookie = _workContext.GetDraftOrderCookie();
-                if (draftOrderGuidCookie != null)
+                if (draftOrderGuidCookie != Guid.Empty)
                 {
-                    draftOrder = await _draftOrderService.GetOrderByGuidAsync(Guid.Parse(draftOrderGuidCookie));
+                    draftOrder = await _draftOrderService.GetOrderByGuidAsync(draftOrderGuidCookie);
                     if (draftOrder != null)
                     {
                         var listOfDraftItems = await _draftOrderService.GetOrderItemsAsync(draftOrder.Id);

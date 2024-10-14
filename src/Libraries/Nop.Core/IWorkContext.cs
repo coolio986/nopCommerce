@@ -77,7 +77,7 @@ public partial interface IWorkContext
     /// Get nop draft order cookie
     /// </summary>
     /// <returns>String value of cookie</returns>
-    string GetDraftOrderCookie();
+    Guid GetDraftOrderCookie();
 
     /// <summary>
     /// Set draft order cookie

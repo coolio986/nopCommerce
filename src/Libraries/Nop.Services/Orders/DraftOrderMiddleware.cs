@@ -45,7 +45,7 @@ namespace Nop.Services.Orders
                     var draftOrderService = EngineContext.Current.Resolve<IDraftOrderService>();
                     var workContext = EngineContext.Current.Resolve<IWorkContext>();
                     var draftOrderGuidCookie = workContext.GetDraftOrderCookie();
-                    if (draftOrderGuidCookie != null)
+                    if (draftOrderGuidCookie != Guid.Empty)
                     {
 
                         var shoppingCartService = EngineContext.Current.Resolve<IShoppingCartService>();
@@ -55,7 +55,7 @@ namespace Nop.Services.Orders
                         var store = await storeContext.GetCurrentStoreAsync();
                         var cart = await shoppingCartService.GetShoppingCartAsync(await workContext.GetCurrentCustomerAsync(), ShoppingCartType.ShoppingCart, store.Id);
 
-                        await customerService.RemoveDiscountCouponCodeAsync(await workContext.GetCurrentCustomerAsync(), draftOrderGuidCookie);
+                        await customerService.RemoveDiscountCouponCodeAsync(await workContext.GetCurrentCustomerAsync(), draftOrderGuidCookie.ToString());
 
                         foreach (var item in cart)
                         {

@@ -1160,11 +1160,9 @@ public partial class ShoppingCartService : IShoppingCartService
         if (getRentalWarnings)
             warnings.AddRange(await GetRentalProductWarningsAsync(product, rentalStartDate, rentalEndDate));
 
-        string orderQuery = _workContext.GetDraftOrderCookie();
-        orderQuery = orderQuery ?? Guid.Empty.ToString();
-        var draftOrderGuid = Guid.Parse(orderQuery);
+        Guid draftOrderCookie = _workContext.GetDraftOrderCookie();
 
-        if (!string.IsNullOrEmpty(orderQuery) && draftOrderGuid != Guid.Empty)
+        if (draftOrderCookie != Guid.Empty)
         {
             var deletedLanguage = await _localizationService.GetResourceAsync("ShoppingCart.ProductDeleted");
             if (warnings.Contains(deletedLanguage))

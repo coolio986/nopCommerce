@@ -514,10 +514,17 @@ public partial class WebWorkContext : IWorkContext
     /// Get nop draft order cookie
     /// </summary>
     /// <returns>String value of cookie</returns>
-    public virtual string GetDraftOrderCookie()
+    public virtual Guid GetDraftOrderCookie()
     {
         var cookieName = $"{NopCookieDefaults.Prefix}{NopCookieDefaults.DraftOrderCookie}";
-        return _httpContextAccessor.HttpContext?.Request?.Cookies[cookieName];
+        Guid cookie = Guid.Empty;
+        Guid.TryParse(_httpContextAccessor.HttpContext?.Request?.Cookies[cookieName], out cookie);
+        
+        //try context if the cookies are empty.
+        if(cookie == Guid.Empty)
+           Guid.TryParse(_httpContextAccessor.HttpContext.Request.Query["order"], out cookie);
+     
+        return cookie;
     }
 
     /// <summary>

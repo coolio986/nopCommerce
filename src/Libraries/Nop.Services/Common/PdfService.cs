@@ -829,13 +829,13 @@ public partial class PdfService : IPdfService
         var column1Lines = string.IsNullOrEmpty(pdfSettingsByStore.InvoiceFooterTextColumn1) ?
             new List<string>()
             : pdfSettingsByStore.InvoiceFooterTextColumn1
-                .Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries)
+                .Split( Environment.NewLine )
                 .ToList();
 
         var column2Lines = string.IsNullOrEmpty(pdfSettingsByStore.InvoiceFooterTextColumn2) ?
             new List<string>()
             : pdfSettingsByStore.InvoiceFooterTextColumn2
-                .Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries)
+                .Split( Environment.NewLine )
                 .ToList();
 
         var source = new PackingSlipSource()
