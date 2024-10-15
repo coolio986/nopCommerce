@@ -31,14 +31,14 @@
                         @{
                             var stateprovincebilling = await stateProvinceService.GetStateProvinceByIdAsync((int)customerModel.StateProvinceId);
                         }
-                        <span>@stateprovincebilling.Abbreviation,</span>
+                        <span>@stateprovincebilling?.Abbreviation,</span>
                         <span>@customerModel.ZipPostalCode</span>
                     </div>
                     <div class="col-md-12">
                         @{
                             var countrybilling = await countryService.GetCountryByIdAsync((int)customerModel.CountryId);
                         }
-                        <span>@countrybilling.ThreeLetterIsoCode</span>
+                        <span>@countrybilling?.ThreeLetterIsoCode</span>
                     </div>
                     <div class="col-md-12">
                         <span>@customerModel.Email</span>
