@@ -1147,12 +1147,12 @@ public partial class ShoppingCartModelFactory : IShoppingCartModelFactory
 
                 //subtotal
                 var subTotalIncludingTax = await _workContext.GetTaxDisplayTypeAsync() == TaxDisplayType.IncludingTax && !_taxSettings.ForceTaxExclusionFromOrderSubtotal;
-                var (_, _, _, subTotalWithoutDiscountBase, _) = await _orderTotalCalculationService.GetShoppingCartSubTotalAsync(cart, subTotalIncludingTax);
-                var subtotalBase = subTotalWithoutDiscountBase;
+                var (discountAmount, _, subTotalWithoutDiscountBase, _, _) = await _orderTotalCalculationService.GetShoppingCartSubTotalAsync(cart, subTotalIncludingTax);
                 var currentCurrency = await _workContext.GetWorkingCurrencyAsync();
-                var subtotal = await _currencyService.ConvertFromPrimaryStoreCurrencyAsync(subtotalBase, currentCurrency);
+                var subtotal = await _currencyService.ConvertFromPrimaryStoreCurrencyAsync(subTotalWithoutDiscountBase, currentCurrency);
+                var discount = await _currencyService.ConvertFromPrimaryStoreCurrencyAsync(discountAmount, currentCurrency);
 
-                var (shoppingCartTotalBase, _, _, appliedGiftCards, redeemedRewardPoints, redeemedRewardPointsAmount) = await _orderTotalCalculationService.GetShoppingCartTotalAsync(cart);
+                var (shoppingCartTotalBase, shoppingCartDiscountBase, _, appliedGiftCards, redeemedRewardPoints, redeemedRewardPointsAmount) = await _orderTotalCalculationService.GetShoppingCartTotalAsync(cart);
 
                 //tax
                 var shoppingCartTax = (await _orderTotalCalculationService.GetTaxTotalAsync(cart)).taxTotal;
@@ -1163,8 +1163,14 @@ public partial class ShoppingCartModelFactory : IShoppingCartModelFactory
                     var shoppingCartTotal = await _currencyService.ConvertFromPrimaryStoreCurrencyAsync(shoppingCartTotalBase.Value, currentCurrency);
                     //model.OrderTotal = await _priceFormatter.FormatPriceAsync(shoppingCartTotal, true, false);
 
-                    model.SubTotal = await _priceFormatter.FormatPriceAsync(shoppingCartTotal, false, currentCurrency, (await _workContext.GetWorkingLanguageAsync()).Id, subTotalIncludingTax);
+                    model.SubTotal = await _priceFormatter.FormatPriceAsync(subtotal, false, currentCurrency, (await _workContext.GetWorkingLanguageAsync()).Id, subTotalIncludingTax);
                     model.SubTotalValue = shoppingCartTotal;
+
+                    model.OrderTotal = await _priceFormatter.FormatPriceAsync(shoppingCartTotal, false, currentCurrency, (await _workContext.GetWorkingLanguageAsync()).Id, subTotalIncludingTax);
+                    model.OrderTotalValue = shoppingCartTotal;
+
+                    model.Discount = await _priceFormatter.FormatPriceAsync(discount, false, currentCurrency, (await _workContext.GetWorkingLanguageAsync()).Id, false);
+                    model.DiscountValue = discount;
 
                     if (shoppingCartTax != decimal.Zero)
                     {
@@ -1176,8 +1182,19 @@ public partial class ShoppingCartModelFactory : IShoppingCartModelFactory
                 {
                     model.SubTotal = await _priceFormatter.FormatPriceAsync(subtotal, false, currentCurrency, (await _workContext.GetWorkingLanguageAsync()).Id, subTotalIncludingTax);
                     model.SubTotalValue = subtotal;
+
+                    model.Discount = await _priceFormatter.FormatPriceAsync(discount, false, currentCurrency, (await _workContext.GetWorkingLanguageAsync()).Id, false);
+                    model.DiscountValue = discount;
+
+                    if (shoppingCartTax != decimal.Zero)
+                    {
+                        model.Tax = await _priceFormatter.FormatPriceAsync(shoppingCartTax, false, currentCurrency, (await _workContext.GetWorkingLanguageAsync()).Id, subTotalIncludingTax);
+                        model.TaxValue = shoppingCartTax;
+                    }
                 }
 
+
+                model.DisplayDiscountApplied = (await _customerService.ParseAppliedDiscountCouponCodesAsync(customer))?.Count() > 0;
 
 
                 //reward points to be spent (redeemed)

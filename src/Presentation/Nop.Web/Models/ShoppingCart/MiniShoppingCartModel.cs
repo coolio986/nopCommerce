@@ -17,7 +17,11 @@ public partial record MiniShoppingCartModel : BaseNopModel
     public string Tax { get; set; }
     public decimal TaxValue { get; set; }
     public string SubTotal { get; set; }
+    public string OrderTotal { get; set; }
+    public string Discount { get; set; }
+    public decimal DiscountValue { get; set; }
     public decimal SubTotalValue { get; set; }
+    public decimal OrderTotalValue { get; set; }
     public string RewardPointsTotal { get; set; }
     public int RewardPoints { get; set; }
     public bool DisplayShoppingCartButton { get; set; }
@@ -25,6 +29,7 @@ public partial record MiniShoppingCartModel : BaseNopModel
     public bool CurrentCustomerIsGuest { get; set; }
     public bool AnonymousCheckoutAllowed { get; set; }
     public bool ShowProductImages { get; set; }
+    public bool DisplayDiscountApplied { get; set; }
 
     #region Nested Classes
 

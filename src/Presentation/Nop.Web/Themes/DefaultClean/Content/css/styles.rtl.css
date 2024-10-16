@@ -7829,6 +7829,10 @@ label, label + * {
     text-align: left;
   }
 
+  .inputs.address label {
+    width: 25%;
+  }
+
   .inputs input[type="text"],
   .inputs input[type="email"],
   .inputs input[type="tel"],
@@ -8754,6 +8758,10 @@ label, label + * {
 
   .inputs label {
     width: 375px;
+  }
+
+  .inputs.address label {
+    width: 25%;
   }
 
   .center-2 .inputs label {

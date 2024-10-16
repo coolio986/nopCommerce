@@ -36,7 +36,10 @@ namespace Nop.Services.Orders
         /// <returns>A task that represents the asynchronous operation</returns>
         public async Task InvokeAsync(HttpContext context)
         {
-            if (context.Request.Path.HasValue && !context.Request.Path.Value.ToLower().StartsWith("/checkout"))
+            if (context.Request.Path.HasValue && (!context.Request.Path.Value.ToLower().StartsWith("/checkout") 
+                && !context.Request.Path.Value.ToLower().StartsWith("/icons")
+                && !context.Request.Path.Value.ToLower().StartsWith("/js")
+                ))
             {
                 string draftOrderQuery = context.Request.Query["draftorder"];
                 if (draftOrderQuery != null && draftOrderQuery != "ignoreCart" || draftOrderQuery == null)

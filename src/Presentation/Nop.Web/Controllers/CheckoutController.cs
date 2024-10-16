@@ -1611,6 +1611,9 @@ public partial class CheckoutController : BasePublicController
                             }
 
                             cart = await _shoppingCartService.GetShoppingCartAsync(customer, ShoppingCartType.ShoppingCart, store.Id);
+
+                            customer.HasShoppingCartItems = cart.Any();
+                            await _customerService.UpdateCustomerAsync(customer);
                             isDraftOrder = true;
                             _workContext.SetDraftOrderCookie(draftOrder.OrderGuid);
 

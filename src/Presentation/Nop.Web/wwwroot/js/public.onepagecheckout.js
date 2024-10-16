@@ -546,20 +546,22 @@ var ShippingMethod = {
         return false;
     },
 
-    save: function () {
+    save: function (callback) {
         if (Checkout.loadWaiting !== false) return;
 
         if (this.validate()) {
             Checkout.setLoadWaiting('shipping-method');
 
             $.ajax({
-                cache: false,
-                url: this.saveUrl,
-                data: $(this.form).serialize(),
-                type: "POST",
-                success: this.nextStep,
-                complete: this.resetLoadWaiting,
-                error: Checkout.ajaxFailure
+              cache: false,
+              url: this.saveUrl,
+              data: $(this.form).serialize(),
+              type: "POST",
+              success: function (data) {
+                ShippingMethod.nextStep(data, callback);
+              },
+              complete: this.resetLoadWaiting,
+              error: Checkout.ajaxFailure
             });
         }
     },
@@ -568,7 +570,7 @@ var ShippingMethod = {
         Checkout.setLoadWaiting(false);
     },
 
-    nextStep: function (response) {
+    nextStep: function (response, callback) {
         if (response.error) {
             if (typeof response.message === 'string') {
                 alert(response.message);
@@ -580,6 +582,9 @@ var ShippingMethod = {
         }
 
         Checkout.setStepResponse(response);
+
+        if (typeof callback == "function")
+          callback();
     }
 };
 
@@ -621,19 +626,21 @@ var PaymentMethod = {
         return false;
     },
 
-    save: function () {
+    save: function (callback) {
         if (Checkout.loadWaiting !== false) return;
 
         if (this.validate()) {
             Checkout.setLoadWaiting('payment-method');
             $.ajax({
-                cache: false,
-                url: this.saveUrl,
-                data: $(this.form).serialize(),
-                type: "POST",
-                success: this.nextStep,
-                complete: this.resetLoadWaiting,
-                error: Checkout.ajaxFailure
+              cache: false,
+              url: this.saveUrl,
+              data: $(this.form).serialize(),
+              type: "POST",
+              success: function (data) {
+                PaymentMethod.nextStep(data, callback);
+              },
+              complete: this.resetLoadWaiting,
+              error: Checkout.ajaxFailure
             });
         }
     },
@@ -642,7 +649,7 @@ var PaymentMethod = {
         Checkout.setLoadWaiting(false);
     },
 
-    nextStep: function (response) {
+    nextStep: function (response, callback) {
         if (response.error) {
             if (typeof response.message === 'string') {
                 alert(response.message);
@@ -654,6 +661,9 @@ var PaymentMethod = {
         }
 
         Checkout.setStepResponse(response);
+
+        if (typeof callback == "function")
+          callback();
     }
 };
 
