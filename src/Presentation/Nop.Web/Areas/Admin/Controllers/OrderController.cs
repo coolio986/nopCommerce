@@ -1,6 +1,6 @@
 ﻿using System.Globalization;
+using System.Net.Mail;
 using System.Text;
-using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Nop.Core;
 using Nop.Core.Domain.Catalog;
@@ -2074,14 +2074,17 @@ public partial class OrderController : BaseAdminController
         List<Customer> sortedCustomers = new List<Customer>();
         IPagedList<Customer> customers = null;
 
-        string emailAddress = string.Empty;
         //check for email address
-        Regex regex = new Regex("^(?(\")(\".+?(?<!\\\\)\"@)|(([0-9a-z]((\\.(?!\\.))|[-!#\\$%&'\\*\\+/=\\?\\^`\\{\\}\\|~\\w])*)(?<=[0-9a-z])@))(?(\\[)(\\[(\\d{1,3}\\.){3}\\d{1,3}\\])|(([0-9a-z][-\\w]*[0-9a-z]*\\.)+[a-z0-9][\\-a-z0-9]{0,22}[a-z0-9]))$");
-        if (regex.Match(customerName).Success)
+        string emailAddress = string.Empty;
+        try
         {
-            emailAddress = customerName;
+            emailAddress = new MailAddress(customerName)?.Address;
+        }
+        catch { }
+        
+        if (!string.IsNullOrEmpty(emailAddress))
+        {
             customers = await _customerService.GetAllCustomersAsync(customerRoleIds: new[] { (await _customerService.GetCustomerRoleBySystemNameAsync(NopCustomerDefaults.RegisteredRoleName)).Id }, email: emailAddress, pageSize: 15);
-
             addresses = (await _addressService.GetAddressesByEmail(emailAddress)).ToList();
         }
         else
