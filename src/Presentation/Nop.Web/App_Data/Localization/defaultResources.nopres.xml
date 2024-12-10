@@ -5136,6 +5136,9 @@
   <LocaleResource Name="Admin.Configuration.EmailAccounts.Fields.ClientId.Hint">
     <Value>Public identifier for application.</Value>
   </LocaleResource>
+  <LocaleResource Name="Admin.Configuration.EmailAccounts.Fields.ClientId.Required">
+    <Value>The client identifier is required</Value>
+  </LocaleResource>
   <LocaleResource Name="Admin.Configuration.EmailAccounts.Fields.ClientSecret">
     <Value>Client Secret</Value>
   </LocaleResource>
@@ -5147,6 +5150,9 @@
   </LocaleResource>
   <LocaleResource Name="Admin.Configuration.EmailAccounts.Fields.ClientSecret.Hint">
     <Value>The secret known only to the application and the authorization server.</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Configuration.EmailAccounts.Fields.ClientSecret.Required">
+    <Value>The client Secret is required</Value>
   </LocaleResource>
   <LocaleResource Name="Admin.Configuration.EmailAccounts.Fields.DisplayName">
     <Value>Email display name</Value>
@@ -5222,6 +5228,9 @@
   </LocaleResource>
   <LocaleResource Name="Admin.Configuration.EmailAccounts.Fields.TenantId.Hint">
     <Value>The tenant ID can be a GUID (the ID of your Microsoft Entra instance), domain name or one of placeholders: "organizations", "consumers", "common".</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Configuration.EmailAccounts.Fields.TenantId.Required">
+    <Value>The tenant identifier is required</Value>
   </LocaleResource>
   <LocaleResource Name="Admin.Configuration.EmailAccounts.Fields.Username">
     <Value>User</Value>
@@ -5666,6 +5675,12 @@
   </LocaleResource>
   <LocaleResource Name="Admin.Configuration.Plugins.ReloadList.Progress">
     <Value>Reloading plugin list...</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Configuration.Plugins.SearchProvider.BackToList">
+    <Value>back to plugin list</Value>
+  </LocaleResource>
+  <LocaleResource Name="Admin.Configuration.Plugins.SearchProvider.Configure">
+    <Value>Configure</Value>
   </LocaleResource>
   <LocaleResource Name="Admin.Configuration.Plugins.Upload">
     <Value>Upload plugin or theme</Value>
@@ -9912,11 +9927,11 @@
   <LocaleResource Name="Admin.ConfigurationSteps.EditServicesInfo.Title">
     <Value>Edit services info</Value>
   </LocaleResource>
-  <LocaleResource Name="Admin.ConfigurationSteps.EmailAccount.DefaultCredentials.Text">
-    <Value>Check to use default credentials for the connection.</Value>
+  <LocaleResource Name="Admin.ConfigurationSteps.EmailAccount.AuthenticationMethod.Text">
+    <Value>Select one of the available authentication methods and enter your credentials if required.</Value>
   </LocaleResource>
-  <LocaleResource Name="Admin.ConfigurationSteps.EmailAccount.DefaultCredentials.Title">
-    <Value>Use default credentials</Value>
+  <LocaleResource Name="Admin.ConfigurationSteps.EmailAccount.AuthenticationMethod.Title">
+    <Value>Authentication method</Value>
   </LocaleResource>
   <LocaleResource Name="Admin.ConfigurationSteps.EmailAccount.DisplayName.Text">
     <Value>Enter the displayed name for outgoing emails of your store. For example, “Your store sales department”.</Value>
@@ -9936,12 +9951,6 @@
   <LocaleResource Name="Admin.ConfigurationSteps.EmailAccount.Host.Title">
     <Value>Host</Value>
   </LocaleResource>
-  <LocaleResource Name="Admin.ConfigurationSteps.EmailAccount.Password.Text">
-    <Value>This is the password you use to authenticate to your mail server.</Value>
-  </LocaleResource>
-  <LocaleResource Name="Admin.ConfigurationSteps.EmailAccount.Password.Title">
-    <Value>Password</Value>
-  </LocaleResource>
   <LocaleResource Name="Admin.ConfigurationSteps.EmailAccount.Port.Text">
     <Value>Enter the SMTP port of your email server. This is usually port 25.</Value>
   </LocaleResource>
@@ -9953,12 +9962,6 @@
   </LocaleResource>
   <LocaleResource Name="Admin.ConfigurationSteps.EmailAccount.TestEmail.Title">
     <Value>Send test email</Value>
-  </LocaleResource>
-  <LocaleResource Name="Admin.ConfigurationSteps.EmailAccount.Username.Text">
-    <Value>Enter the user name which is used to authenticate to your email server.</Value>
-  </LocaleResource>
-  <LocaleResource Name="Admin.ConfigurationSteps.EmailAccount.Username.Title">
-    <Value>Username</Value>
   </LocaleResource>
   <LocaleResource Name="Admin.ConfigurationSteps.EmailAccount.UseSsl.Text">
     <Value>Check to use Secure Sockets Layer (SSL) to encrypt the SMTP connection.</Value>
@@ -20047,22 +20050,22 @@
     <Value>Password is required.</Value>
   </LocaleResource>
   <LocaleResource Name="Validation.Password.LengthValidation">
-    <Value><![CDATA[<li>must have at least {0} characters and not greater than {1} characters</li>]]></Value>
+    <Value>must have at least {0} characters and not greater than {1} characters</Value>
   </LocaleResource>
   <LocaleResource Name="Validation.Password.RequireDigit">
-    <Value><![CDATA[<li>must have at least one digit</li>]]></Value>
+    <Value>must have at least one digit</Value>
   </LocaleResource>
   <LocaleResource Name="Validation.Password.RequireLowercase">
-    <Value><![CDATA[<li>must have at least one lowercase</li>]]></Value>
+    <Value>must have at least one lowercase</Value>
   </LocaleResource>
   <LocaleResource Name="Validation.Password.RequireNonAlphanumeric">
-    <Value><![CDATA[<li>must have at least one special character (e.g. #?!@$%^&*-)</li>]]></Value>
+    <Value><![CDATA[must have at least one special character (e.g. #?!@$%^&*-)]]></Value>
   </LocaleResource>
   <LocaleResource Name="Validation.Password.RequireUppercase">
-    <Value><![CDATA[<li>must have at least one uppercase</li>]]></Value>
+    <Value>must have at least one uppercase</Value>
   </LocaleResource>
   <LocaleResource Name="Validation.Password.Rule">
-    <Value><![CDATA[<p>must meet the following rules: </p><ul>{0}{1}{2}{3}{4}</ul>]]></Value>
+    <Value>Password must meet the following rules: </Value>
   </LocaleResource>
   <LocaleResource Name="Vendors">
     <Value>Vendors</Value>
