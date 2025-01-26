@@ -904,7 +904,7 @@ public partial class CheckoutController : BasePublicController
             loadCountries: async () => await _countryService.GetAllCountriesForShippingAsync((await _workContext.GetWorkingLanguageAsync()).Id),
             customer: customer,
             overrideAttributesXml: customAttributes);
-        
+
         return View(resultModel);
     }
 
@@ -1377,7 +1377,7 @@ public partial class CheckoutController : BasePublicController
         var customer = await _workContext.GetCurrentCustomerAsync();
 
         Guid draftOrderCookie = _workContext.GetDraftOrderCookie();
-        
+
         CheckoutShippingMethodModel checkoutShippingMethodModel = null;
         if (draftOrderCookie != Guid.Empty)
         {
@@ -1530,8 +1530,6 @@ public partial class CheckoutController : BasePublicController
         string orderQuery = HttpContext.Request.Query["order"];
         orderQuery = orderQuery ?? Guid.Empty.ToString();
 
-        bool isDraftOrder = false;
-
         var draftOrderGuid = Guid.Parse(orderQuery);
         if (draftOrderGuid != Guid.Empty)
         {
@@ -1549,9 +1547,7 @@ public partial class CheckoutController : BasePublicController
                         {
                             await _shoppingCartService.DeleteShoppingCartItemAsync(item);
                         }
-
                     }
-
 
                     //move shopping cart items (if possible)
                     foreach (var draftOrderItem in await _draftOrderService.GetOrderItemsAsync(draftOrder.Id))
@@ -1573,26 +1569,26 @@ public partial class CheckoutController : BasePublicController
                     }
 
                     cart = await _shoppingCartService.GetShoppingCartAsync(customer, ShoppingCartType.ShoppingCart, store.Id);
-                    isDraftOrder = true;
+
                     _workContext.SetDraftOrderCookie(draftOrder.OrderGuid);
                 }
                 else
                 { //guest user
+
+                    if (!await _customerService.IsGuestAsync(customer))
+                        return RedirectToRoute("ShoppingCart");
 
                     var customerRoleIds = await _customerService.GetCustomerRoleIdsAsync(customer);
                     var guestRole = await _customerService.GetCustomerRoleBySystemNameAsync(NopCustomerDefaults.GuestsRoleName);
                     var registeredRole = await _customerService.GetCustomerRoleBySystemNameAsync(NopCustomerDefaults.RegisteredRoleName);
 
                     var address = await _customerService.GetCustomerAddressAsync(customer.Id, customer.BillingAddressId ?? 0);
-
-
                     var draftOrderAddress = await _customerService.GetAddressesByCustomerIdAsync(draftOrder.CustomerId);
 
                     if (address == null && draftOrderAddress.Any())
                     {
                         draftOrderAddress = new List<Address>(draftOrderAddress.ToList().OrderBy(x => x.CreatedOnUtc));
                         address = draftOrderAddress.FirstOrDefault();
-
                     }
 
                     if (draftOrderAddress.Any(x => x.Email == address.Email))
@@ -1613,11 +1609,11 @@ public partial class CheckoutController : BasePublicController
                             {
                                 var product = await _productService.GetProductByIdAsync(draftOrderItem.ProductId);
 
-                                 IList<string> warnings = await _shoppingCartService.AddToCartAsync(customer, product,
-                                    ShoppingCartType.ShoppingCart, draftOrder.StoreId,
-                                    draftOrderItem.AttributesXml, draftOrderItem.UnitPriceExclTax,
-                                    draftOrderItem.RentalStartDateUtc, draftOrderItem.RentalEndDateUtc,
-                                    draftOrderItem.Quantity, false);
+                                IList<string> warnings = await _shoppingCartService.AddToCartAsync(customer, product,
+                                   ShoppingCartType.ShoppingCart, draftOrder.StoreId,
+                                   draftOrderItem.AttributesXml, draftOrderItem.UnitPriceExclTax,
+                                   draftOrderItem.RentalStartDateUtc, draftOrderItem.RentalEndDateUtc,
+                                   draftOrderItem.Quantity, false);
 
                                 if (warnings.Any())
                                     _notificationService.ErrorNotification($"{warnings.Last()} {product.Name}");
@@ -1634,9 +1630,17 @@ public partial class CheckoutController : BasePublicController
 
                             customer.HasShoppingCartItems = cart.Any();
                             await _customerService.UpdateCustomerAsync(customer);
-                            isDraftOrder = true;
+
                             _workContext.SetDraftOrderCookie(draftOrder.OrderGuid);
 
+                        }
+                    }
+                    else
+                    {
+                        if (draftOrderAddress.Any(x => x.Email != address.Email))
+                        {
+                            await _customerService.DeleteCustomerAsync(customer);
+                            return RedirectToRoute("CheckoutOnePage", new { order = draftOrderGuid });
                         }
                     }
                 }
@@ -1721,7 +1725,7 @@ public partial class CheckoutController : BasePublicController
                         selectedCountryId: newAddress.CountryId,
                         overrideAttributesXml: customAttributes);
                     billingAddressModel.NewAddressPreselected = true;
-                    
+
                     return Json(new
                     {
                         update_section = new UpdateSectionJsonModel
@@ -2291,7 +2295,7 @@ public partial class CheckoutController : BasePublicController
 
                     await _paymentService.PostProcessPaymentAsync(postProcessPaymentRequest);
 
-                    
+
                     foreach (var deletedProduct in listOfDeletedCustomProducts)
                     {
                         deletedProduct.Deleted = true;
